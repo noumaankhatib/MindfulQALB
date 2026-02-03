@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
 import { User, Heart, Users, ChevronDown, CheckCircle, Clock, Shield, ArrowRight, Sparkles } from 'lucide-react'
 
 // Therapy-themed images for each category from Unsplash

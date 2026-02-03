@@ -161,7 +161,7 @@ const Hero = () => {
                 { icon: Heart, text: 'Evidence-Based', color: 'text-lavender-600' },
                 { icon: Shield, text: 'Confidential', color: 'text-lavender-500' },
                 { icon: Users, text: 'Licensed Professionals', color: 'text-lavender-700' },
-              ].map((item, index) => (
+              ].map((item) => (
                 <motion.div
                   key={item.text}
                   whileHover={{ y: -2 }}
