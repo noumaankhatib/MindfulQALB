@@ -1,0 +1,119 @@
+import { useEffect } from 'react'
+import Navigation from './components/Navigation'
+import Hero from './components/Hero'
+import WhoWeHelp from './components/WhoWeHelp'
+import WhatWeOffer from './components/WhatWeOffer'
+import TrustSignals from './components/TrustSignals'
+import QuickAccess from './components/QuickAccess'
+import MentalHealth from './components/MentalHealth'
+import CouplesRelationships from './components/CouplesRelationships'
+import FamilyCounseling from './components/FamilyCounseling'
+import IslamicPsychology from './components/IslamicPsychology'
+import SelfHelpTools from './components/SelfHelpTools'
+import TherapySupport from './components/TherapySupport'
+import SupportGroups from './components/SupportGroups'
+import AboutTherapist from './components/AboutTherapist'
+import Programs from './components/Programs'
+import Testimonials from './components/Testimonials'
+import GetHelp from './components/GetHelp'
+import AboutEthics from './components/AboutEthics'
+import Footer from './components/Footer'
+import FAQ from './components/FAQ'
+
+function App() {
+  useEffect(() => {
+    // Add FAQ schema for SEO
+    const faqSchema = {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "What types of therapy do you offer?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "We offer individual therapy, couples therapy, support groups, and self-help tools. All services are evidence-based and provided by licensed therapists."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Is online therapy effective?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes, research shows that online therapy can be as effective as in-person therapy for many conditions. We use secure, HIPAA-compliant platforms to ensure privacy and confidentiality."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How do I get started?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "You can request a session through our booking form, or use our quick access buttons to find immediate support. We'll match you with a therapist who specializes in your needs."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What is your approach to couples therapy?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "We use evidence-based approaches including EFT (Emotionally Focused Therapy), Gottman Method, and trauma-informed care. Our therapists are trained to work with all relationship types and orientations."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Is my information confidential?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Absolutely. We use end-to-end encryption, HIPAA-compliant platforms, and strict confidentiality protocols. Your privacy is our top priority."
+          }
+        }
+      ]
+    }
+
+    const script = document.createElement('script')
+    script.type = 'application/ld+json'
+    script.text = JSON.stringify(faqSchema)
+    document.head.appendChild(script)
+
+    return () => {
+      document.head.removeChild(script)
+    }
+  }, [])
+
+  return (
+    <div className="min-h-screen relative overflow-x-hidden">
+      {/* Skip to content link for accessibility */}
+      <a 
+        href="#main-content" 
+        className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[100] focus:px-4 focus:py-2 focus:bg-lavender-600 focus:text-white focus:rounded-lg focus:outline-none"
+      >
+        Skip to main content
+      </a>
+      
+      <Navigation />
+      <main id="main-content">
+        <Hero />
+        <WhoWeHelp />
+        <WhatWeOffer />
+        <TrustSignals />
+        <QuickAccess />
+        <MentalHealth />
+        <CouplesRelationships />
+        <FamilyCounseling />
+        <IslamicPsychology />
+        <SelfHelpTools />
+        <TherapySupport />
+        <SupportGroups />
+        <AboutTherapist />
+        <Programs />
+        <Testimonials />
+        <GetHelp />
+        <AboutEthics />
+        <FAQ />
+      </main>
+      <Footer />
+    </div>
+  )
+}
+
+export default App

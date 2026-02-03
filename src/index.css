@@ -1,0 +1,362 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    @apply border-gray-200;
+  }
+  
+  html {
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  body {
+    @apply font-body antialiased text-gray-800;
+    /* Soft lavender-cream background for calm, therapeutic feel */
+    background: linear-gradient(135deg, #FEFCFF 0%, #FAF8FF 50%, #F5F3FF 100%);
+    font-feature-settings: "kern" 1, "liga" 1;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overflow-x: hidden;
+  }
+  
+  /* Typography - Softer, more calming colors */
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-display font-semibold text-gray-800;
+    letter-spacing: -0.02em;
+    line-height: 1.25;
+  }
+  
+  h1 {
+    @apply text-4xl md:text-5xl lg:text-6xl;
+    line-height: 1.15;
+    font-weight: 600;
+  }
+  
+  h2 {
+    @apply text-3xl md:text-4xl lg:text-5xl;
+    line-height: 1.2;
+    font-weight: 600;
+  }
+  
+  h3 {
+    @apply text-2xl md:text-3xl lg:text-4xl;
+    line-height: 1.25;
+    font-weight: 600;
+  }
+  
+  h4 {
+    @apply text-xl md:text-2xl;
+    line-height: 1.35;
+    font-weight: 600;
+  }
+  
+  p {
+    @apply text-base md:text-lg text-gray-600;
+    line-height: 1.8;
+    letter-spacing: 0.01em;
+  }
+  
+  /* Links - Professional, accessible (using lavender) */
+  a {
+    @apply text-lavender-600;
+    transition: color 0.3s ease, text-decoration 0.3s ease;
+  }
+  
+  a:hover {
+    @apply text-lavender-700;
+  }
+  
+  /* Selection - Subtle lavender */
+  ::selection {
+    @apply bg-lavender-200/60 text-lavender-900;
+  }
+}
+
+@layer components {
+  /* Floating decorative shapes - purple/lavender only for consistency */
+  .floating-shape {
+    @apply absolute rounded-full opacity-30 blur-3xl pointer-events-none;
+  }
+  
+  .floating-shape-primary {
+    @apply bg-gradient-to-br from-lavender-200 to-lavender-300;
+  }
+  
+  .floating-shape-lavender {
+    @apply bg-gradient-to-br from-lavender-100 to-lavender-200;
+  }
+  
+  .floating-shape-cream {
+    @apply bg-gradient-to-br from-lavender-50 to-cream-100;
+  }
+  
+  /* Section container with subtle gradient - lavender focused */
+  .section-gradient-light {
+    background: linear-gradient(180deg, rgba(255,255,255,0) 0%, rgba(250,248,255,0.5) 100%);
+  }
+  
+  .section-gradient-cream {
+    background: linear-gradient(180deg, rgba(254,253,251,0.6) 0%, rgba(250,248,255,0.3) 100%);
+  }
+  
+  .section-gradient-lavender {
+    background: linear-gradient(180deg, rgba(250,248,255,0.8) 0%, rgba(245,243,255,0.4) 100%);
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+  
+  /* Premium button styles - Lavender purple theme */
+  .btn-primary {
+    @apply relative text-white px-7 py-3.5 rounded-xl font-medium;
+    @apply focus:outline-none focus:ring-2 focus:ring-lavender-500 focus:ring-offset-2;
+    @apply transition-all duration-400 ease-gentle;
+    @apply disabled:opacity-50 disabled:cursor-not-allowed;
+    background: linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%);
+    box-shadow: 0 4px 14px rgba(124, 58, 237, 0.25);
+  }
+  
+  .btn-primary:hover {
+    background: linear-gradient(135deg, #7C3AED 0%, #6D28D9 100%);
+    box-shadow: 0 6px 20px rgba(124, 58, 237, 0.35);
+    transform: translateY(-2px);
+  }
+  
+  .btn-primary::before {
+    content: '';
+    @apply absolute inset-0 rounded-xl opacity-0 transition-opacity duration-400;
+    background: linear-gradient(135deg, rgba(255,255,255,0.2) 0%, transparent 50%);
+  }
+  
+  .btn-primary:hover::before {
+    @apply opacity-100;
+  }
+  
+  .btn-secondary {
+    @apply bg-white/90 text-lavender-700 border-2 border-lavender-200 px-7 py-3.5 rounded-xl font-medium;
+    @apply hover:bg-lavender-50 hover:border-lavender-300 focus:outline-none focus:ring-2 focus:ring-lavender-500 focus:ring-offset-2;
+    @apply transition-all duration-400 ease-gentle;
+    @apply backdrop-blur-sm;
+  }
+  
+  /* LavHealthy-style lavender CTA button - Richer purple for better visibility */
+  .btn-lavender {
+    @apply relative px-6 py-2.5 rounded-full font-medium text-sm text-white;
+    @apply focus:outline-none focus:ring-2 focus:ring-lavender-600/50 focus:ring-offset-2;
+    @apply transition-all duration-300 ease-gentle;
+    @apply disabled:opacity-50 disabled:cursor-not-allowed;
+    background: linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%);
+    box-shadow: 0 4px 14px rgba(124, 58, 237, 0.3);
+  }
+  
+  .btn-lavender:hover {
+    transform: translateY(-2px);
+    background: linear-gradient(135deg, #7C3AED 0%, #6D28D9 100%);
+    box-shadow: 0 6px 20px rgba(124, 58, 237, 0.4);
+  }
+  
+  .btn-lavender:active {
+    transform: translateY(0);
+  }
+  
+  .btn-lavender::before {
+    content: '';
+    @apply absolute inset-0 rounded-full opacity-0 transition-opacity duration-300;
+    background: linear-gradient(135deg, rgba(255,255,255,0.25) 0%, transparent 50%);
+  }
+  
+  .btn-lavender:hover::before {
+    @apply opacity-100;
+  }
+  
+  /* Glass morphism - Enhanced with subtle gradients */
+  .glass {
+    @apply bg-white/90 backdrop-blur-md border border-white/60 shadow-card;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  .glass:hover {
+    @apply shadow-card-hover border-lavender-100/60 bg-white/95;
+  }
+  
+  .glass-soft {
+    @apply bg-gradient-to-br from-white/95 to-lavender-50/90 backdrop-blur-md border border-white/70 shadow-soft;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  .glass-soft:hover {
+    @apply shadow-gentle border-lavender-100/50;
+    transform: translateY(-3px);
+  }
+  
+  /* Badge/Pill styles for relationship types */
+  .badge-pill {
+    @apply inline-flex items-center px-6 py-3 rounded-full bg-gradient-to-r from-lavender-50 to-lavender-100 border border-lavender-200/60 text-lavender-700 font-medium text-sm md:text-base;
+    @apply hover:from-lavender-100 hover:to-lavender-200 hover:border-lavender-300/60 transition-all duration-400;
+    @apply shadow-soft hover:shadow-gentle hover:-translate-y-0.5;
+  }
+  
+  /* Card hover effect - Enhanced */
+  .card-hover {
+    @apply transition-all duration-400 ease-gentle;
+  }
+  
+  .card-hover:hover {
+    @apply -translate-y-2 shadow-card-hover;
+  }
+  
+  /* Section divider - Animated gradient (lavender) */
+  .section-divider {
+    @apply h-0.5 w-20 mx-auto rounded-full;
+    background: linear-gradient(90deg, transparent, #8B5CF6, transparent);
+  }
+  
+  .section-divider-animated {
+    @apply h-0.5 w-0 mx-auto rounded-full transition-all duration-800;
+    background: linear-gradient(90deg, #A78BFA, #7C3AED, #8B5CF6);
+  }
+  
+  .section-divider-animated.visible {
+    @apply w-24;
+  }
+  
+  /* Icon container - Enhanced with gradient background */
+  .icon-container {
+    @apply flex items-center justify-center rounded-xl border shadow-soft;
+    @apply transition-all duration-400 ease-gentle;
+    background: linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(250,248,255,0.8) 100%);
+  }
+  
+  .icon-container:hover {
+    @apply shadow-gentle border-lavender-200/60;
+    transform: scale(1.05) rotate(2deg);
+  }
+  
+  /* Gradient text for headings - Lavender purple */
+  .text-gradient {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(135deg, #7C3AED 0%, #8B5CF6 50%, #A78BFA 100%);
+  }
+  
+  .text-gradient-soft {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(135deg, #6B7280 0%, #7C3AED 100%);
+  }
+  
+  /* Subtle text shadow for depth */
+  .text-soft-shadow {
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  }
+  
+  /* Animated underline for links */
+  .link-underline {
+    @apply relative;
+  }
+  
+  .link-underline::after {
+    content: '';
+    @apply absolute bottom-0 left-0 w-0 h-0.5 rounded-full transition-all duration-400;
+    background: linear-gradient(90deg, #8B5CF6, #A78BFA);
+  }
+  
+  .link-underline:hover::after {
+    @apply w-full;
+  }
+  
+  /* Smooth reveal animation helper */
+  .reveal-up {
+    @apply opacity-0 translate-y-4;
+    transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+  }
+  
+  .reveal-up.visible {
+    @apply opacity-100 translate-y-0;
+  }
+  
+  /* Stagger delay utilities */
+  .stagger-1 { transition-delay: 0.1s; }
+  .stagger-2 { transition-delay: 0.2s; }
+  .stagger-3 { transition-delay: 0.3s; }
+  .stagger-4 { transition-delay: 0.4s; }
+  .stagger-5 { transition-delay: 0.5s; }
+  
+  /* Breathing glow for CTAs - Lavender */
+  .glow-breathe {
+    animation: glowBreathe 3s ease-in-out infinite;
+  }
+  
+  @keyframes glowBreathe {
+    0%, 100% {
+      box-shadow: 0 4px 14px rgba(124, 58, 237, 0.25);
+    }
+    50% {
+      box-shadow: 0 6px 20px rgba(124, 58, 237, 0.4);
+    }
+  }
+  
+  /* Soft focus ring */
+  .focus-soft:focus {
+    @apply outline-none ring-2 ring-lavender-400/50 ring-offset-2 ring-offset-white;
+  }
+}
+
+/* Custom scrollbar - Subtle, professional */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-gray-100/50;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-gray-300/80 rounded-full;
+  transition: background-color 0.3s;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-gray-400;
+}
+
+/* Focus styles for accessibility */
+*:focus-visible {
+  @apply outline-none ring-2 ring-lavender-500/70 ring-offset-2;
+}
+
+/* Reduced motion - Respect user preferences */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  body {
+    @apply bg-white text-black;
+  }
+  
+  * {
+    border-width: 2px !important;
+  }
+}
+
+/* Print styles */
+@media print {
+  .floating-shape,
+  .no-print {
+    display: none !important;
+  }
+}
