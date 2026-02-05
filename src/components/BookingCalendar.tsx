@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion'
+
 import { Calendar, Clock, Shield, CheckCircle, ExternalLink, MessageCircle, Video, Phone } from 'lucide-react'
 
 // Cal.com username - update this with your actual Cal.com username once set up

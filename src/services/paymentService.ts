@@ -215,8 +215,8 @@ export const processStripePayment = async (
 
 // Mock payment processor (for testing when payment is disabled)
 export const processMockPayment = async (
-  session: SessionRecommendation,
-  customerInfo: { name?: string; email?: string; phone?: string }
+  _session: SessionRecommendation,
+  _customerInfo: { name?: string; email?: string; phone?: string }
 ): Promise<PaymentResult> => {
   const { MOCK_SETTINGS } = PAYMENT_CONFIG;
 

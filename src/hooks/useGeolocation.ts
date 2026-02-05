@@ -68,7 +68,7 @@ export const useGeolocation = (): GeolocationState => {
         
         // Handle different API response formats
         const country = data.country || data.country;
-        const countryCode = data.countryCode || (data as Record<string, string>).country_code || 'US';
+        const countryCode = data.countryCode || (data as unknown as Record<string, string>).country_code || 'US';
 
         // Cache the result
         localStorage.setItem(

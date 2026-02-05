@@ -1,12 +1,34 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { User, Heart, Users, ChevronDown, CheckCircle, Clock, Shield, ArrowRight, Sparkles } from 'lucide-react'
+import { User, Heart, Users, ChevronDown, CheckCircle, Clock, Shield, ArrowRight, Sparkles, Quote } from 'lucide-react'
 
-// Therapy-themed images for each category from Unsplash
+// Emotional therapy-themed images - showing real connection and healing moments
 const categoryImages = {
-  individuals: 'https://images.unsplash.com/photo-1499209974431-9dddcece7f88?w=600&q=80',
-  couples: 'https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?w=600&q=80',
-  families: 'https://images.unsplash.com/photo-1511895426328-dc8714191300?w=600&q=80',
+  // Person in moment of reflection/breakthrough - warm, hopeful
+  individuals: 'https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?w=600&q=80',
+  // Couple holding hands, reconnecting - intimate, warm lighting
+  couples: 'https://images.unsplash.com/photo-1494774157365-9e04c6720e47?w=600&q=80',
+  // Family embracing, united - warm, authentic moment
+  families: 'https://images.unsplash.com/photo-1609220136736-443140cffec6?w=600&q=80',
+}
+
+// Emotional story snippets for each category
+const emotionalStories = {
+  individuals: {
+    story: "I used to wake up every morning with a weight on my chest. The anxiety was so overwhelming that even simple tasks felt impossible. I thought I had to fight this battle alone...",
+    resolution: "After just a few sessions, I learned I wasn't broken—I just needed someone to help me see my own strength. Today, I finally feel like myself again.",
+    name: "Priya, 28"
+  },
+  couples: {
+    story: "We'd been married for 12 years, but somewhere along the way, we forgot how to talk to each other. Every conversation turned into an argument. We felt like strangers sharing a home...",
+    resolution: "Therapy didn't just save our marriage—it gave us a completely new one. We're more connected now than in our honeymoon phase.",
+    name: "Rahul & Meera"
+  },
+  families: {
+    story: "When our son turned 15, he stopped talking to us. Doors slammed. Silence at dinner. We were losing him and didn't know why...",
+    resolution: "Family therapy helped us understand each other's worlds. Now we have real conversations again. My son even said 'I love you' last week—unprompted.",
+    name: "The Sharma Family"
+  }
 }
 
 const WhoWeHelp = () => {
@@ -16,9 +38,11 @@ const WhoWeHelp = () => {
     {
       icon: User,
       title: 'Individuals',
+      subtitle: 'Your healing journey starts here',
       description: 'Personalized support for anxiety, depression, trauma, and life transitions',
       iconColor: 'text-lavender-600',
       image: categoryImages.individuals,
+      emotionalStory: emotionalStories.individuals,
       delay: 0.1,
       details: {
         overview: 'Our individual therapy provides a safe, confidential space where you can explore your thoughts, feelings, and behaviors with a trained professional who truly listens.',
@@ -47,9 +71,11 @@ const WhoWeHelp = () => {
     {
       icon: Heart,
       title: 'Couples',
+      subtitle: 'Reconnect with the one you love',
       description: 'Relationship counseling, communication, conflict resolution, and intimacy',
-      iconColor: 'text-lavender-600',
+      iconColor: 'text-rose-500',
       image: categoryImages.couples,
+      emotionalStory: emotionalStories.couples,
       delay: 0.2,
       details: {
         overview: 'Whether you\'re navigating a rough patch or wanting to strengthen your bond, our couples therapists provide expert guidance using proven relationship science.',
@@ -78,9 +104,11 @@ const WhoWeHelp = () => {
     {
       icon: Users,
       title: 'Families',
+      subtitle: 'Heal together, grow together',
       description: 'Family therapy and support for parenting challenges and transitions',
-      iconColor: 'text-lavender-600',
+      iconColor: 'text-emerald-500',
       image: categoryImages.families,
+      emotionalStory: emotionalStories.families,
       delay: 0.3,
       details: {
         overview: 'Family dynamics are complex. Our family therapists help improve communication, resolve conflicts, and strengthen bonds across generations.',
@@ -174,7 +202,7 @@ const WhoWeHelp = () => {
                           <h3 className="font-display text-2xl md:text-3xl font-semibold text-gray-800">
                             {card.title}
                           </h3>
-                          <p className="text-gray-600">{card.description}</p>
+                          <p className="text-lavender-600 font-medium">{card.subtitle}</p>
                         </div>
                       </div>
                       <button
@@ -185,19 +213,41 @@ const WhoWeHelp = () => {
                       </button>
                     </div>
 
+                    {/* Full Emotional Story Section */}
+                    <div className="mb-8 bg-gradient-to-r from-lavender-50 via-white to-green-50 rounded-2xl p-6 border border-lavender-100/50">
+                      <div className="flex items-center gap-2 mb-4">
+                        <Quote className="w-5 h-5 text-lavender-500" />
+                        <span className="text-sm font-semibold text-lavender-700">A Real Story of Healing</span>
+                      </div>
+                      <div className="grid md:grid-cols-2 gap-6">
+                        <div>
+                          <p className="text-gray-600 italic mb-3 leading-relaxed">
+                            "{card.emotionalStory.story}"
+                          </p>
+                        </div>
+                        <div className="bg-white/60 rounded-xl p-4 border border-green-100">
+                          <p className="text-sm font-medium text-green-700 mb-2">After working together:</p>
+                          <p className="text-gray-700 leading-relaxed">
+                            "{card.emotionalStory.resolution}"
+                          </p>
+                          <p className="mt-3 text-sm font-semibold text-gray-800">— {card.emotionalStory.name}</p>
+                        </div>
+                      </div>
+                    </div>
+
                     <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                       {/* Image Section */}
-                      <div className="relative rounded-2xl overflow-hidden h-64 md:h-full">
+                      <div className="relative rounded-2xl overflow-hidden h-64 md:h-full min-h-[280px]">
                         <img 
                           src={card.image} 
                           alt={`${card.title} therapy`}
                           className="w-full h-full object-cover"
                           loading="lazy"
                         />
-                        <div className="absolute inset-0 bg-gradient-to-t from-lavender-900/30 via-transparent to-transparent" />
+                        <div className="absolute inset-0 bg-gradient-to-t from-gray-900/60 via-transparent to-transparent" />
                         
                         {/* Testimonial Overlay */}
-                        <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/60 to-transparent">
+                        <div className="absolute bottom-0 left-0 right-0 p-4">
                           <p className="text-white text-sm italic mb-2">"{card.details.testimonial.quote}"</p>
                           <p className="text-white/80 text-xs">— {card.details.testimonial.author}</p>
                         </div>
@@ -275,55 +325,79 @@ const WhoWeHelp = () => {
                     </div>
                   </div>
                 ) : (
-                  // Collapsed View
+                  // Collapsed View - Emotional Story Card
                   <div 
-                    className="p-6 cursor-pointer"
+                    className="cursor-pointer"
                     onClick={() => handleToggle(card.title)}
                   >
-                    {/* Card Image */}
-                    <div className="relative rounded-2xl overflow-hidden mb-5 h-44">
+                    {/* Card Image with Emotional Overlay */}
+                    <div className="relative h-52 overflow-hidden">
                       <img 
                         src={card.image} 
                         alt={`${card.title} therapy support`}
-                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                         loading="lazy"
                       />
-                      <div className="absolute inset-0 bg-gradient-to-t from-lavender-900/30 via-transparent to-transparent" />
-                      <div className="absolute bottom-3 left-3 w-12 h-12 rounded-xl bg-white/90 backdrop-blur-sm flex items-center justify-center shadow-soft">
+                      {/* Gradient overlay for readability */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-gray-900/80 via-gray-900/40 to-transparent" />
+                      
+                      {/* Icon badge */}
+                      <div className="absolute top-4 left-4 w-12 h-12 rounded-xl bg-white/95 backdrop-blur-sm flex items-center justify-center shadow-lg">
                         <Icon className={`w-6 h-6 ${card.iconColor}`} />
+                      </div>
+                      
+                      {/* Story preview on image */}
+                      <div className="absolute bottom-0 left-0 right-0 p-5">
+                        <div className="flex items-start gap-2 mb-2">
+                          <Quote className="w-4 h-4 text-white/60 flex-shrink-0 mt-1" />
+                          <p className="text-white/90 text-sm italic leading-relaxed line-clamp-2">
+                            {card.emotionalStory.story.substring(0, 100)}...
+                          </p>
+                        </div>
+                        <p className="text-white/70 text-xs">— {card.emotionalStory.name}</p>
                       </div>
                     </div>
 
-                    <div className="flex items-start justify-between mb-3">
-                      <h3 className="font-display text-xl md:text-2xl font-semibold text-gray-800">
-                        {card.title}
-                      </h3>
-                      <motion.div
-                        className="w-8 h-8 rounded-full bg-lavender-100/60 flex items-center justify-center"
-                      >
-                        <ChevronDown className="w-5 h-5 text-lavender-600" />
-                      </motion.div>
-                    </div>
-                    
-                    <p className="text-gray-600 leading-relaxed mb-4">
-                      {card.description}
-                    </p>
-                    
-                    {/* Preview Tags */}
-                    <div className="flex flex-wrap gap-2 mb-4">
-                      {card.details.conditions.slice(0, 3).map((condition, idx) => (
-                        <span key={idx} className="px-2 py-1 rounded-full bg-lavender-100/60 text-lavender-700 text-xs">
-                          {condition}
-                        </span>
-                      ))}
-                      <span className="px-2 py-1 rounded-full bg-lavender-100/60 text-lavender-700 text-xs">
-                        +{card.details.conditions.length - 3} more
-                      </span>
-                    </div>
-                    
-                    <div className="flex items-center gap-2 text-lavender-600 font-medium text-sm">
-                      <span>Learn more about {card.title.toLowerCase()} therapy</span>
-                      <ArrowRight className="w-4 h-4" />
+                    {/* Content Area */}
+                    <div className="p-6">
+                      <div className="flex items-start justify-between mb-2">
+                        <div>
+                          <h3 className="font-display text-xl md:text-2xl font-semibold text-gray-800">
+                            {card.title}
+                          </h3>
+                          <p className="text-sm text-lavender-600 font-medium">{card.subtitle}</p>
+                        </div>
+                        <motion.div
+                          className="w-8 h-8 rounded-full bg-lavender-100/60 flex items-center justify-center group-hover:bg-lavender-200 transition-colors"
+                        >
+                          <ChevronDown className="w-5 h-5 text-lavender-600" />
+                        </motion.div>
+                      </div>
+                      
+                      <p className="text-gray-600 leading-relaxed mb-4 text-sm">
+                        {card.description}
+                      </p>
+                      
+                      {/* Emotional Resolution Preview */}
+                      <div className="bg-gradient-to-r from-lavender-50 to-green-50 rounded-xl p-4 mb-4 border border-lavender-100/50">
+                        <p className="text-sm text-gray-700 italic">
+                          "{card.emotionalStory.resolution.substring(0, 80)}..."
+                        </p>
+                      </div>
+                      
+                      {/* Preview Tags */}
+                      <div className="flex flex-wrap gap-2 mb-4">
+                        {card.details.conditions.slice(0, 3).map((condition, idx) => (
+                          <span key={idx} className="px-2.5 py-1 rounded-full bg-lavender-100/60 text-lavender-700 text-xs font-medium">
+                            {condition}
+                          </span>
+                        ))}
+                      </div>
+                      
+                      <div className="flex items-center gap-2 text-lavender-600 font-medium text-sm group-hover:text-lavender-700 transition-colors">
+                        <span>Read their full story & learn more</span>
+                        <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                      </div>
                     </div>
                   </div>
                 )}

@@ -1,20 +1,7 @@
-import { Mail, ArrowRight } from 'lucide-react'
-import { motion } from 'framer-motion'
-import { useState } from 'react'
+import { Mail } from 'lucide-react'
 import Logo from './Logo'
 
 const Footer = () => {
-  const [email, setEmail] = useState('')
-  const [subscribed, setSubscribed] = useState(false)
-
-  const handleNewsletterSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (email) {
-      setSubscribed(true)
-      setEmail('')
-    }
-  }
-
   const footerLinks = {
     quickLinks: [
       { href: '#mental-health', label: 'Mental Health' },

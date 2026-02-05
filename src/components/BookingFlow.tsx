@@ -8,7 +8,7 @@ import {
   CheckCircle,
   ChevronRight,
   ChevronLeft,
-  Clock,
+  // Clock,
   Loader2,
   AlertCircle,
   CalendarCheck,
@@ -19,7 +19,7 @@ import {
 import { SessionRecommendation } from '../data/chatbotFlow';
 import { useGeolocation, formatPrice } from '../hooks/useGeolocation';
 import { processPayment, isPaymentConfigured, isTestMode, getPaymentModeLabel } from '../services/paymentService';
-import { AVAILABILITY_CONFIG, CONSENT_CONFIG } from '../config/paymentConfig';
+import { AVAILABILITY_CONFIG } from '../config/paymentConfig';
 import ConsentModal from './ConsentModal';
 import { ConsentRecord } from '../data/consentForm';
 
@@ -43,7 +43,7 @@ interface CustomerInfo {
 }
 
 const BookingFlow = ({ session, isOpen, onClose }: BookingFlowProps) => {
-  const { isIndia, isLoading: geoLoading } = useGeolocation();
+  const { isIndia } = useGeolocation();
   
   // Flow state
   const [currentStep, setCurrentStep] = useState<BookingStep>('availability');
@@ -96,7 +96,7 @@ const BookingFlow = ({ session, isOpen, onClose }: BookingFlowProps) => {
     }
   }, [selectedDate]);
 
-  const loadAvailableSlots = async (date: Date) => {
+  const loadAvailableSlots = async (_date: Date) => {
     setIsProcessing(true);
     setError(null);
 

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Clock, CheckCircle, CreditCard, Loader2, AlertCircle, Globe } from 'lucide-react';
 import { SessionRecommendation } from '../data/chatbotFlow';
-import { useGeolocation, formatPrice, getCurrency } from '../hooks/useGeolocation';
+import { useGeolocation, formatPrice } from '../hooks/useGeolocation';
 import { processPayment, isPaymentConfigured, PaymentResult } from '../services/paymentService';
 
 interface PaymentModalProps {
@@ -77,8 +77,6 @@ const PaymentModal = ({ session, isOpen, onClose }: PaymentModalProps) => {
   };
 
   const paymentConfigured = isPaymentConfigured(isIndia);
-  const currency = getCurrency(isIndia);
-  const price = isIndia ? session.priceINR : session.priceUSD;
 
   return (
     <AnimatePresence>
