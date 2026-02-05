@@ -39,7 +39,7 @@ const QuickAccess = () => {
   ]
 
   return (
-    <section className="py-28 md:py-36 relative overflow-hidden px-4 sm:px-6 lg:px-8">
+    <section className="py-16 md:py-20 lg:py-24 relative overflow-hidden px-4 sm:px-6 lg:px-8">
       {/* Background */}
       <div className="absolute inset-0 section-gradient-cream" />
       

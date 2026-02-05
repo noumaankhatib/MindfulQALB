@@ -8,17 +8,19 @@ import QuickAccess from './components/QuickAccess'
 import MentalHealth from './components/MentalHealth'
 import CouplesRelationships from './components/CouplesRelationships'
 import FamilyCounseling from './components/FamilyCounseling'
-import IslamicPsychology from './components/IslamicPsychology'
+import HolisticWellness from './components/HolisticWellness'
 import SelfHelpTools from './components/SelfHelpTools'
-import TherapySupport from './components/TherapySupport'
+// import TherapySupport from './components/TherapySupport'
 import SupportGroups from './components/SupportGroups'
 import AboutTherapist from './components/AboutTherapist'
+import TherapeuticApproach from './components/TherapeuticApproach'
 import Programs from './components/Programs'
-import Testimonials from './components/Testimonials'
+// import Testimonials from './components/Testimonials'
 import GetHelp from './components/GetHelp'
 import AboutEthics from './components/AboutEthics'
 import Footer from './components/Footer'
 import FAQ from './components/FAQ'
+import Chatbot from './components/Chatbot'
 
 function App() {
   useEffect(() => {
@@ -32,7 +34,7 @@ function App() {
           "name": "What types of therapy do you offer?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "We offer individual therapy, couples therapy, support groups, and self-help tools. All services are evidence-based and provided by licensed therapists."
+            "text": "I offer individual therapy, couples therapy, support groups, and self-help tools. All services are evidence-based and provided by a licensed psychologist."
           }
         },
         {
@@ -40,7 +42,7 @@ function App() {
           "name": "Is online therapy effective?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "Yes, research shows that online therapy can be as effective as in-person therapy for many conditions. We use secure, HIPAA-compliant platforms to ensure privacy and confidentiality."
+            "text": "Yes, research shows that online therapy can be as effective as in-person therapy for many conditions. I use secure, compliant platforms to ensure privacy and confidentiality."
           }
         },
         {
@@ -48,7 +50,7 @@ function App() {
           "name": "How do I get started?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "You can request a session through our booking form, or use our quick access buttons to find immediate support. We'll match you with a therapist who specializes in your needs."
+            "text": "You can book a session directly through the calendar on my website. I offer a free initial consultation to understand your needs and see if we're a good fit."
           }
         },
         {
@@ -56,7 +58,7 @@ function App() {
           "name": "What is your approach to couples therapy?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "We use evidence-based approaches including EFT (Emotionally Focused Therapy), Gottman Method, and trauma-informed care. Our therapists are trained to work with all relationship types and orientations."
+            "text": "I use evidence-based approaches including EFT (Emotionally Focused Therapy), Gottman Method, and trauma-informed care. I am trained to work with all relationship types and orientations."
           }
         },
         {
@@ -64,7 +66,7 @@ function App() {
           "name": "Is my information confidential?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "Absolutely. We use end-to-end encryption, HIPAA-compliant platforms, and strict confidentiality protocols. Your privacy is our top priority."
+            "text": "Absolutely. I use secure platforms and strict confidentiality protocols. Your privacy is my top priority."
           }
         }
       ]
@@ -93,6 +95,8 @@ function App() {
       <Navigation />
       <main id="main-content">
         <Hero />
+        <AboutTherapist />
+        <TherapeuticApproach />
         <WhoWeHelp />
         <WhatWeOffer />
         <TrustSignals />
@@ -100,18 +104,20 @@ function App() {
         <MentalHealth />
         <CouplesRelationships />
         <FamilyCounseling />
-        <IslamicPsychology />
+        <HolisticWellness />
         <SelfHelpTools />
-        <TherapySupport />
+        {/* <TherapySupport /> */}
         <SupportGroups />
-        <AboutTherapist />
         <Programs />
-        <Testimonials />
+        {/* <Testimonials /> */}
         <GetHelp />
         <AboutEthics />
         <FAQ />
       </main>
       <Footer />
+      
+      {/* Floating Chatbot */}
+      <Chatbot />
     </div>
   )
 }

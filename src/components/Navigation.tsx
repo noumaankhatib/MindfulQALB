@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
-import { Heart, ChevronDown, Menu, X } from 'lucide-react'
+import { ChevronDown, Menu, X } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
+import Logo from './Logo'
 
 // Navigation data structure with dropdowns
 interface DropdownItem {
@@ -25,7 +26,7 @@ const navItems: NavItem[] = [
       { label: 'Couples & Relationships', href: '#couples', description: 'Strengthen your bond', icon: '💕' },
       { label: 'Individual Therapy', href: '#therapy', description: 'Personal growth journey', icon: '🌱' },
       { label: 'Family Counseling', href: '#family', description: 'Heal together as a family', icon: '👨‍👩‍👧' },
-      { label: 'Islamic Psychology', href: '#islamic', description: 'Faith-integrated approach', icon: '🌙' },
+      { label: 'Holistic Wellness', href: '#holistic', description: 'Mind, body & spirit healing', icon: '🌿' },
       { label: 'Online Consultation', href: '#get-help', description: 'Therapy from anywhere', icon: '💻' },
     ],
   },
@@ -53,11 +54,11 @@ const navItems: NavItem[] = [
   {
     label: 'About',
     dropdown: [
-      { label: 'Our Approach', href: '#about', description: 'Evidence-based care', icon: '🎯' },
+      { label: 'My Approach', href: '#about', description: 'Evidence-based care', icon: '🎯' },
       { label: 'Meet Aqsa Khatib', href: '#about', description: 'Your therapist', icon: '👩‍⚕️' },
       { label: 'Ethics & Privacy', href: '#ethics', description: 'Your trust matters', icon: '🔒' },
       { label: 'FAQs', href: '#faq', description: 'Common questions', icon: '❓' },
-      { label: 'Contact Us', href: '#get-help', description: 'Get in touch', icon: '📧' },
+      { label: 'Contact Me', href: '#get-help', description: 'Get in touch', icon: '📧' },
     ],
   },
 ]
@@ -124,19 +125,14 @@ const Navigation = () => {
       }`}
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-20">
+        <div className="flex items-center justify-between h-16 lg:h-18">
           {/* Logo */}
           <a 
             href="#home" 
-            className="flex items-center gap-3 group"
+            className="flex items-center group"
             onClick={() => closeMobileMenu()}
           >
-            <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-lavender-600 to-lavender-700 flex items-center justify-center shadow-lg shadow-lavender-500/25 group-hover:shadow-lavender-500/40 transition-all duration-300">
-              <Heart className="w-6 h-6 text-white" fill="white" />
-            </div>
-            <span className="font-body text-2xl font-semibold text-gray-800">
-              <span className="bg-gradient-to-r from-lavender-700 to-lavender-600 bg-clip-text text-transparent">Mindful</span>QALB
-            </span>
+            <Logo size="md" showText={true} />
           </a>
 
           {/* Desktop Navigation */}

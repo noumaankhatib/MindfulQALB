@@ -41,7 +41,7 @@ const TrustSignals = () => {
   }
 
   return (
-    <section className="py-28 md:py-36 relative overflow-hidden px-4 sm:px-6 lg:px-8">
+    <section className="py-16 md:py-20 lg:py-24 relative overflow-hidden px-4 sm:px-6 lg:px-8">
       {/* Subtle background */}
       <div className="absolute inset-0 bg-gradient-to-b from-white via-lavender-50/20 to-white" />
       
@@ -51,7 +51,7 @@ const TrustSignals = () => {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: "-100px" }}
           transition={{ duration: 0.8, ease: [0.25, 0.1, 0.25, 1] }}
-          className="text-center mb-20"
+          className="text-center mb-12"
         >
           <h2 className="font-display text-3xl md:text-4xl lg:text-5xl font-semibold text-gray-800 mb-5">
             Why Trust Us

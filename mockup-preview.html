@@ -1,0 +1,1679 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MindfulQALB - Aqsa Khatib | Counseling Psychologist</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --lavender-50: #f5f3ff;
+            --lavender-100: #ede9fe;
+            --lavender-200: #ddd6fe;
+            --lavender-300: #c4b5fd;
+            --lavender-400: #a78bfa;
+            --lavender-500: #8b5cf6;
+            --lavender-600: #7c3aed;
+            --lavender-700: #6d28d9;
+            --cream-50: #fefdfb;
+            --accent-100: #fef3c7;
+            --accent-500: #f59e0b;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            color: #374151;
+            line-height: 1.6;
+            background: #fff;
+        }
+        
+        .display-font {
+            font-family: 'Playfair Display', serif;
+        }
+        
+        /* Navigation */
+        .nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: rgba(255,255,255,0.95);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--lavender-100);
+            z-index: 100;
+            padding: 0 2rem;
+        }
+        
+        .nav-inner {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 80px;
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-decoration: none;
+        }
+        
+        .logo-icon {
+            width: 44px;
+            height: 44px;
+            background: linear-gradient(135deg, var(--lavender-600), var(--lavender-700));
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 20px;
+        }
+        
+        .logo-text {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #1f2937;
+        }
+        
+        .logo-text span {
+            background: linear-gradient(135deg, var(--lavender-700), var(--lavender-600));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .nav-links {
+            display: flex;
+            gap: 8px;
+            list-style: none;
+        }
+        
+        .nav-links a {
+            padding: 10px 16px;
+            text-decoration: none;
+            color: #374151;
+            font-weight: 500;
+            font-size: 14px;
+            border-radius: 10px;
+            transition: all 0.2s;
+        }
+        
+        .nav-links a:hover {
+            background: var(--lavender-50);
+            color: var(--lavender-700);
+        }
+        
+        .nav-ctas {
+            display: flex;
+            gap: 12px;
+        }
+        
+        .btn-secondary {
+            padding: 10px 20px;
+            border: 2px solid var(--lavender-200);
+            background: white;
+            color: var(--lavender-700);
+            font-weight: 600;
+            font-size: 14px;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .btn-primary {
+            padding: 12px 24px;
+            background: linear-gradient(135deg, var(--lavender-600), var(--lavender-700));
+            color: white;
+            font-weight: 600;
+            font-size: 14px;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 4px 14px rgba(124, 58, 237, 0.3);
+            transition: all 0.2s;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(124, 58, 237, 0.4);
+        }
+        
+        /* Hero Section */
+        .hero {
+            min-height: 100vh;
+            padding: 120px 2rem 80px;
+            background: linear-gradient(135deg, var(--lavender-50) 0%, white 50%, var(--lavender-100) 100%);
+            display: flex;
+            align-items: center;
+        }
+        
+        .hero-inner {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 60px;
+            align-items: center;
+        }
+        
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            background: white;
+            border: 1px solid var(--lavender-200);
+            border-radius: 50px;
+            font-size: 13px;
+            color: var(--lavender-700);
+            font-weight: 500;
+            margin-bottom: 24px;
+        }
+        
+        .hero h1 {
+            font-family: 'Playfair Display', serif;
+            font-size: 3rem;
+            font-weight: 600;
+            color: #1f2937;
+            line-height: 1.2;
+            margin-bottom: 20px;
+        }
+        
+        .hero h1 .gradient {
+            background: linear-gradient(135deg, var(--lavender-700), var(--lavender-500));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .hero p {
+            font-size: 1.15rem;
+            color: #6b7280;
+            margin-bottom: 32px;
+            max-width: 500px;
+        }
+        
+        .hero-ctas {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 40px;
+        }
+        
+        .trust-badges {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        
+        .trust-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 14px;
+            background: white;
+            border: 1px solid var(--lavender-100);
+            border-radius: 50px;
+            font-size: 13px;
+            color: #374151;
+            font-weight: 500;
+        }
+        
+        .hero-image {
+            position: relative;
+        }
+        
+        .hero-image-main {
+            width: 100%;
+            aspect-ratio: 4/5;
+            border-radius: 32px;
+            box-shadow: 0 25px 50px rgba(124, 58, 237, 0.15);
+            overflow: hidden;
+        }
+        
+        .hero-image-main img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .floating-badge {
+            position: absolute;
+            background: white;
+            padding: 16px;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            border: 1px solid var(--lavender-100);
+        }
+        
+        .floating-badge.experience {
+            bottom: -20px;
+            right: -20px;
+        }
+        
+        .floating-badge.rating {
+            top: 40px;
+            right: -30px;
+        }
+        
+        .floating-badge .number {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: var(--lavender-600);
+        }
+        
+        .floating-badge .label {
+            font-size: 12px;
+            color: #6b7280;
+        }
+        
+        .stars {
+            color: #fbbf24;
+            font-size: 14px;
+        }
+        
+        /* Section Styles */
+        section {
+            padding: 100px 2rem;
+        }
+        
+        .section-inner {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .section-header {
+            text-align: center;
+            margin-bottom: 60px;
+        }
+        
+        .section-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            background: var(--lavender-100);
+            border: 1px solid var(--lavender-200);
+            border-radius: 50px;
+            font-size: 13px;
+            color: var(--lavender-700);
+            font-weight: 500;
+            margin-bottom: 16px;
+        }
+        
+        .section-header h2 {
+            font-family: 'Playfair Display', serif;
+            font-size: 2.5rem;
+            font-weight: 600;
+            color: #1f2937;
+            margin-bottom: 12px;
+        }
+        
+        .section-divider {
+            width: 60px;
+            height: 3px;
+            background: linear-gradient(90deg, var(--lavender-400), var(--lavender-600));
+            border-radius: 2px;
+            margin: 0 auto 16px;
+        }
+        
+        .section-header p {
+            font-size: 1.125rem;
+            color: #6b7280;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        
+        /* About Section */
+        .about {
+            background: var(--lavender-50);
+        }
+        
+        .about-grid {
+            display: grid;
+            grid-template-columns: 1fr 1.2fr;
+            gap: 60px;
+            align-items: start;
+        }
+        
+        .about-image {
+            border-radius: 24px;
+            overflow: hidden;
+            box-shadow: 0 20px 40px rgba(124, 58, 237, 0.15);
+        }
+        
+        .about-image img {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        
+        .about-content h3 {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.75rem;
+            color: #1f2937;
+            margin-bottom: 20px;
+        }
+        
+        .about-content p {
+            color: #4b5563;
+            margin-bottom: 16px;
+        }
+        
+        .quote-box {
+            background: white;
+            border-left: 4px solid var(--lavender-500);
+            padding: 24px;
+            border-radius: 0 16px 16px 0;
+            margin: 24px 0;
+        }
+        
+        .quote-box p {
+            font-style: italic;
+            color: #374151;
+            font-size: 1.1rem;
+            margin-bottom: 8px;
+        }
+        
+        .quote-box .author {
+            color: var(--lavender-600);
+            font-weight: 600;
+            font-style: normal;
+        }
+        
+        .approaches {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 24px;
+        }
+        
+        .approach-tag {
+            padding: 8px 16px;
+            background: white;
+            border: 1px solid var(--lavender-200);
+            border-radius: 50px;
+            font-size: 13px;
+            color: #374151;
+            font-weight: 500;
+        }
+        
+        /* Fee Structure */
+        .fee-section {
+            background: white;
+        }
+        
+        .fee-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+        
+        .fee-card {
+            background: linear-gradient(135deg, var(--lavender-50), white);
+            border: 1px solid var(--lavender-100);
+            border-radius: 20px;
+            padding: 28px;
+            text-align: center;
+            transition: all 0.3s;
+        }
+        
+        .fee-card:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 15px 35px rgba(124, 58, 237, 0.12);
+        }
+        
+        .fee-card.featured {
+            background: linear-gradient(135deg, var(--lavender-600), var(--lavender-700));
+            color: white;
+            transform: scale(1.05);
+        }
+        
+        .fee-card.featured .fee-type,
+        .fee-card.featured .fee-duration {
+            color: rgba(255,255,255,0.9);
+        }
+        
+        .fee-card.featured .fee-price {
+            color: white;
+        }
+        
+        .fee-icon {
+            width: 50px;
+            height: 50px;
+            background: var(--lavender-100);
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            margin: 0 auto 16px;
+        }
+        
+        .fee-card.featured .fee-icon {
+            background: rgba(255,255,255,0.2);
+        }
+        
+        .fee-type {
+            font-weight: 600;
+            color: #1f2937;
+            margin-bottom: 6px;
+            font-size: 1rem;
+        }
+        
+        .fee-duration {
+            font-size: 13px;
+            color: #6b7280;
+            margin-bottom: 16px;
+        }
+        
+        .fee-price {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--lavender-600);
+        }
+        
+        .fee-price span {
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        .fee-note {
+            text-align: center;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        
+        .fee-note p {
+            color: #6b7280;
+            font-size: 14px;
+            margin-bottom: 12px;
+        }
+        
+        .free-call-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+            font-weight: 600;
+            border-radius: 50px;
+            font-size: 15px;
+        }
+        
+        /* Services Section */
+        .services-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 24px;
+        }
+        
+        .service-card {
+            background: white;
+            border: 1px solid var(--lavender-100);
+            border-radius: 24px;
+            padding: 32px;
+            transition: all 0.3s;
+        }
+        
+        .service-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 40px rgba(124, 58, 237, 0.1);
+        }
+        
+        .service-icon {
+            width: 56px;
+            height: 56px;
+            background: var(--lavender-100);
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            margin-bottom: 20px;
+        }
+        
+        .service-card h3 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #1f2937;
+            margin-bottom: 12px;
+        }
+        
+        .service-card p {
+            color: #6b7280;
+            font-size: 14px;
+        }
+        
+        /* Testimonials */
+        .testimonials {
+            background: linear-gradient(135deg, var(--lavender-50), white);
+        }
+        
+        .testimonials-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 24px;
+        }
+        
+        .testimonial-card {
+            background: white;
+            border: 1px solid var(--lavender-100);
+            border-radius: 24px;
+            padding: 32px;
+            position: relative;
+        }
+        
+        .testimonial-card.full-width {
+            grid-column: span 2;
+        }
+        
+        .testimonial-card::before {
+            content: '"';
+            position: absolute;
+            top: 16px;
+            left: 24px;
+            font-size: 80px;
+            color: var(--lavender-200);
+            font-family: Georgia, serif;
+            line-height: 1;
+        }
+        
+        .testimonial-card .stars {
+            margin-bottom: 16px;
+        }
+        
+        .testimonial-card p {
+            color: #374151;
+            font-style: italic;
+            margin-bottom: 20px;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .testimonial-author {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .author-avatar {
+            width: 44px;
+            height: 44px;
+            background: var(--lavender-100);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            color: var(--lavender-600);
+        }
+        
+        .author-info .name {
+            font-weight: 600;
+            color: #1f2937;
+        }
+        
+        .author-info .role {
+            font-size: 13px;
+            color: #6b7280;
+        }
+        
+        /* Feedback Screenshots */
+        .feedback-screenshots {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            margin-top: 40px;
+        }
+        
+        .feedback-screenshot {
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+            border: 1px solid var(--lavender-100);
+        }
+        
+        .feedback-screenshot img {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        
+        /* Screening Test */
+        .screening {
+            background: white;
+        }
+        
+        .screening-box {
+            max-width: 800px;
+            margin: 0 auto;
+            background: var(--lavender-50);
+            border: 1px solid var(--lavender-200);
+            border-radius: 24px;
+            padding: 40px;
+        }
+        
+        .screening-box h3 {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.5rem;
+            color: #1f2937;
+            margin-bottom: 8px;
+        }
+        
+        .screening-box > p {
+            color: #6b7280;
+            margin-bottom: 24px;
+        }
+        
+        .symptoms-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+        
+        .symptom-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            background: white;
+            border: 1px solid var(--lavender-100);
+            border-radius: 12px;
+            font-size: 14px;
+            color: #374151;
+        }
+        
+        .symptom-item input {
+            width: 18px;
+            height: 18px;
+            accent-color: var(--lavender-600);
+        }
+        
+        .screening-disclaimer {
+            background: white;
+            border-left: 4px solid var(--accent-500);
+            padding: 16px;
+            border-radius: 0 12px 12px 0;
+            font-size: 13px;
+            color: #6b7280;
+        }
+        
+        /* Media Mentions */
+        .media {
+            background: var(--lavender-50);
+        }
+        
+        .media-grid {
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            flex-wrap: wrap;
+        }
+        
+        .media-item {
+            background: white;
+            padding: 24px 40px;
+            border-radius: 16px;
+            border: 1px solid var(--lavender-100);
+            text-align: center;
+            min-width: 200px;
+            transition: all 0.3s;
+        }
+        
+        .media-item:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 30px rgba(124, 58, 237, 0.1);
+        }
+        
+        .media-item .icon {
+            font-size: 32px;
+            margin-bottom: 12px;
+        }
+        
+        .media-item .name {
+            font-weight: 600;
+            color: #1f2937;
+        }
+        
+        .media-item .desc {
+            font-size: 13px;
+            color: #6b7280;
+        }
+        
+        /* FAQ Section */
+        .faq-list {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .faq-item {
+            background: white;
+            border: 1px solid var(--lavender-100);
+            border-radius: 16px;
+            margin-bottom: 12px;
+            overflow: hidden;
+        }
+        
+        .faq-question {
+            padding: 20px 24px;
+            font-weight: 600;
+            color: #1f2937;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+        }
+        
+        .faq-question::after {
+            content: '+';
+            font-size: 24px;
+            color: var(--lavender-500);
+        }
+        
+        .faq-answer {
+            padding: 0 24px 20px;
+            color: #6b7280;
+            display: none;
+        }
+        
+        .faq-item.open .faq-answer {
+            display: block;
+        }
+        
+        .faq-item.open .faq-question::after {
+            content: '−';
+        }
+        
+        /* Blog Preview */
+        .blog-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 24px;
+        }
+        
+        .blog-card {
+            background: white;
+            border: 1px solid var(--lavender-100);
+            border-radius: 20px;
+            overflow: hidden;
+        }
+        
+        .blog-image {
+            height: 180px;
+            background: linear-gradient(135deg, var(--lavender-100), var(--lavender-200));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--lavender-400);
+            font-size: 14px;
+        }
+        
+        .blog-content {
+            padding: 24px;
+        }
+        
+        .blog-tag {
+            display: inline-block;
+            padding: 4px 12px;
+            background: var(--lavender-100);
+            color: var(--lavender-700);
+            font-size: 12px;
+            font-weight: 500;
+            border-radius: 50px;
+            margin-bottom: 12px;
+        }
+        
+        .blog-card h3 {
+            font-size: 1.1rem;
+            color: #1f2937;
+            margin-bottom: 8px;
+        }
+        
+        .blog-card p {
+            font-size: 14px;
+            color: #6b7280;
+        }
+        
+        /* Contact/Book Section */
+        .contact {
+            background: linear-gradient(135deg, var(--cream-50), var(--lavender-50));
+        }
+        
+        .contact-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+        }
+        
+        .contact-form {
+            background: white;
+            border-radius: 24px;
+            padding: 40px;
+            border: 1px solid var(--lavender-100);
+        }
+        
+        .contact-form h3 {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.5rem;
+            color: #1f2937;
+            margin-bottom: 24px;
+        }
+        
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+        
+        .form-group {
+            margin-bottom: 16px;
+        }
+        
+        .form-group label {
+            display: block;
+            font-size: 14px;
+            font-weight: 500;
+            color: #374151;
+            margin-bottom: 8px;
+        }
+        
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px 16px;
+            border: 1px solid var(--lavender-200);
+            border-radius: 12px;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+        
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: var(--lavender-400);
+            box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
+        }
+        
+        .crisis-box {
+            background: var(--lavender-50);
+            border-radius: 24px;
+            padding: 40px;
+            border: 1px solid var(--lavender-100);
+        }
+        
+        .crisis-box h3 {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.5rem;
+            color: #1f2937;
+            margin-bottom: 24px;
+        }
+        
+        .crisis-item {
+            display: flex;
+            gap: 16px;
+            padding: 16px;
+            background: white;
+            border-radius: 16px;
+            margin-bottom: 12px;
+        }
+        
+        .crisis-icon {
+            width: 44px;
+            height: 44px;
+            background: var(--lavender-100);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+        }
+        
+        .crisis-info .name {
+            font-weight: 600;
+            color: #1f2937;
+        }
+        
+        .crisis-info .number {
+            color: var(--lavender-600);
+            font-weight: 600;
+        }
+        
+        .crisis-info .avail {
+            font-size: 13px;
+            color: #6b7280;
+        }
+        
+        /* Footer */
+        footer {
+            background: #1f2937;
+            color: white;
+            padding: 60px 2rem 30px;
+        }
+        
+        .footer-inner {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .footer-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr 1fr;
+            gap: 40px;
+            margin-bottom: 40px;
+        }
+        
+        .footer-brand .logo-text {
+            color: white;
+            margin-bottom: 16px;
+        }
+        
+        .footer-brand p {
+            color: #9ca3af;
+            font-size: 14px;
+        }
+        
+        .footer-links h4 {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: white;
+        }
+        
+        .footer-links ul {
+            list-style: none;
+        }
+        
+        .footer-links a {
+            color: #9ca3af;
+            text-decoration: none;
+            font-size: 14px;
+            display: block;
+            padding: 4px 0;
+            transition: color 0.2s;
+        }
+        
+        .footer-links a:hover {
+            color: white;
+        }
+        
+        .footer-bottom {
+            border-top: 1px solid #374151;
+            padding-top: 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 13px;
+            color: #9ca3af;
+        }
+        
+        .social-links {
+            display: flex;
+            gap: 12px;
+        }
+        
+        .social-links a {
+            width: 36px;
+            height: 36px;
+            background: #374151;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            text-decoration: none;
+            transition: background 0.2s;
+        }
+        
+        .social-links a:hover {
+            background: var(--lavender-600);
+        }
+        
+        /* Image Gallery Section */
+        .gallery-images {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            flex-wrap: wrap;
+            margin-top: 40px;
+        }
+        
+        .gallery-img {
+            width: 200px;
+            height: 200px;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+        }
+        
+        .gallery-img img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .hero-inner,
+            .about-grid,
+            .contact-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .fee-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .services-grid,
+            .testimonials-grid,
+            .blog-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .testimonial-card.full-width {
+                grid-column: span 1;
+            }
+            
+            .footer-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .feedback-screenshots {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .nav-links {
+                display: none;
+            }
+            
+            .hero h1 {
+                font-size: 2.25rem;
+            }
+            
+            .fee-grid,
+            .services-grid,
+            .testimonials-grid,
+            .blog-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .fee-card.featured {
+                transform: scale(1);
+            }
+            
+            .symptoms-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+            
+            .footer-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .feedback-screenshots {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="nav">
+        <div class="nav-inner">
+            <a href="#" class="logo">
+                <div class="logo-icon">♡</div>
+                <div class="logo-text"><span>Mindful</span>-Qalb</div>
+            </a>
+            <ul class="nav-links">
+                <li><a href="#home">Home</a></li>
+                <li><a href="#about">About Me</a></li>
+                <li><a href="#services">Services</a></li>
+                <li><a href="#fees">Fees</a></li>
+                <li><a href="#faq">FAQs</a></li>
+                <li><a href="#contact">Contact</a></li>
+            </ul>
+            <div class="nav-ctas">
+                <button class="btn-secondary">Free 10-Min Call</button>
+                <button class="btn-primary">Book Your Session</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero" id="home">
+        <div class="hero-inner">
+            <div class="hero-content">
+                <div class="hero-badge">✨ Compassionate Care | Confidential Support | Personalized Sessions</div>
+                <h1>
+                    Support for your mind,<br>
+                    <span class="gradient">your relationships,</span><br>
+                    and your life.
+                </h1>
+                <p>Evidence-based, confidential mental health care for individuals and couples—private, respectful, and truly human.</p>
+                <div class="hero-ctas">
+                    <button class="btn-primary">Book Your Session →</button>
+                    <button class="btn-secondary">Free 10-Minute Intro Call</button>
+                </div>
+                <div class="trust-badges">
+                    <div class="trust-badge">💜 Evidence-Based</div>
+                    <div class="trust-badge">🔒 Confidential</div>
+                    <div class="trust-badge">🎓 3,000+ Hours Experience</div>
+                </div>
+            </div>
+            <div class="hero-image">
+                <div class="hero-image-main">
+                    <img src="documentAndImages/Additional images website/IMG_2474.jpg" alt="Aqsa Khatib - Counseling Psychologist">
+                </div>
+                <div class="floating-badge experience">
+                    <div class="number">3,000+</div>
+                    <div class="label">Hours Experience</div>
+                </div>
+                <div class="floating-badge rating">
+                    <div class="stars">★★★★★</div>
+                    <div class="label">Trusted by Clients</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- About Section -->
+    <section class="about" id="about">
+        <div class="section-inner">
+            <div class="section-header">
+                <div class="section-badge">💜 Meet Your Therapist</div>
+                <h2 class="display-font">Aqsa Khatib</h2>
+                <div class="section-divider"></div>
+                <p>Counseling Psychologist & Therapist</p>
+            </div>
+            <div class="about-grid">
+                <div class="about-image">
+                    <img src="documentAndImages/Additional images website/IMG_2474.jpg" alt="Aqsa Khatib">
+                </div>
+                <div class="about-content">
+                    <h3>Warm regards & Greetings,</h3>
+                    <p>I'm Aqsa Khatib, a Counseling Psychologist with <strong>3,000+ hours</strong> of hands-on clinical experience, supporting individuals and couples through emotional, relational, and life challenges—at different stages of their personal journeys.</p>
+                    <p>I offer individual counseling, couple therapy, and workshops, working with concerns such as anxiety, stress, relationship difficulties, self-esteem, emotional regulation, and major life transitions.</p>
+                    <p>Each session is thoughtfully adapted to your needs, goals, and pace—there is no one-size-fits-all here.</p>
+                    <p>Whether you're feeling stuck, overwhelmed, or simply seeking deeper self-understanding and growth, therapy is offered as a safe, respectful, and confidential space—where you can explore, heal, and move forward with greater clarity and resilience.</p>
+                    
+                    <div class="quote-box">
+                        <p>"Within each of us lies the quiet strength to fulfil our potential—and often, it awakens with the gentle assurance of another soul."</p>
+                        <span class="author">— Aqsa Khatib</span>
+                    </div>
+                    
+                    <h4 style="margin-top: 24px; margin-bottom: 12px; color: #1f2937;">My Approach:</h4>
+                    <p style="margin-bottom: 16px;">My approach is warm, eclectic, collaborative, and tailored to you. I work with science-backed, evidence-based therapeutic approaches:</p>
+                    <div class="approaches">
+                        <span class="approach-tag">CBT</span>
+                        <span class="approach-tag">ACT</span>
+                        <span class="approach-tag">Gestalt Therapy</span>
+                        <span class="approach-tag">Solution-Focused</span>
+                        <span class="approach-tag">NLP</span>
+                    </div>
+                    
+                    <button class="btn-primary" style="margin-top: 32px;">Book a Session with Aqsa →</button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Fee Structure Section -->
+    <section class="fee-section" id="fees">
+        <div class="section-inner">
+            <div class="section-header">
+                <div class="section-badge">💰 Transparent Pricing</div>
+                <h2 class="display-font">Session Fee Structure</h2>
+                <div class="section-divider"></div>
+                <p>Mental Health Support Tailored for You</p>
+            </div>
+            <div class="fee-grid">
+                <div class="fee-card">
+                    <div class="fee-icon">💬</div>
+                    <div class="fee-type">Chat Session</div>
+                    <div class="fee-duration">45 minutes</div>
+                    <div class="fee-price">₹500</div>
+                </div>
+                <div class="fee-card">
+                    <div class="fee-icon">🎧</div>
+                    <div class="fee-type">Audio Consultation</div>
+                    <div class="fee-duration">50 minutes</div>
+                    <div class="fee-price">₹800</div>
+                </div>
+                <div class="fee-card featured">
+                    <div class="fee-icon">📹</div>
+                    <div class="fee-type">Video Consultation</div>
+                    <div class="fee-duration">60 minutes</div>
+                    <div class="fee-price">₹1,200</div>
+                </div>
+                <div class="fee-card">
+                    <div class="fee-icon">💕</div>
+                    <div class="fee-type">Couple Therapy</div>
+                    <div class="fee-duration">90 minutes</div>
+                    <div class="fee-price">₹1,999</div>
+                </div>
+            </div>
+            <div class="fee-note">
+                <p><em>Note: Chat consultation is not an ideal form of therapy - it is only recommended for discussing minor concerns or if hesitant about audio or video consultation.</em></p>
+                <div class="free-call-badge">
+                    📞 A 10-minute free introductory call is available to clear any queries before booking
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Services Section -->
+    <section class="services" id="services">
+        <div class="section-inner">
+            <div class="section-header">
+                <div class="section-badge">🌱 What We Offer</div>
+                <h2 class="display-font">Services at Mindful-Qalb</h2>
+                <div class="section-divider"></div>
+            </div>
+            <div class="services-grid">
+                <div class="service-card">
+                    <div class="service-icon">🧠</div>
+                    <h3>Individual Counseling</h3>
+                    <p>Work through stress, anxiety, self-esteem, grief & more in a safe, confidential space.</p>
+                </div>
+                <div class="service-card">
+                    <div class="service-icon">💕</div>
+                    <h3>Relationship & Pre-marital Counseling</h3>
+                    <p>Strengthen your relationship through better communication, conflict resolution, and deeper understanding.</p>
+                </div>
+                <div class="service-card">
+                    <div class="service-icon">💪</div>
+                    <h3>Trauma-Informed Support</h3>
+                    <p>Gentle, evidence-based approaches to help you process and heal from difficult experiences.</p>
+                </div>
+                <div class="service-card">
+                    <div class="service-icon">🌿</div>
+                    <h3>Emotional Wellness & Growth Plans</h3>
+                    <p>Structured guidance to help you break patterns, build confidence, and create lasting change.</p>
+                </div>
+                <div class="service-card">
+                    <div class="service-icon">📋</div>
+                    <h3>Therapy Worksheets & Resources</h3>
+                    <p>After-session resources and practical exercises to support your journey between sessions.</p>
+                </div>
+                <div class="service-card">
+                    <div class="service-icon">🏠</div>
+                    <h3>Safe Space for Expression & Healing</h3>
+                    <p>A judgment-free zone where you can be yourself and explore your thoughts and feelings.</p>
+                </div>
+            </div>
+            
+            <!-- Gallery Images -->
+            <div class="gallery-images">
+                <div class="gallery-img">
+                    <img src="documentAndImages/Additional images website/IMG_1184.jpeg" alt="My dear clients - You are the writer of your own story">
+                </div>
+                <div class="gallery-img">
+                    <img src="documentAndImages/Additional images website/IMG_6567.JPG" alt="Intuitive Scribble - Art Therapy">
+                </div>
+                <div class="gallery-img">
+                    <img src="documentAndImages/Additional images website/Untitled design.png" alt="Online Therapy Session">
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Testimonials Section -->
+    <section class="testimonials" id="testimonials">
+        <div class="section-inner">
+            <div class="section-header">
+                <div class="section-badge">💬 Client Stories</div>
+                <h2 class="display-font">What Clients Say</h2>
+                <div class="section-divider"></div>
+                <p>Real experiences from people on their healing journey</p>
+            </div>
+            <div class="testimonials-grid">
+                <div class="testimonial-card">
+                    <div class="stars">★★★★★</div>
+                    <p>"My therapy sessions have been extremely helpful. They provide a safe and understanding space, listen without judgment, and give practical guidance that really works. I feel more confident, calmer, and better equipped to handle challenges."</p>
+                    <div class="testimonial-author">
+                        <div class="author-avatar">AB</div>
+                        <div class="author-info">
+                            <div class="name">AB</div>
+                            <div class="role">24, Male</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="testimonial-card">
+                    <div class="stars">★★★★★</div>
+                    <p>"Hi! Aqsa. After talking to you, I feel like I've been able to open up a bit more about things I couldn't share with others. Your guidance has helped me identify my problems and work through them, and I feel like I can be myself around you. Your support has given me the strength to improve myself, and I'm grateful for that."</p>
+                    <div class="testimonial-author">
+                        <div class="author-avatar">SA</div>
+                        <div class="author-info">
+                            <div class="name">SA</div>
+                            <div class="role">42, Female</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="testimonial-card">
+                    <div class="stars">★★★★★</div>
+                    <p>"We had our first session on the night of 20th February, 2025 and it was an audio call and I was mesmerized by her way of putting things into perspective. Out of all the psychologists I consulted, she had the most different approach which I had never experienced before and she is such a lively and kind woman. Just in 3-4 sessions, this woman has completely changed the way I see things."</p>
+                    <div class="testimonial-author">
+                        <div class="author-avatar">KS</div>
+                        <div class="author-info">
+                            <div class="name">KS</div>
+                            <div class="role">23, Male</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="testimonial-card">
+                    <div class="stars">★★★★★</div>
+                    <p>"Hello Aqsa! I hope you are doing well. I'm thrilled to share that I've secured an SGPA of 8.62 in my 4th semester and my overall CGPA is now 8.27. Eternally grateful for your constant guidance and support, your therapy sessions were the savior! Finally I have bagged the Gold Medal! Thank you so much for your constant support."</p>
+                    <div class="testimonial-author">
+                        <div class="author-avatar">🏅</div>
+                        <div class="author-info">
+                            <div class="name">Gold Medalist</div>
+                            <div class="role">Student</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="testimonial-card full-width">
+                    <div class="stars">★★★★★</div>
+                    <p>"I want to thank you for the space you've created for me during our sessions. I feel safe opening up to you, even about things I've struggled to say out loud to anyone else. You have a way of listening that makes me feel understood and supported. I've noticed some shifts in how I think and respond to situations since we started working together. The tools you've suggested (the coping toolbox, journaling prompts, activities) have given me practical ways to ground myself when I'm feeling too overwhelmed. They've also helped me to get to know myself better. There are still moments when I feel stuck with my complex emotions. I'd like to keep working on those areas together (kinder inner voice, emotional regulation). What I value most is knowing I can bring my honest thoughts to our sessions and that you will respond without judgement. That makes me feel like this is truly a safe space for growth. I'm grateful for help and advice you've given me so far and I'm looking forward to continuing this journey with you!"</p>
+                    <div class="testimonial-author">
+                        <div class="author-avatar">🌍</div>
+                        <div class="author-info">
+                            <div class="name">International Client</div>
+                            <div class="role">Hungary, Europe</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Feedback Screenshots -->
+            <div class="section-header" style="margin-top: 60px; margin-bottom: 20px;">
+                <h3 style="font-size: 1.5rem; color: #1f2937;">Raw Feedback Screenshots</h3>
+            </div>
+            <div class="feedback-screenshots">
+                <div class="feedback-screenshot">
+                    <img src="documentAndImages/Ss of feedbacks /IMG_8202.PNG" alt="Client Feedback">
+                </div>
+                <div class="feedback-screenshot">
+                    <img src="documentAndImages/Ss of feedbacks /IMG_8203.PNG" alt="Client Feedback">
+                </div>
+                <div class="feedback-screenshot">
+                    <img src="documentAndImages/Ss of feedbacks /IMG_8204.PNG" alt="Client Feedback">
+                </div>
+                <div class="feedback-screenshot">
+                    <img src="documentAndImages/Ss of feedbacks /IMG_8205.PNG" alt="Client Feedback">
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Screening Test Section -->
+    <section class="screening" id="screening">
+        <div class="section-inner">
+            <div class="section-header">
+                <div class="section-badge">📋 Free Self-Assessment</div>
+                <h2 class="display-font">Symptoms Checklist</h2>
+                <div class="section-divider"></div>
+                <p>A supportive self-reflection tool to understand your mental wellbeing</p>
+            </div>
+            <div class="screening-box">
+                <h3>Have you experienced any of these in the past 6 months?</h3>
+                <p>Please indicate if you have experienced any of the following symptoms:</p>
+                <div class="symptoms-grid">
+                    <label class="symptom-item"><input type="checkbox"> Persistent sadness or low mood</label>
+                    <label class="symptom-item"><input type="checkbox"> Anxiety or excessive worry</label>
+                    <label class="symptom-item"><input type="checkbox"> Changes in sleep patterns (insomnia or hypersomnia)</label>
+                    <label class="symptom-item"><input type="checkbox"> Changes in appetite or weight</label>
+                    <label class="symptom-item"><input type="checkbox"> Loss of interest in activities once enjoyed</label>
+                    <label class="symptom-item"><input type="checkbox"> Difficulty concentrating or making decisions</label>
+                    <label class="symptom-item"><input type="checkbox"> Feelings of hopelessness or worthlessness</label>
+                    <label class="symptom-item"><input type="checkbox"> Thoughts of self-harm or suicide</label>
+                    <label class="symptom-item"><input type="checkbox"> Substance use or abuse</label>
+                    <label class="symptom-item"><input type="checkbox"> Social withdrawal or isolation</label>
+                    <label class="symptom-item"><input type="checkbox"> Anger or Irritability</label>
+                </div>
+                <div class="screening-disclaimer">
+                    <strong>Important Note:</strong> If you have been experiencing any of the above symptoms continuously for more than three weeks, or if they are causing distress or interfering with your daily functioning, we strongly encourage you to reach out for professional support.<br><br>
+                    If you are currently experiencing thoughts of self-harm or suicide, please seek immediate help by contacting local emergency services or a trusted crisis support resource.<br><br>
+                    This screening tool is designed in line with APA ethical guidelines and serves as a supportive self-reflection and intake aid. It does not replace a comprehensive clinical assessment or diagnosis, which can only be conducted by a qualified mental health professional.
+                </div>
+                <p style="text-align: center; margin-top: 20px; font-style: italic; color: var(--lavender-600);">"You are not alone in this. Support is available, and reaching out is a sign of strength—not weakness."</p>
+                <button class="btn-primary" style="margin-top: 24px; width: 100%;">Get Support - Book a Free Consultation</button>
+            </div>
+        </div>
+    </section>
+
+    <!-- Media Mentions -->
+    <section class="media" id="media">
+        <div class="section-inner">
+            <div class="section-header">
+                <div class="section-badge">📰 Featured In</div>
+                <h2 class="display-font">Media & Mentions</h2>
+                <div class="section-divider"></div>
+            </div>
+            <div class="media-grid">
+                <div class="media-item">
+                    <div class="icon">📰</div>
+                    <div class="name">Inquilab</div>
+                    <div class="desc">Featured Article</div>
+                </div>
+                <div class="media-item">
+                    <div class="icon">📷</div>
+                    <div class="name">Instagram</div>
+                    <div class="desc">@mindfulqalb</div>
+                </div>
+                <div class="media-item">
+                    <div class="icon">💼</div>
+                    <div class="name">LinkedIn</div>
+                    <div class="desc">Aqsa Khatib</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- FAQ Section -->
+    <section class="faq" id="faq">
+        <div class="section-inner">
+            <div class="section-header">
+                <div class="section-badge">❓ FAQs</div>
+                <h2 class="display-font">Common Questions</h2>
+                <div class="section-divider"></div>
+            </div>
+            <div class="faq-list">
+                <div class="faq-item open">
+                    <div class="faq-question">Who can benefit from therapy?</div>
+                    <div class="faq-answer">Anyone going through emotional challenges, life transitions, relationship difficulties, anxiety, stress, or simply seeking personal growth can benefit from therapy. You don't need to be in crisis to seek support.</div>
+                </div>
+                <div class="faq-item">
+                    <div class="faq-question">Is online therapy effective?</div>
+                    <div class="faq-answer">Yes! Research shows online therapy is as effective as in-person sessions for many concerns. It offers convenience, accessibility, and the comfort of your own space.</div>
+                </div>
+                <div class="faq-item">
+                    <div class="faq-question">How long is each session?</div>
+                    <div class="faq-answer">Chat sessions are 45 minutes, audio consultations are 50 minutes, video consultations are 60 minutes, and couple therapy sessions run 90 minutes.</div>
+                </div>
+                <div class="faq-item">
+                    <div class="faq-question">Is therapy confidential?</div>
+                    <div class="faq-answer">Absolutely. All sessions are strictly confidential, following APA ethical guidelines and Indian mental health tele-practice standards. Your privacy is paramount.</div>
+                </div>
+                <div class="faq-item">
+                    <div class="faq-question">Do you work with NRI / international clients?</div>
+                    <div class="faq-answer">Yes! I work with Indians abroad across different time zones. Sessions are conducted online, making it accessible wherever you are - including clients from Europe, USA, Middle East and more.</div>
+                </div>
+                <div class="faq-item">
+                    <div class="faq-question">What happens in the first session?</div>
+                    <div class="faq-answer">The first session is about getting to know you, understanding your concerns, and discussing your goals. It's a collaborative space where we'll determine the best approach for your journey. A free 10-minute introductory call is also available beforehand.</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Contact Section -->
+    <section class="contact" id="contact">
+        <div class="section-inner">
+            <div class="section-header">
+                <div class="section-badge">📞 Get Started</div>
+                <h2 class="display-font">Book Your Session</h2>
+                <div class="section-divider"></div>
+                <p>You don't have to carry this alone.</p>
+            </div>
+            <div class="contact-grid">
+                <div class="contact-form">
+                    <h3>Request a Session</h3>
+                    <form>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Your Name</label>
+                                <input type="text" placeholder="Your full name">
+                            </div>
+                            <div class="form-group">
+                                <label>Email Address</label>
+                                <input type="email" placeholder="your.email@example.com">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Phone Number</label>
+                                <input type="tel" placeholder="+91 98765 43210">
+                            </div>
+                            <div class="form-group">
+                                <label>Session Type</label>
+                                <select>
+                                    <option>Select session type</option>
+                                    <option>Free 10-Min Intro Call</option>
+                                    <option>Chat Session (₹500)</option>
+                                    <option>Audio Consultation (₹800)</option>
+                                    <option>Video Consultation (₹1,200)</option>
+                                    <option>Couple Therapy (₹1,999)</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Briefly describe your concern</label>
+                            <textarea rows="4" placeholder="Tell me what brings you here..."></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label style="display: flex; align-items: flex-start; gap: 10px; cursor: pointer;">
+                                <input type="checkbox" style="width: 18px; height: 18px; margin-top: 2px;">
+                                <span style="font-weight: 400; font-size: 13px; color: #6b7280;">I consent to therapy and agree to the privacy policy. I understand all services are provided in alignment with APA ethical principles and Indian mental health and tele-practice guidelines.</span>
+                            </label>
+                        </div>
+                        <button type="submit" class="btn-primary" style="width: 100%;">Send Request →</button>
+                    </form>
+                </div>
+                <div class="crisis-box">
+                    <h3>Crisis Resources (India)</h3>
+                    <div class="crisis-item">
+                        <div class="crisis-icon">📞</div>
+                        <div class="crisis-info">
+                            <div class="name">iCall - TISS Helpline</div>
+                            <div class="number">9152987821</div>
+                            <div class="avail">Mon-Sat, 8 AM - 10 PM</div>
+                        </div>
+                    </div>
+                    <div class="crisis-item">
+                        <div class="crisis-icon">💬</div>
+                        <div class="crisis-info">
+                            <div class="name">Vandrevala Foundation</div>
+                            <div class="number">1860-2662-345</div>
+                            <div class="avail">24/7 (Hindi, English)</div>
+                        </div>
+                    </div>
+                    <div class="crisis-item">
+                        <div class="crisis-icon">🏥</div>
+                        <div class="crisis-info">
+                            <div class="name">NIMHANS Helpline</div>
+                            <div class="number">080-46110007</div>
+                            <div class="avail">24/7</div>
+                        </div>
+                    </div>
+                    <div class="crisis-item">
+                        <div class="crisis-icon">🚨</div>
+                        <div class="crisis-info">
+                            <div class="name">Emergency Services</div>
+                            <div class="number">112</div>
+                            <div class="avail">India Emergency Number</div>
+                        </div>
+                    </div>
+                    <p style="margin-top: 20px; font-size: 13px; color: #6b7280; text-align: center;">
+                        "You are not alone in this. Reaching out is a sign of strength."
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <div class="footer-inner">
+            <div class="footer-grid">
+                <div class="footer-brand">
+                    <div class="logo-text" style="font-size: 1.5rem; margin-bottom: 16px;"><span style="color: #a78bfa;">Mindful</span>-Qalb</div>
+                    <p>Psychological support for every story, across borders. A secure, virtual space where your experiences are heard and care is tailored to your individual needs.</p>
+                    <p style="margin-top: 12px;"><em>"You don't have to carry this alone."</em></p>
+                </div>
+                <div class="footer-links">
+                    <h4>Quick Links</h4>
+                    <ul>
+                        <li><a href="#about">About Me</a></li>
+                        <li><a href="#services">Services</a></li>
+                        <li><a href="#fees">Fee Structure</a></li>
+                        <li><a href="#testimonials">Testimonials</a></li>
+                    </ul>
+                </div>
+                <div class="footer-links">
+                    <h4>Services</h4>
+                    <ul>
+                        <li><a href="#">Individual Counseling</a></li>
+                        <li><a href="#">Couple Therapy</a></li>
+                        <li><a href="#">Pre-marital Counseling</a></li>
+                        <li><a href="#">Trauma Support</a></li>
+                    </ul>
+                </div>
+                <div class="footer-links">
+                    <h4>Legal & Ethics</h4>
+                    <ul>
+                        <li><a href="#">Privacy Policy</a></li>
+                        <li><a href="#">Informed Consent</a></li>
+                        <li><a href="#">Tele-Counseling Guidelines</a></li>
+                        <li><a href="#">Limits of Confidentiality</a></li>
+                        <li><a href="#">Emergency Disclaimer</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>© 2025 Mindful-Qalb | Aqsa Khatib. All rights reserved. Services aligned with APA ethical principles & Indian mental health guidelines (NCAHP, NIMHANS).</p>
+                <div class="social-links">
+                    <a href="#" title="Instagram">📷</a>
+                    <a href="#" title="LinkedIn">💼</a>
+                    <a href="#" title="Email">📧</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Simple FAQ toggle
+        document.querySelectorAll('.faq-question').forEach(q => {
+            q.addEventListener('click', () => {
+                q.parentElement.classList.toggle('open');
+            });
+        });
+    </script>
+</body>
+</html>

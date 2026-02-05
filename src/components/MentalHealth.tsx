@@ -50,7 +50,7 @@ const MentalHealth = () => {
       details: {
         overview: 'Cognitive health involves how we think, learn, and remember. When our thought patterns become unhelpful, it affects our daily functioning.',
         signs: ['Racing or intrusive thoughts', 'Difficulty concentrating', 'Perfectionism or rumination', 'Compulsive behaviors'],
-        approach: 'Our therapists specialize in CBT, ERP (for OCD), and ADHD coaching to help you regain mental clarity and peace.',
+        approach: 'I specialize in CBT, ERP (for OCD), and ADHD coaching to help you regain mental clarity and peace.',
         duration: '12-24 sessions typical'
       }
     },
@@ -69,7 +69,7 @@ const MentalHealth = () => {
       details: {
         overview: 'Trauma affects how we see ourselves and the world. Healing is possible with the right support and therapeutic approach.',
         signs: ['Flashbacks or nightmares', 'Hypervigilance or feeling on edge', 'Avoidance of reminders', 'Emotional numbness'],
-        approach: 'We offer trauma-informed care including EMDR, Somatic Experiencing, and trauma-focused CBT in a safe, supportive environment.',
+        approach: 'I offer trauma-informed care including EMDR, Somatic Experiencing, and trauma-focused CBT in a safe, supportive environment.',
         duration: '16-32 sessions typical'
       }
     },
@@ -107,7 +107,7 @@ const MentalHealth = () => {
       details: {
         overview: 'Life transitions and identity questions are natural parts of growth. Therapy provides a space to explore and integrate these experiences.',
         signs: ['Feeling lost or uncertain', 'Questioning your identity', 'Struggling with major life changes', 'Low self-worth'],
-        approach: 'We offer affirming, exploratory therapy that honors your unique journey and helps you build a coherent sense of self.',
+        approach: 'I offer affirming, exploratory therapy that honors your unique journey and helps you build a coherent sense of self.',
         duration: '8-20 sessions typical'
       }
     },
@@ -118,13 +118,13 @@ const MentalHealth = () => {
   }
 
   return (
-    <section id="mental-health" className="py-28 md:py-36 relative overflow-hidden px-4 sm:px-6 lg:px-8">
+    <section id="mental-health" className="py-16 md:py-20 lg:py-24 relative overflow-hidden px-4 sm:px-6 lg:px-8">
       {/* Background */}
       <div className="absolute inset-0 bg-gradient-to-b from-white via-lavender-50/20 to-white" />
       
       <div className="max-w-7xl mx-auto relative z-10">
         {/* Hero Section with Image */}
-        <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center mb-20">
+        <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center mb-12">
           {/* Image Section */}
           <motion.div
             initial={{ opacity: 0, x: -30 }}

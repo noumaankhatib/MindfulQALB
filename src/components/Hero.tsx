@@ -1,11 +1,12 @@
 import { motion } from 'framer-motion'
 import { ArrowRight, Shield, Heart, Users, Sparkles } from 'lucide-react'
+import heroMainImage from '../assets/images/hero_main.jpeg'
 
 // Therapy-themed wellness images from Unsplash (royalty-free)
 const heroImages = {
-  main: 'https://images.unsplash.com/photo-1544027993-37dbfe43562a?w=800&q=80', // Calm therapy session
-  secondary: 'https://images.unsplash.com/photo-1506126613408-eca07ce68773?w=600&q=80', // Meditation/mindfulness
-  accent: 'https://images.unsplash.com/photo-1499209974431-9dddcece7f88?w=400&q=80', // Peaceful nature
+  main: heroMainImage,
+  secondary: 'https://images.unsplash.com/photo-1506126613408-eca07ce68773?w=600&q=80',
+  accent: 'https://images.unsplash.com/photo-1499209974431-9dddcece7f88?w=400&q=80',
 }
 
 const Hero = () => {
@@ -58,7 +59,7 @@ const Hero = () => {
   }
 
   return (
-    <section id="home" className="relative min-h-screen flex items-center overflow-hidden pt-24 pb-16 px-4 sm:px-6 lg:px-8">
+    <section id="home" className="relative min-h-[90vh] flex items-center overflow-hidden pt-20 pb-12 px-4 sm:px-6 lg:px-8">
       {/* Gradient Background - Soft lavender for calm therapeutic feel */}
       <div className="absolute inset-0 bg-gradient-to-br from-lavender-50/80 via-white to-lavender-100/30" />
       
@@ -102,7 +103,7 @@ const Hero = () => {
             {/* Authority Badge - Lavender themed */}
             <motion.div
               variants={itemVariants}
-              className="inline-flex items-center gap-2.5 px-5 py-2.5 rounded-full bg-white/80 backdrop-blur-sm border border-lavender-200/60 mb-8 shadow-soft"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/80 backdrop-blur-sm border border-lavender-200/60 mb-6 shadow-soft"
             >
               <Sparkles className="w-4 h-4 text-lavender-600" />
               <span className="text-sm font-medium text-lavender-700 tracking-wide">Licensed & Confidential Care</span>
@@ -115,13 +116,13 @@ const Hero = () => {
             >
               Support for your mind,<br />
               <span className="text-gradient">your relationships,</span><br />
-              your life.
+              and the challenges you carry.
             </motion.h1>
 
             {/* Subtitle */}
             <motion.p
               variants={itemVariants}
-              className="text-lg sm:text-xl md:text-2xl lg:text-xl mb-10 max-w-xl mx-auto lg:mx-0 leading-relaxed font-normal text-gray-600"
+              className="text-lg sm:text-xl lg:text-lg mb-8 max-w-xl mx-auto lg:mx-0 leading-relaxed font-normal text-gray-600"
             >
               Evidence-based mental health care for individuals and couples—accessible, human, and private.
             </motion.p>
@@ -129,7 +130,7 @@ const Hero = () => {
             {/* CTA Buttons */}
             <motion.div
               variants={itemVariants}
-              className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start items-center mb-10"
+              className="flex flex-col sm:flex-row gap-3 justify-center lg:justify-start items-center mb-8"
             >
               <motion.a
                 href="#get-help"
@@ -148,7 +149,7 @@ const Hero = () => {
                 whileTap={{ scale: 0.98 }}
                 className="btn-secondary"
               >
-                Explore Our Approach
+                Explore My Approach
               </motion.a>
             </motion.div>
 
@@ -160,7 +161,7 @@ const Hero = () => {
               {[
                 { icon: Heart, text: 'Evidence-Based', color: 'text-lavender-600' },
                 { icon: Shield, text: 'Confidential', color: 'text-lavender-500' },
-                { icon: Users, text: 'Licensed Professionals', color: 'text-lavender-700' },
+                { icon: Users, text: 'Licensed Psychologist', color: 'text-lavender-700' },
               ].map((item) => (
                 <motion.div
                   key={item.text}
@@ -229,23 +230,23 @@ const Hero = () => {
                   </div>
                   <div>
                     <p className="text-sm font-semibold text-gray-800">You're Not Alone</p>
-                    <p className="text-xs text-gray-500">We're here for you</p>
+                    <p className="text-xs text-gray-500">I'm here for you</p>
                   </div>
                 </div>
               </motion.div>
 
               {/* Stats badge */}
-              <motion.div
+              {/* <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 1.2, duration: 0.6 }}
                 className="absolute -bottom-4 right-8 bg-white/95 backdrop-blur-sm rounded-2xl p-4 shadow-lg shadow-lavender-500/10 border border-lavender-100/50"
               >
                 <div className="text-center">
-                  <p className="text-2xl font-bold text-lavender-600">10k+</p>
-                  <p className="text-xs text-gray-500">Lives Transformed</p>
+                  <p className="text-2xl font-bold text-lavender-600">3000+</p>
+                  <p className="text-xs text-gray-500">Clinical Hours</p>
                 </div>
-              </motion.div>
+              </motion.div> */}
             </div>
           </motion.div>
         </div>

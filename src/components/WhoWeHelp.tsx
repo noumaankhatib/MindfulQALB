@@ -65,7 +65,7 @@ const WhoWeHelp = () => {
         ],
         approaches: ['Gottman Method', 'EFT', 'Imago', 'Attachment-Based'],
         sessionInfo: {
-          duration: '75-90 minutes',
+          duration: '30-45 minutes',
           frequency: 'Weekly recommended',
           format: 'Both partners together'
         },
@@ -113,7 +113,7 @@ const WhoWeHelp = () => {
   }
 
   return (
-    <section className="py-28 md:py-36 relative overflow-hidden px-4 sm:px-6 lg:px-8">
+    <section className="py-16 md:py-20 lg:py-24 relative overflow-hidden px-4 sm:px-6 lg:px-8">
       {/* Subtle background gradient */}
       <div className="absolute inset-0 bg-gradient-to-b from-white via-lavender-50/30 to-white" />
       
@@ -132,7 +132,7 @@ const WhoWeHelp = () => {
             <Sparkles className="w-8 h-8 text-lavender-600" />
           </motion.div>
           <h2 className="font-display text-3xl md:text-4xl lg:text-5xl font-semibold text-gray-800 mb-5">
-            Who We Help
+            Who I Help
           </h2>
           <div className="section-divider mb-6" />
           <p className="text-lg md:text-xl text-gray-600 max-w-2xl mx-auto leading-relaxed">

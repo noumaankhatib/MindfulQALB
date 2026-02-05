@@ -1,6 +1,7 @@
-import { Heart, Mail, ArrowRight } from 'lucide-react'
+import { Mail, ArrowRight } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { useState } from 'react'
+import Logo from './Logo'
 
 const Footer = () => {
   const [email, setEmail] = useState('')
@@ -23,13 +24,13 @@ const Footer = () => {
     ],
     resources: [
       { href: '#about', label: 'About / Ethics' },
-      { href: '#therapists', label: 'For Therapists' },
+      { href: '#about', label: 'About Aqsa' },
       { href: '#', label: 'Privacy Policy' },
       { href: '#', label: 'Terms of Service' },
     ],
     contact: [
       { href: '#get-help', label: 'Get Help Now' },
-      { href: 'mailto:support@mindfulqalb.com', label: 'support@mindfulqalb.com' },
+      { href: 'mailto:mindfulqalb@gmail.com', label: 'mindfulqalb@gmail.com' },
       { href: '#', label: 'Crisis Resources' },
     ],
   }
@@ -39,15 +40,15 @@ const Footer = () => {
       {/* Top gradient border */}
       <div className="h-1 bg-gradient-to-r from-lavender-400 via-lavender-400 to-accent-400" />
       
-      <div className="bg-gradient-to-b from-white to-cream-50/50 py-16 md:py-20 px-4 sm:px-6 lg:px-8">
+      <div className="bg-gradient-to-b from-white to-cream-50/50 py-12 md:py-16 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           {/* Newsletter Section */}
-          <motion.div
+          {/* <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.6 }}
-            className="bg-gradient-to-br from-lavender-50 to-lavender-50/50 rounded-3xl p-8 md:p-10 mb-16 border border-lavender-100/50 shadow-soft"
+            className="bg-gradient-to-br from-lavender-50 to-lavender-50/50 rounded-3xl p-6 md:p-8 mb-10 border border-lavender-100/50 shadow-soft"
           >
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
               <div>
@@ -89,30 +90,22 @@ const Footer = () => {
                 </form>
               )}
             </div>
-          </motion.div>
+          </motion.div> */}
 
           {/* Main Footer Content */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10 mb-14">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-10">
             {/* Brand */}
             <div>
-              <a href="#home" className="flex items-center gap-3 mb-5 group">
-                <motion.div 
-                  whileHover={{ scale: 1.05, rotate: 5 }}
-                  className="w-11 h-11 rounded-xl bg-gradient-to-br from-lavender-500 to-lavender-600 flex items-center justify-center shadow-soft"
-                >
-                  <Heart className="w-6 h-6 text-white" fill="white" />
-                </motion.div>
-                <span className="font-display text-2xl font-semibold text-gray-800">
-                  <span className="text-gradient">Mindful</span>QALB
-                </span>
+              <a href="#home" className="inline-block mb-5">
+                <Logo size="lg" showText={true} />
               </a>
               <p className="text-gray-600 leading-relaxed text-sm mb-6">
                 Evidence-based mental health care for individuals and couples—accessible, human, and private.
               </p>
               <div className="flex items-center gap-2 text-gray-500 text-sm">
                 <Mail className="w-4 h-4" />
-                <a href="mailto:support@mindfulqalb.com" className="hover:text-lavender-600 transition-colors">
-                  support@mindfulqalb.com
+                <a href="mailto:mindfulqalb@gmail.com" className="hover:text-lavender-600 transition-colors">
+                mindfulqalb@gmail.com
                 </a>
               </div>
             </div>

@@ -101,7 +101,7 @@ const FamilyCounseling = () => {
   }
 
   return (
-    <section id="family" className="py-28 md:py-36 relative overflow-hidden px-4 sm:px-6 lg:px-8">
+    <section id="family" className="py-16 md:py-20 lg:py-24 relative overflow-hidden px-4 sm:px-6 lg:px-8">
       {/* Background */}
       <div className="absolute inset-0 section-gradient-light" />
       <div 
@@ -119,7 +119,7 @@ const FamilyCounseling = () => {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: "-100px" }}
           transition={{ duration: 0.8, ease: [0.25, 0.1, 0.25, 1] }}
-          className="text-center mb-20"
+          className="text-center mb-12"
         >
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-lavender-100/60 border border-lavender-200/50 mb-6">
             <Home className="w-4 h-4 text-lavender-600" />
@@ -131,7 +131,7 @@ const FamilyCounseling = () => {
           <div className="section-divider mb-6" />
           <p className="text-lg md:text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
             Navigate family challenges with professional guidance. From parent-child relationships to 
-            joint family dynamics, we help Indian families thrive together.
+            joint family dynamics, I help Indian families thrive together.
           </p>
         </motion.div>
 
