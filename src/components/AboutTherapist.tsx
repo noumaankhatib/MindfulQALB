@@ -29,28 +29,38 @@ const AboutTherapist = () => {
 
   const feeStructure = [
     {
-      type: 'Initial Consultation',
-      duration: '15-20 minutes',
+      type: 'Free Consultation',
+      duration: '15-20 min',
       price: 'Free',
       description: 'A brief call to understand your needs and see if we\'re a good fit',
       features: ['No commitment required', 'Discuss your concerns', 'Ask any questions'],
       popular: false,
+      formats: null,
     },
     {
       type: 'Individual Therapy',
-      duration: '50-60 minutes',
-      price: '1,500',
+      duration: '30-60 min',
+      price: '499',
+      priceLabel: 'Starting from',
       description: 'One-on-one personalized counseling session',
       features: ['Personalized approach', 'Evidence-based techniques', 'Progress tracking'],
       popular: true,
+      formats: [
+        { name: 'Chat', duration: '30 min', price: '₹499' },
+        { name: 'Audio', duration: '45 min', price: '₹899' },
+        { name: 'Video', duration: '60 min', price: '₹1,299' },
+      ],
     },
     {
       type: 'Couple Therapy',
-      duration: '60-75 minutes',
-      price: '2,000',
+      duration: '90 min',
+      price: '1,999',
       description: 'Joint session for couples seeking stronger bonds',
       features: ['Both partners included', 'Relationship focus', 'Communication tools'],
       popular: false,
+      formats: [
+        { name: 'Video', duration: '90 min', price: '₹1,999' },
+      ],
     },
   ]
 
@@ -226,11 +236,24 @@ const AboutTherapist = () => {
                     </div>
                     
                     <div className="mt-4 pt-4 border-t border-lavender-200">
-                      <h5 className="font-semibold text-gray-800 mb-2 text-sm">Areas of Expertise:</h5>
+                      <h5 className="font-semibold text-gray-800 mb-3 text-sm flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-gradient-to-r from-lavender-500 to-purple-500 animate-pulse"></span>
+                        Areas of Expertise
+                      </h5>
                       <div className="flex flex-wrap gap-2">
-                        {['Anxiety & Stress', 'Relationships', 'Self-Esteem', 'Emotional Regulation', 'Life Transitions', 'Couples Therapy', 'Personal Growth'].map((area) => (
-                          <span key={area} className="px-3 py-1 bg-white rounded-full text-xs font-medium text-gray-600 border border-lavender-200">
-                            {area}
+                        {[
+                          { text: 'Anxiety, Overthinking & Emotional Overwhelm', color: 'from-blue-500 to-indigo-500', bg: 'bg-blue-50', border: 'border-blue-200', textColor: 'text-blue-700' },
+                          { text: 'Grief, Trauma & Difficult Life Events', color: 'from-purple-500 to-pink-500', bg: 'bg-purple-50', border: 'border-purple-200', textColor: 'text-purple-700' },
+                          { text: 'Career Stress, Burnout & Work-Life Challenges', color: 'from-amber-500 to-orange-500', bg: 'bg-amber-50', border: 'border-amber-200', textColor: 'text-amber-700' },
+                          { text: 'Relationship, Couple & Family Issues', color: 'from-rose-500 to-red-500', bg: 'bg-rose-50', border: 'border-rose-200', textColor: 'text-rose-700' },
+                          { text: 'Self-Growth & Health Psychology', color: 'from-emerald-500 to-teal-500', bg: 'bg-emerald-50', border: 'border-emerald-200', textColor: 'text-emerald-700' }
+                        ].map((area) => (
+                          <span 
+                            key={area.text} 
+                            className={`group relative px-4 py-2 ${area.bg} rounded-xl text-xs font-semibold ${area.textColor} border ${area.border} hover:shadow-md transition-all duration-300 cursor-default flex items-center gap-2`}
+                          >
+                            <span className={`w-2 h-2 rounded-full bg-gradient-to-r ${area.color}`}></span>
+                            {area.text}
                           </span>
                         ))}
                       </div>
@@ -384,17 +407,42 @@ const AboutTherapist = () => {
                   <h4 className="font-display text-lg font-semibold text-gray-800 mb-1">
                     {fee.type}
                   </h4>
-                  <p className="text-sm text-gray-500 mb-4">{fee.duration}</p>
+                  <p className="text-sm text-gray-500 mb-3">{fee.duration}</p>
                   
-                  <div className="flex items-baseline gap-1 mb-4">
-                    {fee.price !== 'Free' && (
-                      <IndianRupee className="w-5 h-5 text-lavender-600" />
+                  {/* Price Display */}
+                  <div className="mb-4">
+                    {fee.priceLabel && (
+                      <p className="text-xs text-gray-500 mb-1">{fee.priceLabel}</p>
                     )}
-                    <span className="text-4xl font-bold text-lavender-600">{fee.price}</span>
-                    {fee.price !== 'Free' && (
-                      <span className="text-sm text-gray-500">/session</span>
-                    )}
+                    <div className="flex items-baseline gap-1">
+                      {fee.price !== 'Free' && (
+                        <IndianRupee className="w-5 h-5 text-lavender-600" />
+                      )}
+                      <span className="text-3xl font-bold text-lavender-600">{fee.price}</span>
+                      {fee.price !== 'Free' && (
+                        <span className="text-sm text-gray-500">/session</span>
+                      )}
+                    </div>
                   </div>
+                  
+                  {/* Session Formats Table */}
+                  {fee.formats && fee.formats.length > 0 && (
+                    <div className="mb-4 bg-gradient-to-br from-lavender-50 to-purple-50 rounded-xl p-3 border border-lavender-100">
+                      <p className="text-xs font-semibold text-lavender-700 mb-2">Session Options:</p>
+                      <div className="space-y-2">
+                        {fee.formats.map((format, i) => (
+                          <div key={i} className="flex items-center justify-between text-sm">
+                            <div className="flex items-center gap-2">
+                              <span className="w-2 h-2 rounded-full bg-gradient-to-r from-lavender-500 to-purple-500"></span>
+                              <span className="font-medium text-gray-700">{format.name}</span>
+                              <span className="text-gray-400 text-xs">({format.duration})</span>
+                            </div>
+                            <span className="font-bold text-lavender-600">{format.price}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                   
                   <p className="text-sm text-gray-600 mb-4">{fee.description}</p>
                   
@@ -411,11 +459,7 @@ const AboutTherapist = () => {
                     href="#get-help"
                     whileHover={{ scale: 1.03 }}
                     whileTap={{ scale: 0.98 }}
-                    className={`block text-center py-3 px-4 rounded-xl font-semibold transition-colors ${
-                      fee.popular
-                        ? 'bg-gradient-to-r from-lavender-500 to-lavender-600 text-white hover:from-lavender-600 hover:to-lavender-700'
-                        : 'bg-lavender-50 text-lavender-600 hover:bg-lavender-100'
-                    }`}
+                    className="block text-center py-3 px-4 rounded-xl font-semibold transition-all shadow-md hover:shadow-lg bg-gradient-to-r from-lavender-500 to-lavender-600 text-white hover:from-lavender-600 hover:to-lavender-700 shadow-lavender-500/25"
                   >
                     {fee.price === 'Free' ? 'Book Free Call' : 'Get Started'}
                   </motion.a>

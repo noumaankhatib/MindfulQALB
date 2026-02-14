@@ -19,6 +19,7 @@ interface ConsentModalProps {
   onAccept: (record: ConsentRecord) => void;
   sessionType: string;
   customerEmail: string;
+  preSelectAll?: boolean;
 }
 
 const ConsentModal = ({ 
@@ -26,11 +27,11 @@ const ConsentModal = ({
   onClose, 
   onAccept, 
   sessionType,
-  customerEmail 
+  customerEmail,
+  preSelectAll = false
 }: ConsentModalProps) => {
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['services']));
   const [checkedAcknowledgments, setCheckedAcknowledgments] = useState<Set<number>>(new Set());
-  const [signature, setSignature] = useState('');
   const [hasScrolledToBottom, setHasScrolledToBottom] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -39,12 +40,17 @@ const ConsentModal = ({
   useEffect(() => {
     if (isOpen) {
       setExpandedSections(new Set(['services']));
-      setCheckedAcknowledgments(new Set());
-      setSignature('');
+      // Pre-select all acknowledgments if preSelectAll is true
+      if (preSelectAll) {
+        const allIndices = new Set(consentFormData.acknowledgments.map((_, i) => i));
+        setCheckedAcknowledgments(allIndices);
+      } else {
+        setCheckedAcknowledgments(new Set());
+      }
       setHasScrolledToBottom(false);
       setError(null);
     }
-  }, [isOpen]);
+  }, [isOpen, preSelectAll]);
 
   // Track scroll to bottom
   const handleScroll = () => {
@@ -77,6 +83,18 @@ const ConsentModal = ({
     setError(null);
   };
 
+  const toggleSelectAll = () => {
+    if (allAcknowledgmentsChecked) {
+      // Unselect all
+      setCheckedAcknowledgments(new Set());
+    } else {
+      // Select all
+      const allIndices = new Set(consentFormData.acknowledgments.map((_, i) => i));
+      setCheckedAcknowledgments(allIndices);
+    }
+    setError(null);
+  };
+
   const allAcknowledgmentsChecked = 
     checkedAcknowledgments.size === consentFormData.acknowledgments.length;
 
@@ -86,20 +104,10 @@ const ConsentModal = ({
       return;
     }
 
-    if (!signature.trim()) {
-      setError('Please type your full name as your electronic signature');
-      return;
-    }
-
-    if (signature.trim().length < 2) {
-      setError('Please enter a valid name');
-      return;
-    }
-
     // Create consent record for compliance tracking
     const record = createConsentRecord(
       sessionType,
-      signature.trim(),
+      'Accepted via checkbox',
       customerEmail,
       consentFormData.acknowledgments.filter((_, i) => checkedAcknowledgments.has(i))
     );
@@ -261,10 +269,22 @@ const ConsentModal = ({
 
               {/* Acknowledgments */}
               <div className="mb-6">
-                <h4 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
-                  <CheckCircle className="w-4 h-4 text-lavender-500" />
-                  Acknowledgments
-                </h4>
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="font-semibold text-gray-800 flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4 text-lavender-500" />
+                    Acknowledgments
+                  </h4>
+                  {/* Select All Checkbox */}
+                  <label className="flex items-center gap-2 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={allAcknowledgmentsChecked}
+                      onChange={toggleSelectAll}
+                      className="w-4 h-4 rounded border-gray-300 text-lavender-600 focus:ring-lavender-500"
+                    />
+                    <span className="text-sm font-medium text-lavender-600">Select All</span>
+                  </label>
+                </div>
                 <div className="space-y-2">
                   {consentFormData.acknowledgments.map((ack, index) => (
                     <label
@@ -287,26 +307,6 @@ const ConsentModal = ({
                 </div>
               </div>
 
-              {/* Electronic Signature */}
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Electronic Signature *
-                </label>
-                <p className="text-xs text-gray-500 mb-2">
-                  By typing your full name below, you agree that this constitutes a legally binding electronic signature.
-                </p>
-                <input
-                  type="text"
-                  value={signature}
-                  onChange={(e) => {
-                    setSignature(e.target.value);
-                    setError(null);
-                  }}
-                  placeholder="Type your full name"
-                  className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-lavender-300 focus:border-lavender-400 transition-colors font-medium"
-                />
-              </div>
-
               {/* Error Message */}
               {error && (
                 <div className="mb-4 p-3 bg-red-50 border border-red-100 rounded-lg flex items-start gap-2">
@@ -327,7 +327,7 @@ const ConsentModal = ({
                 </button>
                 <button
                   onClick={handleAccept}
-                  disabled={!allAcknowledgmentsChecked || !signature.trim()}
+                  disabled={!allAcknowledgmentsChecked}
                   className="flex-1 px-6 py-3 bg-gradient-to-r from-lavender-500 to-lavender-600 text-white rounded-lg hover:from-lavender-600 hover:to-lavender-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all font-medium flex items-center justify-center gap-2"
                 >
                   <CheckCircle className="w-5 h-5" />

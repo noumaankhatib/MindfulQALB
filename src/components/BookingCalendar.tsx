@@ -64,18 +64,25 @@ const BookingCalendar = ({ className = '' }: BookingCalendarProps) => {
       className={`bg-gradient-to-br from-white/95 to-lavender-50/80 rounded-3xl p-8 md:p-10 border border-lavender-100/50 shadow-soft ${className}`}
     >
       {/* Header */}
-      <div className="flex items-center gap-3 mb-4">
-        <motion.div
-          whileHover={{ scale: 1.1, rotate: 5 }}
-          className="w-12 h-12 rounded-xl bg-lavender-100/80 flex items-center justify-center shadow-soft"
-        >
-          <Calendar className="w-6 h-6 text-lavender-600" />
-        </motion.div>
-        <div>
-          <h3 className="font-display text-xl md:text-2xl font-semibold text-gray-800">
-            Book a Session
-          </h3>
-          <p className="text-sm text-gray-600">Choose your session type</p>
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-3">
+          <motion.div
+            whileHover={{ scale: 1.1, rotate: 5 }}
+            className="w-12 h-12 rounded-xl bg-lavender-100/80 flex items-center justify-center shadow-soft"
+          >
+            <Calendar className="w-6 h-6 text-lavender-600" />
+          </motion.div>
+          <div>
+            <h3 className="font-display text-xl md:text-2xl font-semibold text-gray-800">
+              Schedule Session
+            </h3>
+            <p className="text-sm text-gray-600">Choose your session type</p>
+          </div>
+        </div>
+        {/* Test Mode Badge */}
+        <div className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 border border-amber-200 rounded-full text-amber-700 text-xs font-medium">
+          <span>🧪</span>
+          <span className="hidden sm:inline">Test Mode</span>
         </div>
       </div>
 

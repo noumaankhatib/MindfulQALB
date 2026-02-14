@@ -36,7 +36,7 @@ const TherapeuticApproach = () => {
   ]
 
   return (
-    <section id="approach" className="py-16 md:py-20 lg:py-24 relative overflow-hidden px-4 sm:px-6 lg:px-8">
+    <section id="approach" className="pt-6 pb-16 md:pt-8 md:pb-20 lg:pt-10 lg:pb-24 relative overflow-hidden px-4 sm:px-6 lg:px-8">
       {/* Background */}
       <div className="absolute inset-0 section-gradient-lavender" />
       
@@ -95,7 +95,7 @@ const TherapeuticApproach = () => {
         </div>
 
         {/* Additional Info */}
-        <motion.div
+        {/* <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
@@ -117,7 +117,7 @@ const TherapeuticApproach = () => {
           >
             Start Your Journey
           </motion.a>
-        </motion.div>
+        </motion.div> */}
       </div>
     </section>
   )

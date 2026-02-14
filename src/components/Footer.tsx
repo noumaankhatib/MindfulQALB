@@ -1,5 +1,30 @@
-import { Mail } from 'lucide-react'
+import { Instagram, Linkedin } from 'lucide-react'
+import { motion } from 'framer-motion'
 import Logo from './Logo'
+
+// Social media links with actual brand colors
+const socialLinks = [
+  {
+    name: 'Instagram',
+    href: 'https://www.instagram.com/mindfulqalb',
+    icon: Instagram,
+    ariaLabel: 'Follow MindfulQalb on Instagram',
+    // Instagram gradient: purple -> pink -> orange
+    hoverBg: 'hover:bg-gradient-to-br hover:from-purple-600 hover:via-pink-500 hover:to-orange-400',
+    hoverShadow: 'hover:shadow-pink-500/40',
+    iconColor: 'text-pink-600',
+  },
+  {
+    name: 'LinkedIn',
+    href: 'https://www.linkedin.com/in/aqsa-khatib-0a9b6218b',
+    icon: Linkedin,
+    ariaLabel: 'Connect with Aqsa Khatib on LinkedIn',
+    // LinkedIn blue
+    hoverBg: 'hover:bg-[#0A66C2]',
+    hoverShadow: 'hover:shadow-blue-500/40',
+    iconColor: 'text-[#0A66C2]',
+  },
+]
 
 const Footer = () => {
   const footerLinks = {
@@ -10,10 +35,11 @@ const Footer = () => {
       { href: '#self-help', label: 'Self-Help Tools' },
     ],
     resources: [
-      { href: '#about', label: 'About / Ethics' },
+      { href: '#ethics', label: 'About / Ethics' },
       { href: '#about', label: 'About Aqsa' },
-      { href: '#', label: 'Privacy Policy' },
-      { href: '#', label: 'Terms of Service' },
+      { href: '#self-help', label: 'Self-Help Tools' },
+      // { href: '#', label: 'Privacy Policy' },
+      // { href: '#', label: 'Terms of Service' },
     ],
     contact: [
       { href: '#get-help', label: 'Get Help Now' },
@@ -86,15 +112,9 @@ const Footer = () => {
               <a href="#home" className="inline-block mb-5">
                 <Logo size="lg" showText={true} />
               </a>
-              <p className="text-gray-600 leading-relaxed text-sm mb-6">
+              <p className="text-gray-600 leading-relaxed text-sm">
                 Evidence-based mental health care for individuals and couples—accessible, human, and private.
               </p>
-              <div className="flex items-center gap-2 text-gray-500 text-sm">
-                <Mail className="w-4 h-4" />
-                <a href="mailto:mindfulqalb@gmail.com" className="hover:text-lavender-600 transition-colors">
-                mindfulqalb@gmail.com
-                </a>
-              </div>
             </div>
 
             {/* Quick Links */}
@@ -134,7 +154,7 @@ const Footer = () => {
             {/* Contact */}
             <div>
               <h4 className="font-display text-base font-semibold mb-5 text-gray-800">Contact</h4>
-              <ul className="space-y-3">
+              <ul className="space-y-3 mb-5">
                 {footerLinks.contact.map((link) => (
                   <li key={link.label}>
                     <a 
@@ -146,16 +166,46 @@ const Footer = () => {
                   </li>
                 ))}
               </ul>
+              
+              {/* Social Media Icons */}
+              <div className="flex items-center gap-3">
+                {socialLinks.map((social) => {
+                  const Icon = social.icon
+                  return (
+                    <motion.a
+                      key={social.name}
+                      href={social.href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label={social.ariaLabel}
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.95 }}
+                      className={`group relative w-11 h-11 rounded-full bg-gray-50 border-2 border-gray-200 flex items-center justify-center transition-all duration-300 ease-out hover:border-transparent hover:shadow-lg ${social.hoverBg} ${social.hoverShadow} focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-lavender-500`}
+                    >
+                      <Icon 
+                        className={`w-5 h-5 ${social.iconColor} transition-all duration-300 group-hover:text-white`}
+                        strokeWidth={2}
+                      />
+                    </motion.a>
+                  )
+                })}
+              </div>
+              <p className="text-xs text-gray-500 mt-2">
+                <span className="font-medium text-pink-600">@mindfulqalb</span>
+              </p>
             </div>
           </div>
 
           {/* Bottom Bar */}
           <div className="pt-8 border-t border-gray-200/60">
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 text-center md:text-left">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 text-center md:text-left">
+              {/* Copyright */}
               <p className="text-gray-500 text-sm">
                 © {new Date().getFullYear()} Mindful QALB · Confidential & Ethical Practice
               </p>
-              <p className="text-gray-400 text-xs">
+              
+              {/* Disclaimer */}
+              <p className="text-gray-400 text-xs max-w-sm">
                 This platform is not a crisis service. For emergencies, call 911 or your local crisis line.
               </p>
             </div>

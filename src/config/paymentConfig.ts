@@ -75,21 +75,43 @@ export const AVAILABILITY_CONFIG = {
 
   /**
    * Mock available slots for testing (when Cal.com is not set up)
+   * When Cal.com API is configured (VITE_CALCOM_API_KEY in .env),
+   * real-time availability will be fetched from Cal.com
    */
   USE_MOCK_AVAILABILITY: true,
 
   /**
-   * Available time slots for mock mode
+   * Available time slots for mock/fallback mode
+   * These are used when Cal.com is not configured or API fails
    */
   MOCK_SLOTS: [
     { time: '10:00 AM', available: true },
     { time: '11:00 AM', available: true },
+    { time: '12:00 PM', available: true },
     { time: '2:00 PM', available: true },
-    { time: '3:00 PM', available: false },
+    { time: '3:00 PM', available: true },
     { time: '4:00 PM', available: true },
     { time: '5:00 PM', available: true },
   ],
 };
+
+// ============================================================================
+// CAL.COM INTEGRATION
+// ============================================================================
+// 
+// To enable real-time availability and prevent double-booking across devices:
+// 
+// 1. Create a Cal.com account: https://cal.com
+// 2. Go to Settings > Developer > API Keys
+// 3. Create a new API key with booking:write scope
+// 4. Add to .env: VITE_CALCOM_API_KEY=your_api_key
+// 5. Create event types in Cal.com (free-consultation, individual-therapy, etc.)
+// 6. Update EVENT_TYPE_IDS in src/services/calcomService.ts with actual IDs
+// 
+// Without Cal.com configured, bookings are stored locally and won't sync
+// across devices. Cal.com handles real-time availability and prevents
+// double-booking automatically.
+// ============================================================================
 
 // ============================================================================
 // CONSENT CONFIGURATION

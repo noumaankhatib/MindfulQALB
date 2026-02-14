@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { Phone, MessageCircle, AlertTriangle, ExternalLink, IndianRupee, Clock, Shield, CheckCircle, Video, Headphones, Users, Calendar } from 'lucide-react'
-import BookingCalendar from './BookingCalendar'
+// BookingCalendar removed - using BookingFlow modal instead
 import BookingFlow from './BookingFlow'
 import { sessionTypes, SessionRecommendation } from '../data/chatbotFlow'
 import { useGeolocation, formatPrice } from '../hooks/useGeolocation'
@@ -13,7 +13,7 @@ const GetHelp = () => {
   const [selectedSession, setSelectedSession] = useState<SessionRecommendation | null>(null)
   const { isIndia } = useGeolocation()
 
-  const handleBookSession = (session: SessionRecommendation) => {
+  const handleBookSession = (session: SessionRecommendation | null = null) => {
     setSelectedSession(session)
     setShowBookingFlow(true)
   }
@@ -74,12 +74,12 @@ const GetHelp = () => {
           </p>
         </motion.div>
 
-        {/* Main Booking Section - Pricing + Calendar */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-16">
+        {/* Main Booking Section */}
+        <div className="max-w-3xl mx-auto mb-16">
           {/* Pricing Section */}
           <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            whileInView={{ opacity: 1, x: 0 }}
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: "-100px" }}
             transition={{ duration: 0.7, ease: [0.25, 0.1, 0.25, 1] }}
             className="bg-gradient-to-br from-white/95 to-lavender-50/80 rounded-3xl p-8 md:p-10 border border-lavender-100/50 shadow-soft"
@@ -139,8 +139,19 @@ const GetHelp = () => {
               </div>
             )}
 
+            {/* Primary Book Now Button */}
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => handleBookSession(null)}
+              className="mt-6 w-full py-4 px-6 bg-gradient-to-r from-lavender-500 to-lavender-600 text-white rounded-xl font-semibold text-lg shadow-lg shadow-lavender-500/25 hover:shadow-lavender-500/40 transition-all flex items-center justify-center gap-3"
+            >
+              <Calendar className="w-6 h-6" />
+              Book a Session
+            </motion.button>
+
             {/* Quick Book Buttons */}
-            <div className="mt-6 grid grid-cols-2 gap-3">
+            <div className="mt-4 grid grid-cols-2 gap-3">
               {sessionCards.map((session) => {
                 const Icon = session.icon
                 return (
@@ -177,9 +188,6 @@ const GetHelp = () => {
               </p>
             </div>
           </motion.div>
-
-          {/* Cal.com Booking Calendar */}
-          <BookingCalendar eventType="consultation" />
         </div>
 
         {/* Crisis Resources - Condensed */}
@@ -243,9 +251,9 @@ const GetHelp = () => {
       </div>
 
       {/* Booking Flow Modal */}
-      {showBookingFlow && selectedSession && (
+      {showBookingFlow && (
         <BookingFlow
-          session={selectedSession}
+          session={selectedSession || undefined}
           isOpen={showBookingFlow}
           onClose={() => {
             setShowBookingFlow(false)

@@ -144,10 +144,22 @@ const Hero = () => {
                 </span>
               </motion.a>
               <motion.a
-                href="#therapy"
+                href="#approach"
                 whileHover={{ scale: 1.03, y: -2 }}
                 whileTap={{ scale: 0.98 }}
                 className="btn-secondary"
+                onClick={(e) => {
+                  e.preventDefault()
+                  const element = document.getElementById('approach')
+                  if (element) {
+                    const navHeight = 80
+                    const elementPosition = element.getBoundingClientRect().top + window.scrollY
+                    window.scrollTo({
+                      top: elementPosition - navHeight,
+                      behavior: 'smooth'
+                    })
+                  }
+                }}
               >
                 Explore My Approach
               </motion.a>

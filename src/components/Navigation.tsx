@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { ChevronDown, Menu, X } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Logo from './Logo'
@@ -31,15 +31,8 @@ const navItems: NavItem[] = [
     ],
   },
   {
-    label: 'Therapy',
-    dropdown: [
-      { label: 'Anxiety & Stress', href: '#mental-health', description: 'Find calm and peace', icon: '😌' },
-      { label: 'Depression', href: '#mental-health', description: 'Rediscover hope', icon: '🌤️' },
-      { label: 'Trauma & PTSD', href: '#mental-health', description: 'Heal from past wounds', icon: '💪' },
-      { label: 'Marriage Counseling', href: '#couples', description: 'Rebuild connection', icon: '💑' },
-      { label: 'Addiction Support', href: '#mental-health', description: 'Path to recovery', icon: '🔄' },
-      { label: 'Grief & Loss', href: '#mental-health', description: 'Navigate loss with support', icon: '🕊️' },
-    ],
+    label: 'Approach',
+    href: '#approach',
   },
   {
     label: 'Resources',
@@ -54,7 +47,7 @@ const navItems: NavItem[] = [
   {
     label: 'About',
     dropdown: [
-      { label: 'My Approach', href: '#about', description: 'Evidence-based care', icon: '🎯' },
+      { label: 'Therapeutic Approach', href: '#approach', description: 'Evidence-based methods', icon: '🎯' },
       { label: 'Meet Aqsa Khatib', href: '#about', description: 'Your therapist', icon: '👩‍⚕️' },
       { label: 'Ethics & Privacy', href: '#ethics', description: 'Your trust matters', icon: '🔒' },
       { label: 'FAQs', href: '#faq', description: 'Common questions', icon: '❓' },
@@ -63,18 +56,63 @@ const navItems: NavItem[] = [
   },
 ]
 
+// Sections to track for active highlighting
+const sectionIds = ['home', 'about', 'approach', 'mental-health', 'couples', 'family', 'holistic', 'self-help', 'groups', 'get-help', 'ethics', 'faq']
+
 const Navigation = () => {
   const [isScrolled, setIsScrolled] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [openDropdown, setOpenDropdown] = useState<string | null>(null)
   const [mobileOpenSection, setMobileOpenSection] = useState<string | null>(null)
+  const [activeSection, setActiveSection] = useState<string>('home')
   const navRef = useRef<HTMLElement>(null)
 
-  // Handle scroll
+  // Smooth scroll to section
+  const scrollToSection = useCallback((e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
+    e.preventDefault()
+    const targetId = href.replace('#', '')
+    const element = document.getElementById(targetId)
+    
+    if (element) {
+      const navHeight = 80 // Account for fixed nav
+      const elementPosition = element.getBoundingClientRect().top + window.scrollY
+      const offsetPosition = elementPosition - navHeight
+
+      window.scrollTo({
+        top: offsetPosition,
+        behavior: 'smooth'
+      })
+      
+      // Update URL without triggering scroll
+      window.history.pushState(null, '', href)
+      setActiveSection(targetId)
+    }
+    
+    // Close dropdowns and mobile menu
+    setOpenDropdown(null)
+    closeMobileMenu()
+  }, [])
+
+  // Handle scroll and active section detection
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 50)
+      
+      // Detect active section
+      const scrollPosition = window.scrollY + 150 // Offset for detection
+      
+      for (const sectionId of sectionIds) {
+        const element = document.getElementById(sectionId)
+        if (element) {
+          const { offsetTop, offsetHeight } = element
+          if (scrollPosition >= offsetTop && scrollPosition < offsetTop + offsetHeight) {
+            setActiveSection(sectionId)
+            break
+          }
+        }
+      }
     }
+    
     window.addEventListener('scroll', handleScroll)
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
@@ -137,90 +175,114 @@ const Navigation = () => {
 
           {/* Desktop Navigation */}
           <div className="hidden lg:flex items-center gap-1">
-            {navItems.map((item) => (
-              <div key={item.label} className="relative">
-                {item.dropdown ? (
-                  <>
-                    <button
-                      onClick={() => handleDropdownToggle(item.label)}
-                      onMouseEnter={() => setOpenDropdown(item.label)}
-                      className={`flex items-center gap-1.5 px-4 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 ${
-                        openDropdown === item.label 
-                          ? 'bg-lavender-100 text-lavender-700' 
+            {navItems.map((item) => {
+              // Check if this nav item or any of its dropdown items match the active section
+              const isActive = item.href 
+                ? activeSection === item.href.replace('#', '')
+                : item.dropdown?.some(sub => activeSection === sub.href.replace('#', ''))
+              
+              return (
+                <div key={item.label} className="relative">
+                  {item.dropdown ? (
+                    <>
+                      <button
+                        onClick={() => handleDropdownToggle(item.label)}
+                        onMouseEnter={() => setOpenDropdown(item.label)}
+                        className={`flex items-center gap-1.5 px-4 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 ${
+                          openDropdown === item.label 
+                            ? 'bg-lavender-100 text-lavender-700' 
+                            : isActive
+                            ? 'bg-lavender-50 text-lavender-700'
+                            : 'text-gray-700 hover:bg-lavender-50 hover:text-lavender-600'
+                        }`}
+                      >
+                        {item.label}
+                        <ChevronDown 
+                          className={`w-4 h-4 transition-transform duration-200 ${
+                            openDropdown === item.label ? 'rotate-180' : ''
+                          }`} 
+                        />
+                      </button>
+
+                      {/* Dropdown Menu */}
+                      <AnimatePresence>
+                        {openDropdown === item.label && (
+                          <motion.div
+                            initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                            exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                            transition={{ duration: 0.2 }}
+                            onMouseEnter={() => setOpenDropdown(item.label)}
+                            onMouseLeave={() => setOpenDropdown(null)}
+                            className="absolute top-full left-0 mt-2 w-72 bg-white rounded-2xl shadow-2xl shadow-lavender-500/15 border border-lavender-100 overflow-hidden z-50"
+                          >
+                            <div className="p-2">
+                              {item.dropdown.map((subItem, index) => {
+                                const isSubActive = activeSection === subItem.href.replace('#', '')
+                                return (
+                                  <a
+                                    key={index}
+                                    href={subItem.href}
+                                    onClick={(e) => scrollToSection(e, subItem.href)}
+                                    className={`flex items-start gap-3 px-4 py-3 rounded-xl transition-colors duration-150 group ${
+                                      isSubActive ? 'bg-lavender-100' : 'hover:bg-lavender-50'
+                                    }`}
+                                  >
+                                    <span className="text-xl mt-0.5">{subItem.icon}</span>
+                                    <div>
+                                      <span className={`block font-medium transition-colors ${
+                                        isSubActive ? 'text-lavender-700' : 'text-gray-800 group-hover:text-lavender-700'
+                                      }`}>
+                                        {subItem.label}
+                                      </span>
+                                      {subItem.description && (
+                                        <span className={`block text-xs mt-0.5 ${
+                                          isSubActive ? 'text-lavender-600' : 'text-gray-500 group-hover:text-lavender-600'
+                                        }`}>
+                                          {subItem.description}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </a>
+                                )
+                              })}
+                            </div>
+                            
+                            {/* Dropdown Footer CTA */}
+                            <div className="bg-lavender-50/50 p-3 border-t border-lavender-100">
+                              <a 
+                                href="#get-help"
+                                onClick={(e) => scrollToSection(e, '#get-help')}
+                                className="block text-center text-sm font-medium text-lavender-700 hover:text-lavender-800 transition-colors"
+                              >
+                                View All {item.label} →
+                              </a>
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </>
+                  ) : (
+                    <a
+                      href={item.href}
+                      onClick={(e) => scrollToSection(e, item.href!)}
+                      className={`px-4 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 ${
+                        isActive
+                          ? 'bg-lavender-100 text-lavender-700'
                           : 'text-gray-700 hover:bg-lavender-50 hover:text-lavender-600'
                       }`}
                     >
                       {item.label}
-                      <ChevronDown 
-                        className={`w-4 h-4 transition-transform duration-200 ${
-                          openDropdown === item.label ? 'rotate-180' : ''
-                        }`} 
-                      />
-                    </button>
-
-                    {/* Dropdown Menu */}
-                    <AnimatePresence>
-                      {openDropdown === item.label && (
-                        <motion.div
-                          initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                          animate={{ opacity: 1, y: 0, scale: 1 }}
-                          exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                          transition={{ duration: 0.2 }}
-                          onMouseEnter={() => setOpenDropdown(item.label)}
-                          onMouseLeave={() => setOpenDropdown(null)}
-                          className="absolute top-full left-0 mt-2 w-72 bg-white rounded-2xl shadow-2xl shadow-lavender-500/15 border border-lavender-100 overflow-hidden z-50"
-                        >
-                          <div className="p-2">
-                            {item.dropdown.map((subItem, index) => (
-                              <a
-                                key={index}
-                                href={subItem.href}
-                                onClick={() => setOpenDropdown(null)}
-                                className="flex items-start gap-3 px-4 py-3 rounded-xl hover:bg-lavender-50 transition-colors duration-150 group"
-                              >
-                                <span className="text-xl mt-0.5">{subItem.icon}</span>
-                                <div>
-                                  <span className="block font-medium text-gray-800 group-hover:text-lavender-700 transition-colors">
-                                    {subItem.label}
-                                  </span>
-                                  {subItem.description && (
-                                    <span className="block text-xs text-gray-500 mt-0.5 group-hover:text-lavender-600">
-                                      {subItem.description}
-                                    </span>
-                                  )}
-                                </div>
-                              </a>
-                            ))}
-                          </div>
-                          
-                          {/* Dropdown Footer CTA */}
-                          <div className="bg-lavender-50/50 p-3 border-t border-lavender-100">
-                            <a 
-                              href="#get-help"
-                              onClick={() => setOpenDropdown(null)}
-                              className="block text-center text-sm font-medium text-lavender-700 hover:text-lavender-800 transition-colors"
-                            >
-                              View All {item.label} →
-                            </a>
-                          </div>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                  </>
-                ) : (
-                  <a
-                    href={item.href}
-                    className="px-4 py-2.5 rounded-xl font-medium text-sm text-gray-700 hover:bg-lavender-50 hover:text-lavender-600 transition-all duration-200"
-                  >
-                    {item.label}
-                  </a>
-                )}
-              </div>
-            ))}
+                    </a>
+                  )}
+                </div>
+              )
+            })}
             
             {/* CTA Button */}
             <a
               href="#get-help"
+              onClick={(e) => scrollToSection(e, '#get-help')}
               className="ml-4 px-6 py-2.5 rounded-full font-medium text-sm text-white bg-gradient-to-r from-lavender-600 to-lavender-700 shadow-lg shadow-lavender-500/25 hover:shadow-lavender-500/40 hover:-translate-y-0.5 transition-all duration-300"
             >
               Book a Session
@@ -252,68 +314,87 @@ const Navigation = () => {
               className="lg:hidden overflow-hidden border-t border-lavender-100"
             >
               <div className="py-4 space-y-1">
-                {navItems.map((item) => (
-                  <div key={item.label}>
-                    {item.dropdown ? (
-                      <>
-                        <button
-                          onClick={() => handleMobileSectionToggle(item.label)}
-                          className="w-full flex items-center justify-between px-4 py-3 rounded-xl font-medium text-gray-700 hover:bg-lavender-50 transition-colors"
+                {navItems.map((item) => {
+                  const isActive = item.href 
+                    ? activeSection === item.href.replace('#', '')
+                    : item.dropdown?.some(sub => activeSection === sub.href.replace('#', ''))
+                  
+                  return (
+                    <div key={item.label}>
+                      {item.dropdown ? (
+                        <>
+                          <button
+                            onClick={() => handleMobileSectionToggle(item.label)}
+                            className={`w-full flex items-center justify-between px-4 py-3 rounded-xl font-medium transition-colors ${
+                              isActive ? 'bg-lavender-50 text-lavender-700' : 'text-gray-700 hover:bg-lavender-50'
+                            }`}
+                          >
+                            {item.label}
+                            <ChevronDown 
+                              className={`w-5 h-5 transition-transform duration-200 ${
+                                mobileOpenSection === item.label ? 'rotate-180' : ''
+                              }`} 
+                            />
+                          </button>
+                          
+                          <AnimatePresence>
+                            {mobileOpenSection === item.label && (
+                              <motion.div
+                                initial={{ opacity: 0, height: 0 }}
+                                animate={{ opacity: 1, height: 'auto' }}
+                                exit={{ opacity: 0, height: 0 }}
+                                transition={{ duration: 0.2 }}
+                                className="overflow-hidden"
+                              >
+                                <div className="pl-4 py-2 space-y-1">
+                                  {item.dropdown.map((subItem, index) => {
+                                    const isSubActive = activeSection === subItem.href.replace('#', '')
+                                    return (
+                                      <a
+                                        key={index}
+                                        href={subItem.href}
+                                        onClick={(e) => scrollToSection(e, subItem.href)}
+                                        className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${
+                                          isSubActive 
+                                            ? 'bg-lavender-100 text-lavender-700' 
+                                            : 'text-gray-600 hover:bg-lavender-50 hover:text-lavender-700'
+                                        }`}
+                                      >
+                                        <span className="text-lg">{subItem.icon}</span>
+                                        <div>
+                                          <span className="block font-medium text-sm">{subItem.label}</span>
+                                          <span className={`block text-xs ${isSubActive ? 'text-lavender-600' : 'text-gray-500'}`}>
+                                            {subItem.description}
+                                          </span>
+                                        </div>
+                                      </a>
+                                    )
+                                  })}
+                                </div>
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+                        </>
+                      ) : (
+                        <a
+                          href={item.href}
+                          onClick={(e) => scrollToSection(e, item.href!)}
+                          className={`block px-4 py-3 rounded-xl font-medium transition-colors ${
+                            isActive ? 'bg-lavender-100 text-lavender-700' : 'text-gray-700 hover:bg-lavender-50'
+                          }`}
                         >
                           {item.label}
-                          <ChevronDown 
-                            className={`w-5 h-5 transition-transform duration-200 ${
-                              mobileOpenSection === item.label ? 'rotate-180' : ''
-                            }`} 
-                          />
-                        </button>
-                        
-                        <AnimatePresence>
-                          {mobileOpenSection === item.label && (
-                            <motion.div
-                              initial={{ opacity: 0, height: 0 }}
-                              animate={{ opacity: 1, height: 'auto' }}
-                              exit={{ opacity: 0, height: 0 }}
-                              transition={{ duration: 0.2 }}
-                              className="overflow-hidden"
-                            >
-                              <div className="pl-4 py-2 space-y-1">
-                                {item.dropdown.map((subItem, index) => (
-                                  <a
-                                    key={index}
-                                    href={subItem.href}
-                                    onClick={closeMobileMenu}
-                                    className="flex items-center gap-3 px-4 py-3 rounded-xl text-gray-600 hover:bg-lavender-50 hover:text-lavender-700 transition-colors"
-                                  >
-                                    <span className="text-lg">{subItem.icon}</span>
-                                    <div>
-                                      <span className="block font-medium text-sm">{subItem.label}</span>
-                                      <span className="block text-xs text-gray-500">{subItem.description}</span>
-                                    </div>
-                                  </a>
-                                ))}
-                              </div>
-                            </motion.div>
-                          )}
-                        </AnimatePresence>
-                      </>
-                    ) : (
-                      <a
-                        href={item.href}
-                        onClick={closeMobileMenu}
-                        className="block px-4 py-3 rounded-xl font-medium text-gray-700 hover:bg-lavender-50 transition-colors"
-                      >
-                        {item.label}
-                      </a>
-                    )}
-                  </div>
-                ))}
+                        </a>
+                      )}
+                    </div>
+                  )
+                })}
                 
                 {/* Mobile CTA */}
                 <div className="pt-4 px-4">
                   <a
                     href="#get-help"
-                    onClick={closeMobileMenu}
+                    onClick={(e) => scrollToSection(e, '#get-help')}
                     className="block w-full text-center px-6 py-3 rounded-xl font-medium text-white bg-gradient-to-r from-lavender-600 to-lavender-700 shadow-lg shadow-lavender-500/25"
                   >
                     Book a Session

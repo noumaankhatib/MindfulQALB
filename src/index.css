@@ -135,6 +135,7 @@
     @apply disabled:opacity-50 disabled:cursor-not-allowed;
     background: linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%);
     box-shadow: 0 4px 14px rgba(124, 58, 237, 0.25);
+    overflow: hidden;
   }
   
   .btn-primary:hover {
@@ -147,10 +148,18 @@
     content: '';
     @apply absolute inset-0 rounded-xl opacity-0 transition-opacity duration-400;
     background: linear-gradient(135deg, rgba(255,255,255,0.2) 0%, transparent 50%);
+    z-index: 0;
+    pointer-events: none;
   }
   
   .btn-primary:hover::before {
     @apply opacity-100;
+  }
+  
+  /* Ensure text content stays above the overlay */
+  .btn-primary > * {
+    position: relative;
+    z-index: 1;
   }
   
   .btn-secondary {
