@@ -1,10 +1,8 @@
 import { Router, Request, Response } from 'express';
 import * as razorpayService from '../services/razorpayService';
-import * as stripeService from '../services/stripeService';
 import {
   paymentOrderValidation,
   paymentVerifyValidation,
-  stripeCheckoutValidation,
   validate,
 } from '../utils/validation';
 
@@ -84,49 +82,12 @@ router.post('/verify', paymentVerifyValidation, validate, async (req: Request, r
 });
 
 /**
- * Create Stripe Checkout session
- * POST /api/payments/create-checkout
- */
-router.post('/create-checkout', stripeCheckoutValidation, validate, async (req: Request, res: Response) => {
-  try {
-    const { sessionType, format, customer, successUrl, cancelUrl } = req.body;
-
-    if (!stripeService.isConfigured()) {
-      return res.status(503).json({
-        success: false,
-        error: 'Stripe payment gateway not configured',
-      });
-    }
-
-    const session = await stripeService.createCheckoutSession(
-      sessionType,
-      format,
-      customer.email,
-      successUrl,
-      cancelUrl
-    );
-    
-    res.json({
-      success: true,
-      ...session,
-    });
-  } catch (error) {
-    console.error('Create checkout error:', error);
-    res.status(500).json({
-      success: false,
-      error: error instanceof Error ? error.message : 'Failed to create checkout session',
-    });
-  }
-});
-
-/**
  * Get payment gateway status
  * GET /api/payments/status
  */
 router.get('/status', (_req, res) => {
   res.json({
     razorpay: razorpayService.isConfigured(),
-    stripe: stripeService.isConfigured(),
   });
 });
 

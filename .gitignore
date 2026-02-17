@@ -25,3 +25,9 @@ dist-ssr
 .env
 .env.local
 .env.*.local
+
+# Test files
+playwright-report/
+test-results/
+e2e/
+playwright.config.ts

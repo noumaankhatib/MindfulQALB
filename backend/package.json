@@ -9,7 +9,11 @@
     "start": "node dist/index.js",
     "lint": "tsc --noEmit"
   },
-  "keywords": ["therapy", "booking", "api"],
+  "keywords": [
+    "therapy",
+    "booking",
+    "api"
+  ],
   "author": "MindfulQALB",
   "license": "ISC",
   "type": "commonjs",
@@ -22,7 +26,6 @@
     "express-validator": "^7.3.1",
     "helmet": "^8.1.0",
     "razorpay": "^2.9.6",
-    "stripe": "^20.3.1",
     "uuid": "^13.0.0"
   },
   "devDependencies": {

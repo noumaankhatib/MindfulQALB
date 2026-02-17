@@ -14,9 +14,15 @@ router.post('/', bookingValidation, validate, async (req: Request, res: Response
   try {
     const bookingRequest: BookingRequest = req.body;
     
+    // Combine sessionType and format for Cal.com event type lookup
+    // e.g., "individual" + "video" = "individual-video"
+    const combinedSessionType = bookingRequest.format 
+      ? `${bookingRequest.sessionType}-${bookingRequest.format}`
+      : bookingRequest.sessionType;
+    
     // Create booking on Cal.com
     const calComResult = await createCalComBooking(
-      bookingRequest.sessionType,
+      combinedSessionType,
       bookingRequest.date,
       bookingRequest.time,
       bookingRequest.customer

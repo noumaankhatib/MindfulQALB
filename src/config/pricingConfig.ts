@@ -94,9 +94,9 @@ export const THERAPY_PRICING: TherapyPricingConfig = {
     },
   },
 
-  // Free Consultation - Fixed format (introductory call)
+  // Free Consultation - Fixed format (introductory video call)
   free: {
-    call: { 
+    video: { 
       priceINR: 0, 
       priceUSD: 0, 
       enabled: true,

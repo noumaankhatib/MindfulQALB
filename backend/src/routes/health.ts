@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { isCalComConfigured, isRazorpayConfigured, isStripeConfigured } from '../utils/config';
+import { isCalComConfigured, isRazorpayConfigured } from '../utils/config';
 
 const router = Router();
 
@@ -14,7 +14,6 @@ router.get('/', (_req, res) => {
     services: {
       calcom: isCalComConfigured() ? 'configured' : 'not configured',
       razorpay: isRazorpayConfigured() ? 'configured' : 'not configured',
-      stripe: isStripeConfigured() ? 'configured' : 'not configured',
     },
   });
 });

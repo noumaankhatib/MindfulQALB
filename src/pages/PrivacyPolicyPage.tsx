@@ -47,7 +47,7 @@ const PrivacyPolicyPage = () => {
             <ul className="list-disc pl-6 text-gray-600 space-y-2">
               <li><strong>Personal Information:</strong> Name, email address, phone number when you book sessions</li>
               <li><strong>Health Information:</strong> Information shared during therapy sessions (kept strictly confidential)</li>
-              <li><strong>Payment Information:</strong> Processed securely through third-party payment processors (Razorpay, Stripe)</li>
+              <li><strong>Payment Information:</strong> Processed securely through Razorpay payment gateway</li>
               <li><strong>Technical Data:</strong> IP address, browser type, and device information for website functionality</li>
             </ul>
           </section>

@@ -1,42 +1,20 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import Razorpay from 'razorpay';
+import { handleCorsPrelight, validateMethod } from '../_utils/cors';
+import { validateSessionType, validateFormat } from '../_utils/validation';
 
-// Pricing configuration
-const PRICING = {
-  individual: {
-    chat: { amount: 499, currency: 'INR' },
-    audio: { amount: 899, currency: 'INR' },
-    video: { amount: 1299, currency: 'INR' },
-  },
-  couples: {
-    audio: { amount: 1499, currency: 'INR' },
-    video: { amount: 1999, currency: 'INR' },
-  },
-  family: {
-    audio: { amount: 1799, currency: 'INR' },
-    video: { amount: 2499, currency: 'INR' },
-  },
-} as const;
-
-// CORS headers
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type',
+// Pricing configuration (server-side only - secure)
+const PRICING: Record<string, Record<string, number>> = {
+  individual: { chat: 499, audio: 899, video: 1299 },
+  couples: { audio: 1499, video: 1999 },
+  family: { audio: 1799, video: 2499 },
+  free: { chat: 0, audio: 0, video: 0 },
 };
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  Object.entries(corsHeaders).forEach(([key, value]) => {
-    res.setHeader(key, value);
-  });
-
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
-
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
+  // Handle CORS
+  if (handleCorsPrelight(req, res)) return;
+  if (!validateMethod(req, res, ['POST'])) return;
 
   const keyId = process.env.RAZORPAY_KEY_ID;
   const keySecret = process.env.RAZORPAY_KEY_SECRET;
@@ -44,26 +22,45 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (!keyId || !keySecret) {
     return res.status(503).json({
       success: false,
-      error: 'Razorpay not configured',
+      error: 'Payment service not configured',
     });
   }
 
   try {
     const { sessionType, format } = req.body;
 
-    if (!sessionType || !format) {
-      return res.status(400).json({ error: 'sessionType and format are required' });
+    // Validate inputs
+    const sessionTypeResult = validateSessionType(sessionType);
+    if (!sessionTypeResult.valid) {
+      return res.status(400).json({ error: sessionTypeResult.error });
+    }
+    
+    const formatResult = validateFormat(format);
+    if (!formatResult.valid) {
+      return res.status(400).json({ error: formatResult.error });
     }
 
-    // Get price from server-side config (secure)
-    const therapyPricing = PRICING[sessionType as keyof typeof PRICING];
+    // Get price from server-side config (secure - prevents price manipulation)
+    const therapyPricing = PRICING[sessionType];
     if (!therapyPricing) {
-      return res.status(400).json({ error: 'Invalid session type' });
+      return res.status(400).json({ error: 'Invalid session type for pricing' });
     }
 
-    const formatPricing = therapyPricing[format as keyof typeof therapyPricing];
-    if (!formatPricing) {
-      return res.status(400).json({ error: 'Invalid format' });
+    const amount = therapyPricing[format];
+    if (amount === undefined) {
+      return res.status(400).json({ error: 'Invalid format for this session type' });
+    }
+
+    // Free sessions don't need payment
+    if (amount === 0) {
+      return res.json({
+        success: true,
+        orderId: `free_${Date.now()}`,
+        amount: 0,
+        currency: 'INR',
+        keyId: keyId,
+        isFree: true,
+      });
     }
 
     const razorpay = new Razorpay({
@@ -72,8 +69,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
 
     const order = await razorpay.orders.create({
-      amount: formatPricing.amount * 100, // Amount in paise
-      currency: formatPricing.currency,
+      amount: amount * 100, // Amount in paise
+      currency: 'INR',
       receipt: `receipt_${Date.now()}`,
       notes: { sessionType, format },
     });
@@ -81,8 +78,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     res.json({
       success: true,
       orderId: order.id,
-      amount: formatPricing.amount * 100,
-      currency: formatPricing.currency,
+      amount: amount * 100,
+      currency: 'INR',
       keyId: keyId,
     });
   } catch (error) {

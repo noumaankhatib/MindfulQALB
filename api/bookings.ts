@@ -1,11 +1,12 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-
-// CORS headers
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type',
-};
+import { handleCorsPrelight, validateMethod } from './_utils/cors';
+import { 
+  validateSessionType, 
+  validateDate, 
+  validateTime, 
+  validateCustomer,
+  sanitizeString 
+} from './_utils/validation';
 
 // Parse time to ISO
 const parseTimeToISO = (dateString: string, timeString: string): string => {
@@ -35,7 +36,8 @@ const createCalComBooking = async (
   const eventTypeIds = JSON.parse(process.env.CALCOM_EVENT_TYPE_IDS || '{}');
 
   if (!apiKey) {
-    return { success: true, bookingId: `local_${Date.now()}` };
+    // Return mock booking ID for development
+    return { success: true, bookingId: `dev_${Date.now()}` };
   }
 
   try {
@@ -54,10 +56,10 @@ const createCalComBooking = async (
         eventTypeId: parseInt(eventTypeId),
         start: startTime,
         responses: {
-          name: customer.name,
-          email: customer.email,
+          name: sanitizeString(customer.name),
+          email: customer.email.toLowerCase().trim(),
           phone: customer.phone,
-          notes: customer.notes || '',
+          notes: customer.notes ? sanitizeString(customer.notes) : '',
         },
         timeZone: 'Asia/Kolkata',
         language: 'en',
@@ -81,24 +83,32 @@ const createCalComBooking = async (
 };
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  Object.entries(corsHeaders).forEach(([key, value]) => {
-    res.setHeader(key, value);
-  });
-
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
-
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
+  // Handle CORS
+  if (handleCorsPrelight(req, res)) return;
+  if (!validateMethod(req, res, ['POST'])) return;
 
   try {
-    const { sessionType, format, date, time, customer } = req.body;
+    const { sessionType, date, time, customer } = req.body;
 
-    // Validation
-    if (!sessionType || !date || !time || !customer?.name || !customer?.email || !customer?.phone) {
-      return res.status(400).json({ error: 'Missing required fields' });
+    // Validate all inputs
+    const sessionTypeResult = validateSessionType(sessionType);
+    if (!sessionTypeResult.valid) {
+      return res.status(400).json({ error: sessionTypeResult.error });
+    }
+    
+    const dateResult = validateDate(date);
+    if (!dateResult.valid) {
+      return res.status(400).json({ error: dateResult.error });
+    }
+    
+    const timeResult = validateTime(time);
+    if (!timeResult.valid) {
+      return res.status(400).json({ error: timeResult.error });
+    }
+    
+    const customerResult = validateCustomer(customer);
+    if (!customerResult.valid) {
+      return res.status(400).json({ error: customerResult.error });
     }
 
     // Create booking

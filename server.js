@@ -95,22 +95,6 @@ app.post('/api/payments/verify', (req, res) => {
   });
 });
 
-// Create Stripe checkout (mock)
-app.post('/api/payments/create-checkout', (req, res) => {
-  const { sessionType, format, customer } = req.body;
-  
-  if (!sessionType || !format || !customer?.email) {
-    return res.status(400).json({ error: 'Missing required fields' });
-  }
-  
-  res.json({
-    success: true,
-    sessionId: `cs_mock_${Date.now()}`,
-    url: `http://localhost:5173/?payment=mock`,
-    mode: 'mock',
-  });
-});
-
 // Create booking (mock)
 app.post('/api/bookings', (req, res) => {
   const { sessionType, date, time, customer } = req.body;

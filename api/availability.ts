@@ -1,4 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { handleCorsPrelight, validateMethod } from './_utils/cors';
+import { validateSessionType, validateDate } from './_utils/validation';
 
 interface TimeSlot {
   time: string;
@@ -8,13 +10,6 @@ interface TimeSlot {
 interface CalComSlot {
   time: string;
 }
-
-// CORS headers
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type',
-};
 
 // Get mock slots for development/fallback
 const getMockSlots = (): TimeSlot[] => [
@@ -85,24 +80,22 @@ const getEventTypeSlug = (sessionType: string): string => {
 };
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // Set CORS headers
-  Object.entries(corsHeaders).forEach(([key, value]) => {
-    res.setHeader(key, value);
-  });
-
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
-
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
+  // Handle CORS
+  if (handleCorsPrelight(req, res)) return;
+  if (!validateMethod(req, res, ['POST'])) return;
 
   try {
     const { date, sessionType } = req.body;
     
-    if (!date || !sessionType) {
-      return res.status(400).json({ error: 'Date and sessionType are required' });
+    // Validate inputs
+    const sessionTypeResult = validateSessionType(sessionType);
+    if (!sessionTypeResult.valid) {
+      return res.status(400).json({ error: sessionTypeResult.error });
+    }
+    
+    const dateResult = validateDate(date);
+    if (!dateResult.valid) {
+      return res.status(400).json({ error: dateResult.error });
     }
 
     const slots = await fetchCalComAvailability(date, sessionType);
@@ -113,6 +106,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       slots,
     });
   } catch (error) {
+    console.error('Availability error:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to fetch availability',

@@ -1,16 +1,16 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import crypto from 'crypto';
+import { handleCorsPrelight, validateMethod } from './_utils/cors';
+import { 
+  validateSessionType, 
+  validateEmail, 
+  validateConsentVersion, 
+  validateAcknowledgments 
+} from './_utils/validation';
 
-// CORS headers
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type',
-};
-
-// Simple hash for email
+// Simple hash for email (one-way)
 const hashEmail = (email: string): string => {
-  return crypto.createHash('sha256').update(email.toLowerCase()).digest('hex');
+  return crypto.createHash('sha256').update(email.toLowerCase().trim()).digest('hex');
 };
 
 // Generate consent ID
@@ -19,24 +19,32 @@ const generateConsentId = (): string => {
 };
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  Object.entries(corsHeaders).forEach(([key, value]) => {
-    res.setHeader(key, value);
-  });
-
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
-
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
+  // Handle CORS
+  if (handleCorsPrelight(req, res)) return;
+  if (!validateMethod(req, res, ['POST'])) return;
 
   try {
     const { sessionType, email, consentVersion, acknowledgments } = req.body;
 
-    // Validation
-    if (!sessionType || !email || !consentVersion || !acknowledgments?.length) {
-      return res.status(400).json({ error: 'Missing required fields' });
+    // Validate all inputs
+    const sessionTypeResult = validateSessionType(sessionType);
+    if (!sessionTypeResult.valid) {
+      return res.status(400).json({ error: sessionTypeResult.error });
+    }
+    
+    const emailResult = validateEmail(email);
+    if (!emailResult.valid) {
+      return res.status(400).json({ error: emailResult.error });
+    }
+    
+    const versionResult = validateConsentVersion(consentVersion);
+    if (!versionResult.valid) {
+      return res.status(400).json({ error: versionResult.error });
+    }
+    
+    const acksResult = validateAcknowledgments(acknowledgments);
+    if (!acksResult.valid) {
+      return res.status(400).json({ error: acksResult.error });
     }
 
     // Create consent record (in production, store in database)
@@ -53,7 +61,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     };
 
     // Log consent record (in production, save to database)
-    console.log('Consent recorded:', consentRecord);
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('Consent recorded:', consentRecord);
+    }
 
     res.json({
       success: true,

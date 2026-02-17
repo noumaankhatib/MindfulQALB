@@ -9,16 +9,16 @@
 // PAYMENT GATEWAY TOGGLE
 // ============================================================================
 // Set to false to disable real payments and use mock success flow
-// Set to true to enable real Razorpay/Stripe payments
+// Set to true to enable real Razorpay payments
 // ============================================================================
 
 export const PAYMENT_CONFIG = {
   /**
    * Master toggle for payment processing
-   * - true: Real payments via Razorpay/Stripe (requires API keys)
+   * - true: Real payments via Razorpay (requires API keys)
    * - false: Mock payments for testing (simulates successful payment)
    */
-  PAYMENT_ENABLED: false, // <-- Toggle this for testing vs production
+  PAYMENT_ENABLED: true, // <-- Toggle this for testing vs production
 
   /**
    * Mock payment settings (only used when PAYMENT_ENABLED = false)
@@ -75,8 +75,8 @@ export const AVAILABILITY_CONFIG = {
 
   /**
    * Mock available slots for testing (when Cal.com is not set up)
-   * When Cal.com API is configured (VITE_CALCOM_API_KEY in .env),
-   * real-time availability will be fetched from Cal.com
+   * When Cal.com API is configured in backend/.env,
+   * real-time availability will be fetched via the backend API
    */
   USE_MOCK_AVAILABILITY: true,
 
@@ -99,18 +99,15 @@ export const AVAILABILITY_CONFIG = {
 // CAL.COM INTEGRATION
 // ============================================================================
 // 
-// To enable real-time availability and prevent double-booking across devices:
+// Cal.com integration is handled via the backend API for security.
+// Configure the following in backend/.env:
 // 
-// 1. Create a Cal.com account: https://cal.com
-// 2. Go to Settings > Developer > API Keys
-// 3. Create a new API key with booking:write scope
-// 4. Add to .env: VITE_CALCOM_API_KEY=your_api_key
-// 5. Create event types in Cal.com (free-consultation, individual-therapy, etc.)
-// 6. Update EVENT_TYPE_IDS in src/services/calcomService.ts with actual IDs
+// - CALCOM_API_KEY: Your Cal.com API key
+// - CALCOM_USERNAME: Your Cal.com username
+// - CALCOM_EVENT_TYPE_IDS: JSON mapping of session types to event IDs
 // 
-// Without Cal.com configured, bookings are stored locally and won't sync
-// across devices. Cal.com handles real-time availability and prevents
-// double-booking automatically.
+// The frontend communicates with Cal.com through the /api/availability and
+// /api/bookings endpoints, keeping API keys secure on the server.
 // ============================================================================
 
 // ============================================================================

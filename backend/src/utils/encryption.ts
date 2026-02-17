@@ -1,6 +1,21 @@
 import CryptoJS from 'crypto-js';
 
-const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || 'default-dev-key-change-in-production';
+// Require encryption key in production
+const getEncryptionKey = (): string => {
+  const key = process.env.ENCRYPTION_KEY;
+  
+  if (process.env.NODE_ENV === 'production' && !key) {
+    throw new Error(
+      'ENCRYPTION_KEY environment variable is required in production. ' +
+      'Generate a secure key using: openssl rand -base64 32'
+    );
+  }
+  
+  // Allow default key only in development
+  return key || 'dev-only-key-not-for-production';
+};
+
+const ENCRYPTION_KEY = getEncryptionKey();
 
 /**
  * Encrypt sensitive data

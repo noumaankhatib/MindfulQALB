@@ -78,7 +78,7 @@ const TermsOfServicePage = () => {
             <ul className="list-disc pl-6 text-gray-600 space-y-2">
               <li>Payment is due at the time of booking or as agreed upon</li>
               <li>Session fees are clearly displayed before booking</li>
-              <li>We accept payments via Razorpay (India) and Stripe (International)</li>
+              <li>We accept payments via Razorpay (UPI, Cards, NetBanking)</li>
               <li>All fees are quoted in the local currency based on your location</li>
               <li>Receipts are provided for all payments</li>
             </ul>

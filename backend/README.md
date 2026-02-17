@@ -74,16 +74,6 @@ POST /api/payments/verify
 }
 ```
 
-### Create Checkout (Stripe)
-```
-POST /api/payments/create-checkout
-{
-  "sessionType": "individual",
-  "format": "video",
-  "customer": { "email": "user@example.com" }
-}
-```
-
 ### Create Booking
 ```
 POST /api/bookings
@@ -123,8 +113,6 @@ POST /api/consent
 | `CALCOM_EVENT_TYPE_IDS` | JSON mapping of session types to event IDs |
 | `RAZORPAY_KEY_ID` | Razorpay key ID |
 | `RAZORPAY_KEY_SECRET` | Razorpay key secret |
-| `STRIPE_SECRET_KEY` | Stripe secret key |
-| `STRIPE_WEBHOOK_SECRET` | Stripe webhook secret |
 | `ENCRYPTION_KEY` | Key for encrypting PII |
 
 ## Deployment

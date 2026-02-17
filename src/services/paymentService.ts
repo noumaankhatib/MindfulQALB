@@ -1,18 +1,12 @@
-// Payment service for handling Razorpay (India) and Stripe (International) payments
+// Payment service for handling Razorpay payments
 
 import { SessionRecommendation } from '../data/chatbotFlow';
 import { PAYMENT_CONFIG } from '../config/paymentConfig';
 
-// Backend API configuration
-const BACKEND_CONFIG = {
-  USE_BACKEND_API: import.meta.env.VITE_USE_BACKEND_API === 'true',
-  BACKEND_URL: import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001/api',
-};
 
 // Types
 export interface PaymentConfig {
   razorpayKeyId: string;
-  stripePublishableKey: string;
 }
 
 export interface PaymentResult {
@@ -59,10 +53,10 @@ declare global {
   }
 }
 
-// Get API keys from environment variables
+// Note: Razorpay key ID is now fetched from backend API during order creation
+// This ensures the key is always in sync with the server configuration
 export const getPaymentConfig = (): PaymentConfig => ({
-  razorpayKeyId: import.meta.env.VITE_RAZORPAY_KEY_ID || '',
-  stripePublishableKey: import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || '',
+  razorpayKeyId: '', // Populated from backend API response
 });
 
 // Load Razorpay script dynamically
@@ -81,29 +75,11 @@ export const loadRazorpayScript = (): Promise<boolean> => {
   });
 };
 
-// Load Stripe script dynamically
-export const loadStripeScript = (): Promise<boolean> => {
-  return new Promise((resolve) => {
-    if ((window as unknown as Record<string, unknown>).Stripe) {
-      resolve(true);
-      return;
-    }
-
-    const script = document.createElement('script');
-    script.src = 'https://js.stripe.com/v3/';
-    script.onload = () => resolve(true);
-    script.onerror = () => resolve(false);
-    document.body.appendChild(script);
-  });
-};
-
-// Process Razorpay payment (for India)
+// Process Razorpay payment
 export const processRazorpayPayment = async (
   session: SessionRecommendation,
   customerInfo: { name?: string; email?: string; phone?: string }
 ): Promise<PaymentResult> => {
-  const config = getPaymentConfig();
-
   const scriptLoaded = await loadRazorpayScript();
   if (!scriptLoaded) {
     return {
@@ -112,44 +88,56 @@ export const processRazorpayPayment = async (
     };
   }
 
-  // Use backend API to create order (secure - server-side amount verification)
-  let orderId: string | undefined;
-  let amount: number = session.priceINR * 100;
-  let keyId: string = config.razorpayKeyId;
+  // SECURITY: Always create orders via backend API
+  // This ensures server-side price verification and prevents price manipulation
+  let orderId: string;
+  let amount: number;
+  let keyId: string;
 
-  if (BACKEND_CONFIG.USE_BACKEND_API) {
-    try {
-      const response = await fetch(`${BACKEND_CONFIG.BACKEND_URL}/payments/create-order`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          sessionType: session.id?.split('-')[0] || 'individual',
-          format: session.id?.split('-')[1] || 'video',
-        }),
-      });
+  try {
+    const response = await fetch(`/api/payments/create-order`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        sessionType: session.id?.split('-')[0] || 'individual',
+        format: session.id?.split('-')[1] || 'video',
+      }),
+    });
+    
+    if (response.ok) {
+      const data = await response.json();
       
-      if (response.ok) {
-        const data = await response.json();
-        orderId = data.orderId;
-        amount = data.amount;
-        keyId = data.keyId;
-      } else {
-        const errorData = await response.json();
+      // Handle free sessions
+      if (data.isFree) {
         return {
-          success: false,
-          error: errorData.error || 'Failed to create payment order',
+          success: true,
+          paymentId: data.orderId,
+          orderId: data.orderId,
         };
       }
-    } catch (error) {
+      
+      orderId = data.orderId;
+      amount = data.amount;
+      keyId = data.keyId;
+    } else {
+      const errorData = await response.json();
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Failed to create payment order',
+        error: errorData.error || 'Failed to create payment order',
       };
     }
-  } else if (!keyId) {
+  } catch (error) {
     return {
       success: false,
-      error: 'Razorpay is not configured. Please contact support.',
+      error: error instanceof Error ? error.message : 'Payment service unavailable',
+    };
+  }
+  
+  // Fallback check - should not happen if API is working
+  if (!keyId || !orderId) {
+    return {
+      success: false,
+      error: 'Payment configuration error. Please contact support.',
     };
   }
 
@@ -170,20 +158,30 @@ export const processRazorpayPayment = async (
         color: '#8B7EC8', // Lavender theme color
       },
       handler: async (response: RazorpayResponse) => {
-        // Verify payment signature via backend (secure)
-        if (BACKEND_CONFIG.USE_BACKEND_API && response.razorpay_signature) {
-          try {
-            const verifyResponse = await fetch(`${BACKEND_CONFIG.BACKEND_URL}/payments/verify`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                razorpay_order_id: response.razorpay_order_id,
-                razorpay_payment_id: response.razorpay_payment_id,
-                razorpay_signature: response.razorpay_signature,
-              }),
-            });
-            
-            if (verifyResponse.ok) {
+        // SECURITY: Always verify payment signature via backend
+        // Never trust client-side payment confirmation without server verification
+        if (!response.razorpay_signature || !response.razorpay_order_id) {
+          resolve({
+            success: false,
+            error: 'Invalid payment response - missing verification data',
+          });
+          return;
+        }
+
+        try {
+          const verifyResponse = await fetch(`/api/payments/verify`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+            }),
+          });
+          
+          if (verifyResponse.ok) {
+            const data = await verifyResponse.json();
+            if (data.verified) {
               resolve({
                 success: true,
                 paymentId: response.razorpay_payment_id,
@@ -192,20 +190,20 @@ export const processRazorpayPayment = async (
             } else {
               resolve({
                 success: false,
-                error: 'Payment verification failed',
+                error: 'Payment verification failed - signature mismatch',
               });
             }
-          } catch {
+          } else {
             resolve({
               success: false,
-              error: 'Payment verification failed',
+              error: 'Payment verification failed - server error',
             });
           }
-        } else {
+        } catch (error) {
+          console.error('Payment verification error:', error);
           resolve({
-            success: true,
-            paymentId: response.razorpay_payment_id,
-            orderId: response.razorpay_order_id,
+            success: false,
+            error: 'Payment verification failed - please contact support',
           });
         }
       },
@@ -221,69 +219,6 @@ export const processRazorpayPayment = async (
 
     const razorpay = new window.Razorpay(options);
     razorpay.open();
-  });
-};
-
-// Process Stripe payment (for International)
-// Note: For production, this should create a checkout session via your backend
-export const processStripePayment = async (
-  session: SessionRecommendation,
-  _customerInfo: { name?: string; email?: string; phone?: string }
-): Promise<PaymentResult> => {
-  const config = getPaymentConfig();
-
-  if (!config.stripePublishableKey) {
-    return {
-      success: false,
-      error: 'Stripe is not configured. Please contact support.',
-    };
-  }
-
-  const scriptLoaded = await loadStripeScript();
-  if (!scriptLoaded) {
-    return {
-      success: false,
-      error: 'Failed to load payment gateway. Please try again.',
-    };
-  }
-
-  // For a full implementation, you would:
-  // 1. Call your backend to create a Stripe Checkout Session
-  // 2. Redirect to Stripe Checkout or use Stripe Elements
-  
-  // For now, we'll show a placeholder that indicates Stripe is ready
-  // This should be replaced with actual Stripe Checkout integration
-  
-  return new Promise((resolve) => {
-    // Simulating redirect to Stripe Checkout
-    // In production, replace with actual Stripe Checkout Session
-    // URL would be: https://checkout.stripe.com/pay/cs_live_xxx
-    
-    // For demo purposes, show an alert
-    // In production, redirect using backend-generated session URL
-    const confirmed = window.confirm(
-      `Stripe Checkout\n\n` +
-      `Session: ${session.title}\n` +
-      `Amount: $${session.priceUSD}\n\n` +
-      `Note: For production, this will redirect to Stripe Checkout.\n` +
-      `Click OK to simulate successful payment.`
-    );
-
-    if (confirmed) {
-      resolve({
-        success: true,
-        paymentId: `stripe_${Date.now()}`,
-      });
-    } else {
-      resolve({
-        success: false,
-        error: 'Payment cancelled by user',
-      });
-    }
-
-    // Production code would look like:
-    // window.location.href = stripeCheckoutUrl;
-    // Stripe checkout URL ready for production use
   });
 };
 
@@ -316,10 +251,10 @@ export const processMockPayment = async (
   });
 };
 
-// Main payment processor - routes to appropriate gateway based on location and config
+// Main payment processor - uses Razorpay for all payments
 export const processPayment = async (
   session: SessionRecommendation,
-  isIndia: boolean,
+  _isIndia: boolean, // Kept for API compatibility, but always uses Razorpay
   customerInfo: { name?: string; email?: string; phone?: string }
 ): Promise<PaymentResult> => {
   // Check if payment is enabled
@@ -328,26 +263,15 @@ export const processPayment = async (
     return processMockPayment(session, customerInfo);
   }
 
-  // Real payment processing
-  if (isIndia) {
-    return processRazorpayPayment(session, customerInfo);
-  } else {
-    return processStripePayment(session, customerInfo);
-  }
+  // Real payment processing with Razorpay
+  return processRazorpayPayment(session, customerInfo);
 };
 
 // Validate payment configuration
-export const isPaymentConfigured = (isIndia: boolean): boolean => {
-  // In test mode, always return true
-  if (!PAYMENT_CONFIG.isPaymentEnabled) {
-    return true;
-  }
-
-  const config = getPaymentConfig();
-  if (isIndia) {
-    return !!config.razorpayKeyId;
-  }
-  return !!config.stripePublishableKey;
+export const isPaymentConfigured = (_isIndia?: boolean): boolean => {
+  // Always return true - the backend API handles Razorpay configuration
+  // If backend is not configured, the payment request will fail gracefully
+  return true;
 };
 
 // Check if we're in test mode
@@ -363,7 +287,6 @@ export const getPaymentModeLabel = (): string => {
 export default {
   processPayment,
   processRazorpayPayment,
-  processStripePayment,
   processMockPayment,
   isPaymentConfigured,
   isTestMode,

@@ -24,7 +24,7 @@ app.use(helmet({
       scriptSrc: ["'self'"],
       styleSrc: ["'self'", "'unsafe-inline'"],
       imgSrc: ["'self'", "data:", "https:"],
-      connectSrc: ["'self'", "https://api.cal.com", "https://api.razorpay.com", "https://api.stripe.com"],
+      connectSrc: ["'self'", "https://api.cal.com", "https://api.razorpay.com"],
     },
   },
 }));

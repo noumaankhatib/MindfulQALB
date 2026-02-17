@@ -1,25 +1,22 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { handleCorsPrelight, validateMethod } from './_utils/cors';
 
-// Configuration check
-const isCalComConfigured = () => !!process.env.CALCOM_API_KEY;
-const isRazorpayConfigured = () => !!process.env.RAZORPAY_KEY_ID && !!process.env.RAZORPAY_KEY_SECRET;
-const isStripeConfigured = () => !!process.env.STRIPE_SECRET_KEY;
+export default function handler(req: VercelRequest, res: VercelResponse) {
+  // Handle CORS
+  if (handleCorsPrelight(req, res)) return;
+  if (!validateMethod(req, res, ['GET'])) return;
 
-export default function handler(_req: VercelRequest, res: VercelResponse) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-  
-  if (_req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
+  // Don't expose service configuration in production
+  const isProduction = process.env.NODE_ENV === 'production';
   
   res.json({
     status: 'ok',
     timestamp: new Date().toISOString(),
-    services: {
-      calcom: isCalComConfigured() ? 'configured' : 'not configured',
-      razorpay: isRazorpayConfigured() ? 'configured' : 'not configured',
-      stripe: isStripeConfigured() ? 'configured' : 'not configured',
-    },
+    ...(isProduction ? {} : {
+      services: {
+        calcom: !!process.env.CALCOM_API_KEY ? 'configured' : 'not configured',
+        razorpay: !!process.env.RAZORPAY_KEY_ID ? 'configured' : 'not configured',
+      },
+    }),
   });
 }

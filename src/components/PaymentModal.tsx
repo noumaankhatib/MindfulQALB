@@ -179,11 +179,7 @@ const PaymentModal = ({ session, isOpen, onClose }: PaymentModalProps) => {
                   {/* Payment Gateway Info */}
                   <div className="mb-5 p-3 bg-gray-50 rounded-lg border border-gray-100">
                     <p className="text-xs text-gray-600 text-center">
-                      {isIndia ? (
-                        <>Paying with <strong>Razorpay</strong> (UPI, Cards, NetBanking)</>
-                      ) : (
-                        <>Paying with <strong>Stripe</strong> (International Cards)</>
-                      )}
+                      Paying with <strong>Razorpay</strong> (UPI, Cards, NetBanking)
                     </p>
                   </div>
 
@@ -302,7 +298,7 @@ const PaymentModal = ({ session, isOpen, onClose }: PaymentModalProps) => {
                   <p className="mt-4 text-xs text-gray-500 text-center">
                     <span className="inline-flex items-center gap-1">
                       <CheckCircle className="w-3.5 h-3.5 text-green-500" />
-                      Secure payment powered by {isIndia ? 'Razorpay' : 'Stripe'}
+                      Secure payment powered by Razorpay
                     </span>
                   </p>
                 </>

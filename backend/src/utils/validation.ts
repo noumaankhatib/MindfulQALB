@@ -90,16 +90,3 @@ export const consentValidation = [
     .isArray({ min: 1 })
     .withMessage('At least one acknowledgment is required'),
 ];
-
-export const stripeCheckoutValidation = [
-  body('sessionType')
-    .isIn(['individual', 'couples', 'family'])
-    .withMessage('Invalid session type'),
-  body('format')
-    .isIn(['chat', 'audio', 'video'])
-    .withMessage('Invalid format'),
-  body('customer.email')
-    .isEmail()
-    .normalizeEmail()
-    .withMessage('Invalid email address'),
-];

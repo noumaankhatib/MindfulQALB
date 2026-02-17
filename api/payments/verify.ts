@@ -1,50 +1,54 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import crypto from 'crypto';
-
-// CORS headers
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type',
-};
+import { handleCorsPrelight, validateMethod } from '../_utils/cors';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  Object.entries(corsHeaders).forEach(([key, value]) => {
-    res.setHeader(key, value);
-  });
-
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
-
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
+  // Handle CORS
+  if (handleCorsPrelight(req, res)) return;
+  if (!validateMethod(req, res, ['POST'])) return;
 
   const keySecret = process.env.RAZORPAY_KEY_SECRET;
 
   if (!keySecret) {
     return res.status(503).json({
       success: false,
-      error: 'Razorpay not configured',
+      error: 'Payment service not configured',
     });
   }
 
   try {
     const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
 
-    if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
-      return res.status(400).json({ error: 'Missing required fields' });
+    // Validate required fields
+    if (!razorpay_order_id || typeof razorpay_order_id !== 'string') {
+      return res.status(400).json({ error: 'Order ID is required' });
+    }
+    if (!razorpay_payment_id || typeof razorpay_payment_id !== 'string') {
+      return res.status(400).json({ error: 'Payment ID is required' });
+    }
+    if (!razorpay_signature || typeof razorpay_signature !== 'string') {
+      return res.status(400).json({ error: 'Signature is required' });
     }
 
-    // Verify signature
+    // Validate format (basic sanity check)
+    if (!razorpay_order_id.startsWith('order_')) {
+      return res.status(400).json({ error: 'Invalid order ID format' });
+    }
+    if (!razorpay_payment_id.startsWith('pay_')) {
+      return res.status(400).json({ error: 'Invalid payment ID format' });
+    }
+
+    // Verify signature using HMAC SHA256
     const body = razorpay_order_id + '|' + razorpay_payment_id;
     const expectedSignature = crypto
       .createHmac('sha256', keySecret)
       .update(body)
       .digest('hex');
 
-    const isValid = expectedSignature === razorpay_signature;
+    const isValid = crypto.timingSafeEqual(
+      Buffer.from(expectedSignature),
+      Buffer.from(razorpay_signature)
+    );
 
     if (isValid) {
       res.json({
@@ -53,6 +57,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         paymentId: razorpay_payment_id,
       });
     } else {
+      // Log failed verification attempt (potential fraud)
+      console.warn('Payment verification failed:', {
+        orderId: razorpay_order_id,
+        paymentId: razorpay_payment_id,
+        ip: req.headers['x-forwarded-for'] || req.headers['x-real-ip'],
+        timestamp: new Date().toISOString(),
+      });
+      
       res.status(400).json({
         success: false,
         verified: false,

@@ -121,44 +121,6 @@ export const verifyPayment = async (
 };
 
 /**
- * Create Stripe checkout session
- */
-export const createStripeCheckout = async (
-  sessionType: string,
-  format: string,
-  customerEmail: string,
-  successUrl: string,
-  cancelUrl: string
-): Promise<ApiResponse<{ sessionId: string; url: string }>> => {
-  if (API_CONFIG.USE_BACKEND_API) {
-    try {
-      const response = await fetch(`${API_CONFIG.BACKEND_URL}/payments/create-checkout`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          sessionType,
-          format,
-          customer: { email: customerEmail },
-          successUrl,
-          cancelUrl,
-        }),
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to create checkout session');
-      }
-      
-      const data = await response.json();
-      return { success: true, data };
-    } catch {
-      return { success: false, error: 'Failed to create checkout session' };
-    }
-  } else {
-    return { success: false, error: 'Backend API not configured' };
-  }
-};
-
-/**
  * Create a booking
  */
 export const createBooking = async (booking: {

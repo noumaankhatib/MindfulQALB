@@ -35,14 +35,6 @@ export const RAZORPAY_CONFIG = {
   KEY_SECRET: process.env.RAZORPAY_KEY_SECRET || '',
 };
 
-// Stripe configuration
-export const STRIPE_CONFIG = {
-  SECRET_KEY: process.env.STRIPE_SECRET_KEY || '',
-  WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET || '',
-  SUCCESS_URL: process.env.STRIPE_SUCCESS_URL || 'http://localhost:5173/booking/success',
-  CANCEL_URL: process.env.STRIPE_CANCEL_URL || 'http://localhost:5173/booking/cancel',
-};
-
 // Validation helpers
 export const isCalComConfigured = (): boolean => {
   return !!CALCOM_CONFIG.API_KEY && !!CALCOM_CONFIG.USERNAME;
@@ -50,10 +42,6 @@ export const isCalComConfigured = (): boolean => {
 
 export const isRazorpayConfigured = (): boolean => {
   return !!RAZORPAY_CONFIG.KEY_ID && !!RAZORPAY_CONFIG.KEY_SECRET;
-};
-
-export const isStripeConfigured = (): boolean => {
-  return !!STRIPE_CONFIG.SECRET_KEY;
 };
 
 // Get price for session type and format
