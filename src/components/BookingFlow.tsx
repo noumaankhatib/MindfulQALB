@@ -325,10 +325,10 @@ const BookingFlow = ({ session, isOpen, onClose }: BookingFlowProps) => {
     }
   }, [selectedDate]);
 
-  // Get booked slots from localStorage (for local fallback)
+  // Get booked slots from sessionStorage (for local fallback)
   const getLocalBookedSlots = (date: Date): string[] => {
     try {
-      const existingBookings = JSON.parse(localStorage.getItem('bookings') || '[]');
+      const existingBookings = JSON.parse(sessionStorage.getItem('mq_bookingRefs') || '[]');
       const dateString = date.toDateString();
       
       return existingBookings
@@ -565,24 +565,27 @@ const BookingFlow = ({ session, isOpen, onClose }: BookingFlowProps) => {
         bookingId,
       });
 
-      // Store booking info locally for reference
-      const bookingRecord = {
+      // Store minimal booking reference in sessionStorage (not full PII)
+      // Full booking data is stored on Cal.com backend or sent to server
+      const bookingReference = {
         bookingId,
-        paymentId: paymentId || 'FREE',
         session: selectedSessionType.id,
         sessionTitle: selectedSessionType.title,
         isFree: selectedSessionType.isFree,
         date: selectedDate.toISOString(),
         time: selectedSlot,
-        customerInfo,
-        consentRecord,
+        firstName: customerInfo.name.split(' ')[0], // Only first name for display
         calComBooked: isCalComConfigured(),
         timestamp: new Date().toISOString(),
       };
       
-      const existingBookings = JSON.parse(localStorage.getItem('bookings') || '[]');
-      existingBookings.push(bookingRecord);
-      localStorage.setItem('bookings', JSON.stringify(existingBookings));
+      try {
+        const existingBookings = JSON.parse(sessionStorage.getItem('mq_bookingRefs') || '[]');
+        existingBookings.push(bookingReference);
+        sessionStorage.setItem('mq_bookingRefs', JSON.stringify(existingBookings));
+      } catch {
+        // Storage failed - continue without local storage
+      }
 
       setCurrentStep('confirmation');
     } catch (err) {
@@ -650,9 +653,13 @@ const BookingFlow = ({ session, isOpen, onClose }: BookingFlowProps) => {
               transition={{ duration: 0.2 }}
               onClick={(e) => e.stopPropagation()}
               className="w-full max-w-5xl max-h-[90vh] bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="booking-dialog-title"
             >
               {/* Header */}
               <div className="bg-gradient-to-r from-lavender-500 to-lavender-600 text-white p-4 flex-shrink-0">
+                <h2 id="booking-dialog-title" className="sr-only">Book Your Therapy Session</h2>
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-3">
                     <div className="flex items-center gap-2 text-sm text-white/80">
@@ -675,6 +682,7 @@ const BookingFlow = ({ session, isOpen, onClose }: BookingFlowProps) => {
                     <button
                       onClick={onClose}
                       className="p-2 hover:bg-white/20 rounded-full transition-colors"
+                      aria-label="Close booking dialog"
                     >
                       <X className="w-5 h-5" />
                     </button>
@@ -1261,10 +1269,11 @@ const BookingFlow = ({ session, isOpen, onClose }: BookingFlowProps) => {
 
                       <div className="space-y-4">
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                          <label htmlFor="booking-name" className="block text-sm font-medium text-gray-700 mb-1">
                             Full Name *
                           </label>
                           <input
+                            id="booking-name"
                             type="text"
                             value={customerInfo.name}
                             onChange={(e) =>
@@ -1274,17 +1283,20 @@ const BookingFlow = ({ session, isOpen, onClose }: BookingFlowProps) => {
                               formErrors.name ? 'border-red-300' : 'border-gray-200'
                             }`}
                             placeholder="Jane Doe"
+                            aria-invalid={formErrors.name ? 'true' : 'false'}
+                            aria-describedby={formErrors.name ? 'name-error' : undefined}
                           />
                           {formErrors.name && (
-                            <p className="mt-1 text-xs text-red-500">{formErrors.name}</p>
+                            <p id="name-error" className="mt-1 text-xs text-red-500" role="alert">{formErrors.name}</p>
                           )}
                         </div>
 
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                          <label htmlFor="booking-email" className="block text-sm font-medium text-gray-700 mb-1">
                             Email Address *
                           </label>
                           <input
+                            id="booking-email"
                             type="email"
                             value={customerInfo.email}
                             onChange={(e) =>
@@ -1294,17 +1306,20 @@ const BookingFlow = ({ session, isOpen, onClose }: BookingFlowProps) => {
                               formErrors.email ? 'border-red-300' : 'border-gray-200'
                             }`}
                             placeholder="jane.doe@example.com"
+                            aria-invalid={formErrors.email ? 'true' : 'false'}
+                            aria-describedby={formErrors.email ? 'email-error' : undefined}
                           />
                           {formErrors.email && (
-                            <p className="mt-1 text-xs text-red-500">{formErrors.email}</p>
+                            <p id="email-error" className="mt-1 text-xs text-red-500" role="alert">{formErrors.email}</p>
                           )}
                         </div>
 
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                          <label htmlFor="booking-phone" className="block text-sm font-medium text-gray-700 mb-1">
                             Phone Number *
                           </label>
                           <input
+                            id="booking-phone"
                             type="tel"
                             value={customerInfo.phone}
                             onChange={(e) =>
@@ -1314,17 +1329,20 @@ const BookingFlow = ({ session, isOpen, onClose }: BookingFlowProps) => {
                               formErrors.phone ? 'border-red-300' : 'border-gray-200'
                             }`}
                             placeholder="+91 9876543210"
+                            aria-invalid={formErrors.phone ? 'true' : 'false'}
+                            aria-describedby={formErrors.phone ? 'phone-error' : undefined}
                           />
                           {formErrors.phone && (
-                            <p className="mt-1 text-xs text-red-500">{formErrors.phone}</p>
+                            <p id="phone-error" className="mt-1 text-xs text-red-500" role="alert">{formErrors.phone}</p>
                           )}
                         </div>
 
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                          <label htmlFor="booking-notes" className="block text-sm font-medium text-gray-700 mb-1">
                             Optional Notes
                           </label>
                           <textarea
+                            id="booking-notes"
                             value={customerInfo.notes}
                             onChange={(e) =>
                               setCustomerInfo((prev) => ({ ...prev, notes: e.target.value }))
@@ -1503,13 +1521,14 @@ const BookingFlow = ({ session, isOpen, onClose }: BookingFlowProps) => {
                       <div className="flex gap-3">
                         <button
                           onClick={() => {
-                            // Add to calendar logic
-                            const event = {
-                              title: `Therapy Session - ${selectedSessionType?.title}`,
-                              start: selectedDate,
-                              duration: selectedSessionType?.duration,
-                            };
-                            console.log('Add to calendar:', event);
+                            // Generate Google Calendar URL
+                            if (selectedDate && selectedSessionType) {
+                              const startTime = selectedDate.toISOString().replace(/-|:|\.\d+/g, '');
+                              const title = encodeURIComponent(`Therapy Session - ${selectedSessionType.title}`);
+                              const details = encodeURIComponent('Your therapy session with MindfulQALB');
+                              const calendarUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${startTime}/${startTime}&details=${details}`;
+                              window.open(calendarUrl, '_blank');
+                            }
                           }}
                           className="flex-1 px-4 py-3 bg-lavender-100 text-lavender-700 rounded-lg hover:bg-lavender-200 transition-colors font-medium flex items-center justify-center gap-2"
                         >

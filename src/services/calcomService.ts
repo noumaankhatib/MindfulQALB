@@ -109,6 +109,12 @@ interface CalComAvailabilityResponse {
   slots: Record<string, CalComSlot[]>;
 }
 
+// Backend API configuration
+const BACKEND_CONFIG = {
+  USE_BACKEND_API: import.meta.env.VITE_USE_BACKEND_API === 'true',
+  BACKEND_URL: import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001/api',
+};
+
 /**
  * Fetch available time slots from Cal.com
  */
@@ -116,10 +122,31 @@ export const fetchCalComAvailability = async (
   date: Date,
   sessionType: string = 'individual'
 ): Promise<TimeSlot[]> => {
+  // Use backend API if configured (recommended for production)
+  if (BACKEND_CONFIG.USE_BACKEND_API) {
+    try {
+      const response = await fetch(`${BACKEND_CONFIG.BACKEND_URL}/availability`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          date: date.toISOString().split('T')[0],
+          sessionType,
+        }),
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        return data.slots || getFallbackSlots();
+      }
+    } catch {
+      // Fall through to direct API or fallback
+    }
+  }
+  
   const apiKey = getApiKey();
   
   if (!apiKey) {
-    console.warn('Cal.com API key not configured, using fallback slots');
+    // Cal.com API key not configured, using fallback slots
     return getFallbackSlots();
   }
 
@@ -171,8 +198,8 @@ export const fetchCalComAvailability = async (
     }
 
     return slots;
-  } catch (error) {
-    console.error('Error fetching Cal.com availability:', error);
+  } catch {
+    // Error fetching Cal.com availability, using fallback slots
     return getFallbackSlots();
   }
 };
@@ -191,10 +218,46 @@ export const createCalComBooking = async (
     notes?: string;
   }
 ): Promise<{ success: boolean; bookingId?: string; error?: string }> => {
+  // Use backend API if configured (recommended for production)
+  if (BACKEND_CONFIG.USE_BACKEND_API) {
+    try {
+      const response = await fetch(`${BACKEND_CONFIG.BACKEND_URL}/bookings`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionType,
+          format: sessionType.includes('-') ? sessionType.split('-')[1] : 'video',
+          date: date.toISOString().split('T')[0],
+          time: timeSlot,
+          customer: customerInfo,
+        }),
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        return {
+          success: true,
+          bookingId: data.bookingId || data.calComBookingId,
+        };
+      }
+      
+      const errorData = await response.json();
+      return {
+        success: false,
+        error: errorData.error || 'Booking failed',
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Booking failed',
+      };
+    }
+  }
+  
   const apiKey = getApiKey();
   
   if (!apiKey) {
-    console.warn('Cal.com API key not configured, creating local booking only');
+    // Cal.com API key not configured, creating local booking only
     return createLocalBooking(sessionType, date, timeSlot, customerInfo);
   }
 
@@ -202,7 +265,7 @@ export const createCalComBooking = async (
     const eventTypeId = CALCOM_CONFIG.EVENT_TYPE_IDS[sessionType as keyof typeof CALCOM_CONFIG.EVENT_TYPE_IDS];
     
     if (!eventTypeId) {
-      console.warn('Event type ID not configured for:', sessionType);
+      // Event type ID not configured for this session type
       return createLocalBooking(sessionType, date, timeSlot, customerInfo);
     }
 
@@ -247,9 +310,8 @@ export const createCalComBooking = async (
       success: true,
       bookingId: bookingData.uid || `CAL-${Date.now()}`,
     };
-  } catch (error) {
-    console.error('Error creating Cal.com booking:', error);
-    // Fall back to local booking
+  } catch {
+    // Error creating Cal.com booking - fall back to local booking
     return createLocalBooking(sessionType, date, timeSlot, customerInfo);
   }
 };
@@ -279,7 +341,8 @@ const createLocalBooking = async (
 };
 
 /**
- * Save booking to localStorage
+ * Save booking reference to sessionStorage (not full PII)
+ * For production: PII should be sent to secure backend only
  */
 const saveLocalBooking = (
   sessionType: string,
@@ -294,20 +357,25 @@ const saveLocalBooking = (
   bookingId: string
 ) => {
   try {
-    const bookingRecord = {
+    // Only store minimal reference data in sessionStorage
+    // Full PII should go to backend, not client storage
+    const bookingReference = {
       bookingId,
       sessionType,
       date: date.toISOString(),
       time: timeSlot,
-      customerInfo,
-      timestamp: new Date().toISOString(),
+      // Only store first name for display
+      firstName: customerInfo.name.split(' ')[0],
+      createdAt: new Date().toISOString(),
     };
     
-    const existingBookings = JSON.parse(localStorage.getItem('bookings') || '[]');
-    existingBookings.push(bookingRecord);
-    localStorage.setItem('bookings', JSON.stringify(existingBookings));
-  } catch (error) {
-    console.error('Error saving local booking:', error);
+    // Use sessionStorage instead of localStorage for better privacy
+    // Data is cleared when browser session ends
+    const existingBookings = JSON.parse(sessionStorage.getItem('mq_bookingRefs') || '[]');
+    existingBookings.push(bookingReference);
+    sessionStorage.setItem('mq_bookingRefs', JSON.stringify(existingBookings));
+  } catch {
+    // Error saving booking reference - silently fail in production
   }
 };
 

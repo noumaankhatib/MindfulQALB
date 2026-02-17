@@ -112,11 +112,22 @@ const ConsentModal = ({
       consentFormData.acknowledgments.filter((_, i) => checkedAcknowledgments.has(i))
     );
 
-    // Store locally if configured
+    // Store consent acknowledgment in sessionStorage (not full PII)
+    // For production: Full consent records should be sent to secure backend
     if (CONSENT_CONFIG.STORE_CONSENT_LOCALLY) {
-      const existingRecords = JSON.parse(localStorage.getItem('consentRecords') || '[]');
-      existingRecords.push(record);
-      localStorage.setItem('consentRecords', JSON.stringify(existingRecords));
+      try {
+        const acknowledgment = {
+          sessionId: `consent_${Date.now()}`,
+          timestamp: record.timestamp,
+          consentVersion: record.consentVersion,
+          acknowledged: true,
+        };
+        const existingAcks = JSON.parse(sessionStorage.getItem('mq_consentAcks') || '[]');
+        existingAcks.push(acknowledgment);
+        sessionStorage.setItem('mq_consentAcks', JSON.stringify(existingAcks));
+      } catch {
+        // Storage failed - continue without local storage
+      }
     }
 
     onAccept(record);
@@ -162,6 +173,9 @@ const ConsentModal = ({
             transition={{ duration: 0.2 }}
             onClick={(e) => e.stopPropagation()}
             className="w-full max-w-2xl max-h-[90vh] bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="consent-dialog-title"
           >
             {/* Header */}
             <div className="bg-gradient-to-r from-lavender-500 to-lavender-600 text-white p-5 flex-shrink-0">
@@ -171,7 +185,7 @@ const ConsentModal = ({
                     <Shield className="w-5 h-5" />
                   </div>
                   <div>
-                    <h3 className="font-semibold">Informed Consent</h3>
+                    <h3 id="consent-dialog-title" className="font-semibold">Informed Consent</h3>
                     <p className="text-sm text-white/80">Please read and accept to continue</p>
                   </div>
                 </div>
@@ -180,12 +194,14 @@ const ConsentModal = ({
                     onClick={handleDownload}
                     className="p-2 hover:bg-white/20 rounded-full transition-colors"
                     title="Download consent form"
+                    aria-label="Download consent form"
                   >
                     <Download className="w-5 h-5" />
                   </button>
                   <button
                     onClick={onClose}
                     className="p-2 hover:bg-white/20 rounded-full transition-colors"
+                    aria-label="Close consent form"
                   >
                     <X className="w-5 h-5" />
                   </button>

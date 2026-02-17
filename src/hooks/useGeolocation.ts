@@ -30,8 +30,8 @@ export const useGeolocation = (): GeolocationState => {
 
   useEffect(() => {
     const detectCountry = async () => {
-      // Check if we have cached result
-      const cached = localStorage.getItem('userCountry');
+      // Check if we have cached result (country code is not PII)
+      const cached = localStorage.getItem('mq_userCountry');
       if (cached) {
         try {
           const { country, countryCode, timestamp } = JSON.parse(cached);
@@ -70,15 +70,19 @@ export const useGeolocation = (): GeolocationState => {
         const country = data.country || data.country;
         const countryCode = data.countryCode || (data as unknown as Record<string, string>).country_code || 'US';
 
-        // Cache the result
-        localStorage.setItem(
-          'userCountry',
-          JSON.stringify({
-            country,
-            countryCode,
-            timestamp: Date.now(),
-          })
-        );
+        // Cache the result (country code is not PII)
+        try {
+          localStorage.setItem(
+            'mq_userCountry',
+            JSON.stringify({
+              country,
+              countryCode,
+              timestamp: Date.now(),
+            })
+          );
+        } catch {
+          // Storage not available
+        }
 
         setState({
           country,

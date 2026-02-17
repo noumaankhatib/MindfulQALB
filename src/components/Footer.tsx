@@ -1,5 +1,6 @@
 import { Instagram, Linkedin } from 'lucide-react'
 import { motion } from 'framer-motion'
+import { Link } from 'react-router-dom'
 import Logo from './Logo'
 
 // Social media links with actual brand colors
@@ -35,11 +36,11 @@ const Footer = () => {
       { href: '#self-help', label: 'Self-Help Tools' },
     ],
     resources: [
-      { href: '#ethics', label: 'About / Ethics' },
-      { href: '#about', label: 'About Aqsa' },
-      { href: '#self-help', label: 'Self-Help Tools' },
-      // { href: '#', label: 'Privacy Policy' },
-      // { href: '#', label: 'Terms of Service' },
+      { href: '#ethics', label: 'About / Ethics', isExternal: false },
+      { href: '#about', label: 'About Aqsa', isExternal: false },
+      { href: '#self-help', label: 'Self-Help Tools', isExternal: false },
+      { href: '/privacy', label: 'Privacy Policy', isRoute: true },
+      { href: '/terms', label: 'Terms of Service', isRoute: true },
     ],
     contact: [
       { href: '#get-help', label: 'Get Help Now' },
@@ -140,12 +141,21 @@ const Footer = () => {
               <ul className="space-y-3">
                 {footerLinks.resources.map((link) => (
                   <li key={link.label}>
-                    <a 
-                      href={link.href} 
-                      className="text-gray-600 hover:text-lavender-600 transition-colors duration-300 text-sm link-underline inline-block"
-                    >
-                      {link.label}
-                    </a>
+                    {link.isRoute ? (
+                      <Link 
+                        to={link.href} 
+                        className="text-gray-600 hover:text-lavender-600 transition-colors duration-300 text-sm link-underline inline-block"
+                      >
+                        {link.label}
+                      </Link>
+                    ) : (
+                      <a 
+                        href={link.href} 
+                        className="text-gray-600 hover:text-lavender-600 transition-colors duration-300 text-sm link-underline inline-block"
+                      >
+                        {link.label}
+                      </a>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -198,11 +208,28 @@ const Footer = () => {
 
           {/* Bottom Bar */}
           <div className="pt-8 border-t border-gray-200/60">
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 text-center md:text-left">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 text-center md:text-left">
               {/* Copyright */}
               <p className="text-gray-500 text-sm">
                 © {new Date().getFullYear()} Mindful QALB · Confidential & Ethical Practice
               </p>
+              
+              {/* Legal Links - Industry Standard Placement */}
+              <div className="flex items-center justify-center gap-4 text-sm">
+                <Link 
+                  to="/privacy" 
+                  className="text-gray-500 hover:text-lavender-600 transition-colors"
+                >
+                  Privacy Policy
+                </Link>
+                <span className="text-gray-300">|</span>
+                <Link 
+                  to="/terms" 
+                  className="text-gray-500 hover:text-lavender-600 transition-colors"
+                >
+                  Terms of Service
+                </Link>
+              </div>
               
               {/* Disclaimer */}
               <p className="text-gray-400 text-xs max-w-sm">

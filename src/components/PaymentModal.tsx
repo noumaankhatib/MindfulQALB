@@ -56,15 +56,19 @@ const PaymentModal = ({ session, isOpen, onClose }: PaymentModalProps) => {
       setPaymentResult(result);
 
       if (result.success) {
-        // Store successful payment info
-        localStorage.setItem(
-          'lastPayment',
-          JSON.stringify({
-            sessionId: session.id,
-            paymentId: result.paymentId,
-            timestamp: Date.now(),
-          })
-        );
+        // Store payment reference in sessionStorage (cleared when browser closes)
+        try {
+          sessionStorage.setItem(
+            'mq_lastPayment',
+            JSON.stringify({
+              sessionId: session.id,
+              paymentId: result.paymentId,
+              timestamp: Date.now(),
+            })
+          );
+        } catch {
+          // Storage failed - continue without storing
+        }
       }
     } catch (error) {
       setPaymentResult({
@@ -95,6 +99,9 @@ const PaymentModal = ({ session, isOpen, onClose }: PaymentModalProps) => {
             transition={{ duration: 0.2 }}
             onClick={(e) => e.stopPropagation()}
             className="w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="payment-dialog-title"
           >
             {/* Header */}
             <div className="bg-gradient-to-r from-lavender-500 to-lavender-600 text-white p-5">
@@ -104,7 +111,7 @@ const PaymentModal = ({ session, isOpen, onClose }: PaymentModalProps) => {
                     <CreditCard className="w-5 h-5" />
                   </div>
                   <div>
-                    <h3 className="font-semibold">Complete Your Booking</h3>
+                    <h3 id="payment-dialog-title" className="font-semibold">Complete Your Booking</h3>
                     <p className="text-sm text-white/80">Secure payment</p>
                   </div>
                 </div>
@@ -183,10 +190,11 @@ const PaymentModal = ({ session, isOpen, onClose }: PaymentModalProps) => {
                   {/* Customer Form */}
                   <div className="space-y-4 mb-5">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                      <label htmlFor="payment-name" className="block text-sm font-medium text-gray-700 mb-1">
                         Full Name
                       </label>
                       <input
+                        id="payment-name"
                         type="text"
                         value={customerInfo.name}
                         onChange={(e) =>
@@ -196,17 +204,20 @@ const PaymentModal = ({ session, isOpen, onClose }: PaymentModalProps) => {
                           formErrors.name ? 'border-red-300' : 'border-gray-200'
                         }`}
                         placeholder="Enter your name"
+                        aria-invalid={formErrors.name ? 'true' : 'false'}
+                        aria-describedby={formErrors.name ? 'payment-name-error' : undefined}
                       />
                       {formErrors.name && (
-                        <p className="mt-1 text-xs text-red-500">{formErrors.name}</p>
+                        <p id="payment-name-error" className="mt-1 text-xs text-red-500" role="alert">{formErrors.name}</p>
                       )}
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                      <label htmlFor="payment-email" className="block text-sm font-medium text-gray-700 mb-1">
                         Email Address
                       </label>
                       <input
+                        id="payment-email"
                         type="email"
                         value={customerInfo.email}
                         onChange={(e) =>
@@ -216,18 +227,21 @@ const PaymentModal = ({ session, isOpen, onClose }: PaymentModalProps) => {
                           formErrors.email ? 'border-red-300' : 'border-gray-200'
                         }`}
                         placeholder="your@email.com"
+                        aria-invalid={formErrors.email ? 'true' : 'false'}
+                        aria-describedby={formErrors.email ? 'payment-email-error' : undefined}
                       />
                       {formErrors.email && (
-                        <p className="mt-1 text-xs text-red-500">{formErrors.email}</p>
+                        <p id="payment-email-error" className="mt-1 text-xs text-red-500" role="alert">{formErrors.email}</p>
                       )}
                     </div>
 
                     {isIndia && (
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                        <label htmlFor="payment-phone" className="block text-sm font-medium text-gray-700 mb-1">
                           Phone Number
                         </label>
                         <input
+                          id="payment-phone"
                           type="tel"
                           value={customerInfo.phone}
                           onChange={(e) =>
@@ -237,9 +251,11 @@ const PaymentModal = ({ session, isOpen, onClose }: PaymentModalProps) => {
                             formErrors.phone ? 'border-red-300' : 'border-gray-200'
                           }`}
                           placeholder="9876543210"
+                          aria-invalid={formErrors.phone ? 'true' : 'false'}
+                          aria-describedby={formErrors.phone ? 'payment-phone-error' : undefined}
                         />
                         {formErrors.phone && (
-                          <p className="mt-1 text-xs text-red-500">{formErrors.phone}</p>
+                          <p id="payment-phone-error" className="mt-1 text-xs text-red-500" role="alert">{formErrors.phone}</p>
                         )}
                       </div>
                     )}

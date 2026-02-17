@@ -23,11 +23,15 @@ const Chatbot = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { isIndia } = useGeolocation();
 
-  // Check if user has completed the flow before
+  // Check if user has completed the flow before (session-based)
   useEffect(() => {
-    const completed = localStorage.getItem('chatbotCompleted');
-    if (completed) {
-      setHasCompletedFlow(true);
+    try {
+      const completed = sessionStorage.getItem('mq_chatbotCompleted');
+      if (completed) {
+        setHasCompletedFlow(true);
+      }
+    } catch {
+      // Storage not available
     }
   }, []);
 
@@ -106,7 +110,11 @@ const Chatbot = () => {
 
           // Mark as completed if we reached a recommendation
           if (nextStep.type === 'recommendation') {
-            localStorage.setItem('chatbotCompleted', 'true');
+            try {
+              sessionStorage.setItem('mq_chatbotCompleted', 'true');
+            } catch {
+              // Storage not available
+            }
             setHasCompletedFlow(true);
           }
         }

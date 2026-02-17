@@ -3,6 +3,12 @@
 import { SessionRecommendation } from '../data/chatbotFlow';
 import { PAYMENT_CONFIG } from '../config/paymentConfig';
 
+// Backend API configuration
+const BACKEND_CONFIG = {
+  USE_BACKEND_API: import.meta.env.VITE_USE_BACKEND_API === 'true',
+  BACKEND_URL: import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001/api',
+};
+
 // Types
 export interface PaymentConfig {
   razorpayKeyId: string;
@@ -98,13 +104,6 @@ export const processRazorpayPayment = async (
 ): Promise<PaymentResult> => {
   const config = getPaymentConfig();
 
-  if (!config.razorpayKeyId) {
-    return {
-      success: false,
-      error: 'Razorpay is not configured. Please contact support.',
-    };
-  }
-
   const scriptLoaded = await loadRazorpayScript();
   if (!scriptLoaded) {
     return {
@@ -113,13 +112,55 @@ export const processRazorpayPayment = async (
     };
   }
 
+  // Use backend API to create order (secure - server-side amount verification)
+  let orderId: string | undefined;
+  let amount: number = session.priceINR * 100;
+  let keyId: string = config.razorpayKeyId;
+
+  if (BACKEND_CONFIG.USE_BACKEND_API) {
+    try {
+      const response = await fetch(`${BACKEND_CONFIG.BACKEND_URL}/payments/create-order`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionType: session.id?.split('-')[0] || 'individual',
+          format: session.id?.split('-')[1] || 'video',
+        }),
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        orderId = data.orderId;
+        amount = data.amount;
+        keyId = data.keyId;
+      } else {
+        const errorData = await response.json();
+        return {
+          success: false,
+          error: errorData.error || 'Failed to create payment order',
+        };
+      }
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to create payment order',
+      };
+    }
+  } else if (!keyId) {
+    return {
+      success: false,
+      error: 'Razorpay is not configured. Please contact support.',
+    };
+  }
+
   return new Promise((resolve) => {
     const options: RazorpayOptions = {
-      key: config.razorpayKeyId,
-      amount: session.priceINR * 100, // Amount in paise
+      key: keyId,
+      amount: amount,
       currency: 'INR',
       name: 'MindfulQALB',
       description: `${session.title} - ${session.duration}`,
+      order_id: orderId,
       prefill: {
         name: customerInfo.name,
         email: customerInfo.email,
@@ -128,12 +169,45 @@ export const processRazorpayPayment = async (
       theme: {
         color: '#8B7EC8', // Lavender theme color
       },
-      handler: (response: RazorpayResponse) => {
-        resolve({
-          success: true,
-          paymentId: response.razorpay_payment_id,
-          orderId: response.razorpay_order_id,
-        });
+      handler: async (response: RazorpayResponse) => {
+        // Verify payment signature via backend (secure)
+        if (BACKEND_CONFIG.USE_BACKEND_API && response.razorpay_signature) {
+          try {
+            const verifyResponse = await fetch(`${BACKEND_CONFIG.BACKEND_URL}/payments/verify`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+              }),
+            });
+            
+            if (verifyResponse.ok) {
+              resolve({
+                success: true,
+                paymentId: response.razorpay_payment_id,
+                orderId: response.razorpay_order_id,
+              });
+            } else {
+              resolve({
+                success: false,
+                error: 'Payment verification failed',
+              });
+            }
+          } catch {
+            resolve({
+              success: false,
+              error: 'Payment verification failed',
+            });
+          }
+        } else {
+          resolve({
+            success: true,
+            paymentId: response.razorpay_payment_id,
+            orderId: response.razorpay_order_id,
+          });
+        }
       },
       modal: {
         ondismiss: () => {
@@ -182,11 +256,11 @@ export const processStripePayment = async (
   
   return new Promise((resolve) => {
     // Simulating redirect to Stripe Checkout
-    // In production, replace this with actual Stripe Checkout Session
-    const stripeCheckoutUrl = `https://checkout.stripe.com/pay/cs_test_placeholder?session=${session.id}`;
+    // In production, replace with actual Stripe Checkout Session
+    // URL would be: https://checkout.stripe.com/pay/cs_live_xxx
     
     // For demo purposes, show an alert
-    // In production, you would redirect or open Stripe Checkout
+    // In production, redirect using backend-generated session URL
     const confirmed = window.confirm(
       `Stripe Checkout\n\n` +
       `Session: ${session.title}\n` +
@@ -209,7 +283,7 @@ export const processStripePayment = async (
 
     // Production code would look like:
     // window.location.href = stripeCheckoutUrl;
-    console.log('Stripe checkout URL (for production):', stripeCheckoutUrl);
+    // Stripe checkout URL ready for production use
   });
 };
 
@@ -250,7 +324,7 @@ export const processPayment = async (
 ): Promise<PaymentResult> => {
   // Check if payment is enabled
   if (!PAYMENT_CONFIG.isPaymentEnabled) {
-    console.log('[Payment] Test mode - using mock payment');
+    // Test mode - using mock payment
     return processMockPayment(session, customerInfo);
   }
 

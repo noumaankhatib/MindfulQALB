@@ -1,4 +1,6 @@
 import { useEffect } from 'react'
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
+import { cleanupLegacyStorage } from './utils/secureStorage'
 import Navigation from './components/Navigation'
 import Hero from './components/Hero'
 import WhoWeHelp from './components/WhoWeHelp'
@@ -10,20 +12,24 @@ import CouplesRelationships from './components/CouplesRelationships'
 import FamilyCounseling from './components/FamilyCounseling'
 import HolisticWellness from './components/HolisticWellness'
 import SelfHelpTools from './components/SelfHelpTools'
-// import TherapySupport from './components/TherapySupport'
 import SupportGroups from './components/SupportGroups'
 import AboutTherapist from './components/AboutTherapist'
 import TherapeuticApproach from './components/TherapeuticApproach'
 import Programs from './components/Programs'
-// import Testimonials from './components/Testimonials'
 import GetHelp from './components/GetHelp'
 import AboutEthics from './components/AboutEthics'
 import Footer from './components/Footer'
 import FAQ from './components/FAQ'
 import Chatbot from './components/Chatbot'
+import PrivacyPolicyPage from './pages/PrivacyPolicyPage'
+import TermsOfServicePage from './pages/TermsOfServicePage'
 
-function App() {
+// Home page component
+const HomePage = () => {
   useEffect(() => {
+    // Clean up any legacy localStorage data that contained PII
+    cleanupLegacyStorage();
+    
     // Add FAQ schema for SEO
     const faqSchema = {
       "@context": "https://schema.org",
@@ -106,10 +112,8 @@ function App() {
         <FamilyCounseling />
         <HolisticWellness />
         <SelfHelpTools />
-        {/* <TherapySupport /> */}
         <SupportGroups />
         <Programs />
-        {/* <Testimonials /> */}
         <GetHelp />
         <AboutEthics />
         <FAQ />
@@ -119,6 +123,18 @@ function App() {
       {/* Floating Chatbot */}
       <Chatbot />
     </div>
+  )
+}
+
+function App() {
+  return (
+    <Router>
+      <Routes>
+        <Route path="/" element={<HomePage />} />
+        <Route path="/privacy" element={<PrivacyPolicyPage />} />
+        <Route path="/terms" element={<TermsOfServicePage />} />
+      </Routes>
+    </Router>
   )
 }
 

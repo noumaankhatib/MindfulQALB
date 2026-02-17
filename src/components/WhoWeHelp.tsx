@@ -4,8 +4,8 @@ import { User, Heart, Users, ChevronDown, CheckCircle, Clock, Shield, ArrowRight
 
 // Emotional therapy-themed images - showing real connection and healing moments
 const categoryImages = {
-  // Person in moment of reflection/breakthrough - warm, hopeful
-  individuals: 'https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?w=600&q=80',
+  // Indian woman close-up portrait - warm, thoughtful
+  individuals: 'https://images.unsplash.com/photo-1602442787305-decbd65be507?w=600&q=80',
   // Couple holding hands, reconnecting - intimate, warm lighting
   couples: 'https://images.unsplash.com/photo-1494774157365-9e04c6720e47?w=600&q=80',
   // Family embracing, united - warm, authentic moment
@@ -208,6 +208,8 @@ const WhoWeHelp = () => {
                       <button
                         onClick={() => handleToggle(card.title)}
                         className="w-10 h-10 rounded-full bg-lavender-100/60 flex items-center justify-center hover:bg-lavender-200/60 transition-colors"
+                        aria-label={`Collapse ${card.title} section`}
+                        aria-expanded="true"
                       >
                         <ChevronDown className="w-5 h-5 text-lavender-600 rotate-180" />
                       </button>
@@ -241,7 +243,7 @@ const WhoWeHelp = () => {
                         <img 
                           src={card.image} 
                           alt={`${card.title} therapy`}
-                          className="w-full h-full object-cover"
+                          className="w-full h-full object-cover object-top"
                           loading="lazy"
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-gray-900/60 via-transparent to-transparent" />
@@ -329,13 +331,23 @@ const WhoWeHelp = () => {
                   <div 
                     className="cursor-pointer"
                     onClick={() => handleToggle(card.title)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        handleToggle(card.title);
+                      }
+                    }}
+                    role="button"
+                    tabIndex={0}
+                    aria-expanded="false"
+                    aria-label={`Expand ${card.title} section`}
                   >
                     {/* Card Image with Emotional Overlay */}
                     <div className="relative h-52 overflow-hidden">
                       <img 
                         src={card.image} 
                         alt={`${card.title} therapy support`}
-                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                        className="w-full h-full object-cover object-top transition-transform duration-700 group-hover:scale-110"
                         loading="lazy"
                       />
                       {/* Gradient overlay for readability */}
@@ -406,13 +418,27 @@ const WhoWeHelp = () => {
           })}
         </div>
 
+        {/* Privacy Disclaimer */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          viewport={{ once: true }}
+          transition={{ delay: 0.3 }}
+          className="mt-10 text-center"
+        >
+          <p className="text-xs text-gray-500 italic flex items-center justify-center gap-1.5">
+            <Shield className="w-3.5 h-3.5" />
+            Images are for illustration purposes only, not real clients. We maintain full user privacy. The reviews and stories shared are real and legitimate.
+          </p>
+        </motion.div>
+
         {/* Bottom CTA */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ delay: 0.4 }}
-          className="mt-12 text-center"
+          className="mt-8 text-center"
         >
           <p className="text-gray-600 mb-4">Not sure which type of support is right for you?</p>
           <a 

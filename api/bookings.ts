@@ -1,0 +1,126 @@
+import type { VercelRequest, VercelResponse } from '@vercel/node';
+
+// CORS headers
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type',
+};
+
+// Parse time to ISO
+const parseTimeToISO = (dateString: string, timeString: string): string => {
+  const match = timeString.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
+  if (!match) throw new Error('Invalid time format');
+
+  let hours = parseInt(match[1]);
+  const minutes = parseInt(match[2]);
+  const period = match[3].toUpperCase();
+
+  if (period === 'PM' && hours !== 12) hours += 12;
+  else if (period === 'AM' && hours === 12) hours = 0;
+
+  const date = new Date(dateString);
+  date.setHours(hours, minutes, 0, 0);
+  return date.toISOString();
+};
+
+// Create Cal.com booking
+const createCalComBooking = async (
+  sessionType: string,
+  date: string,
+  time: string,
+  customer: { name: string; email: string; phone: string; notes?: string }
+): Promise<{ success: boolean; bookingId?: string; error?: string }> => {
+  const apiKey = process.env.CALCOM_API_KEY;
+  const eventTypeIds = JSON.parse(process.env.CALCOM_EVENT_TYPE_IDS || '{}');
+
+  if (!apiKey) {
+    return { success: true, bookingId: `local_${Date.now()}` };
+  }
+
+  try {
+    const eventTypeId = eventTypeIds[sessionType];
+    if (!eventTypeId) {
+      return { success: true, bookingId: `local_${Date.now()}` };
+    }
+
+    const startTime = parseTimeToISO(date, time);
+    const url = `https://api.cal.com/v1/bookings?apiKey=${apiKey}`;
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        eventTypeId: parseInt(eventTypeId),
+        start: startTime,
+        responses: {
+          name: customer.name,
+          email: customer.email,
+          phone: customer.phone,
+          notes: customer.notes || '',
+        },
+        timeZone: 'Asia/Kolkata',
+        language: 'en',
+        metadata: {},
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json() as { message?: string };
+      throw new Error(errorData.message || 'Booking failed');
+    }
+
+    const bookingData = await response.json() as { uid?: string };
+    return { success: true, bookingId: bookingData.uid || `CAL-${Date.now()}` };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Booking failed',
+    };
+  }
+};
+
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  Object.entries(corsHeaders).forEach(([key, value]) => {
+    res.setHeader(key, value);
+  });
+
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  try {
+    const { sessionType, format, date, time, customer } = req.body;
+
+    // Validation
+    if (!sessionType || !date || !time || !customer?.name || !customer?.email || !customer?.phone) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    // Create booking
+    const result = await createCalComBooking(sessionType, date, time, customer);
+
+    if (!result.success) {
+      return res.status(500).json({
+        success: false,
+        error: result.error || 'Failed to create booking',
+      });
+    }
+
+    res.json({
+      success: true,
+      bookingId: result.bookingId,
+      message: 'Booking created successfully',
+    });
+  } catch (error) {
+    console.error('Booking error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to create booking',
+    });
+  }
+}

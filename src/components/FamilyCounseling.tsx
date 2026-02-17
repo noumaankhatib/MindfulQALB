@@ -156,6 +156,16 @@ const FamilyCounseling = () => {
                 layout
                 className={`group bg-gradient-to-br ${isExpanded ? colors.expanded : colors.gradient} rounded-3xl p-7 ${colors.border} border shadow-soft hover:shadow-card-hover transition-all duration-500 ease-gentle cursor-pointer ${isExpanded ? 'md:col-span-2 lg:col-span-3' : ''}`}
                 onClick={() => setExpandedCard(isExpanded ? null : service.id)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    setExpandedCard(isExpanded ? null : service.id);
+                  }
+                }}
+                role="button"
+                tabIndex={0}
+                aria-expanded={isExpanded}
+                aria-label={`${isExpanded ? 'Collapse' : 'Expand'} ${service.title} section`}
               >
                 <div className="flex items-start justify-between mb-4">
                   <motion.div 
