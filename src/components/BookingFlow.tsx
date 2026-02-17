@@ -129,9 +129,9 @@ const getSessionFormatsForTherapy = (therapyTypeId: string): SessionFormat[] => 
   });
 };
 
-// Free consultation format (fixed)
+// Free consultation format (fixed) - uses 'video' to match Cal.com event type
 const freeConsultationFormat: SessionFormat = {
-  id: 'free-call',
+  id: 'video',
   title: 'Introductory Call',
   description: 'Brief phone/video consultation',
   duration: '15-20 min',
@@ -428,7 +428,7 @@ const BookingFlow = ({ session, isOpen, onClose }: BookingFlowProps) => {
       // For free consultation, auto-select the free format
       setSelectedFormat(freeConsultationFormat);
       setSelectedSessionType({
-        id: `${therapy.id}-call`,
+        id: `${therapy.id}-video`,
         therapyType: therapy,
         format: freeConsultationFormat,
         title: therapy.title,
@@ -487,6 +487,8 @@ const BookingFlow = ({ session, isOpen, onClose }: BookingFlowProps) => {
   const handleProceedFromDetails = async () => {
     if (!validateCustomerInfo()) return;
 
+    setError(null); // Clear any previous errors
+    
     if (selectedSessionType?.isFree) {
       // Skip payment for free sessions
       await completeBooking();
@@ -599,6 +601,7 @@ const BookingFlow = ({ session, isOpen, onClose }: BookingFlowProps) => {
   const goToNextStep = () => {
     const nextIndex = currentStepIndex + 1;
     if (nextIndex < steps.length) {
+      setError(null); // Clear any previous errors when moving forward
       setCurrentStep(steps[nextIndex].id as BookingStep);
     }
   };
@@ -606,6 +609,7 @@ const BookingFlow = ({ session, isOpen, onClose }: BookingFlowProps) => {
   const goToPrevStep = () => {
     const prevIndex = currentStepIndex - 1;
     if (prevIndex >= 0) {
+      setError(null); // Clear any previous errors when going back
       setCurrentStep(steps[prevIndex].id as BookingStep);
     }
   };
@@ -1436,10 +1440,15 @@ const BookingFlow = ({ session, isOpen, onClose }: BookingFlowProps) => {
                               </button>
                             </>
                           ) : (
-                            <button className="flex-1 px-4 py-2.5 border-2 border-lavender-300 bg-lavender-50 rounded-lg text-sm font-medium text-lavender-700 flex items-center justify-center gap-2">
-                              <CreditCard className="w-4 h-4" />
-                              Pay with Stripe
-                            </button>
+                            <>
+                              <button className="flex-1 px-4 py-2.5 border-2 border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:border-lavender-300">
+                                Bank Transfer
+                              </button>
+                              <button className="flex-1 px-4 py-2.5 border-2 border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:border-lavender-300 flex items-center justify-center gap-1">
+                                <CreditCard className="w-4 h-4" />
+                                Debit/Credit Card
+                              </button>
+                            </>
                           )}
                         </div>
                       </div>
@@ -1449,10 +1458,8 @@ const BookingFlow = ({ session, isOpen, onClose }: BookingFlowProps) => {
                         <p className="text-xs text-gray-600 text-center">
                           {isTestMode() ? (
                             <>Payment is in <strong>Test Mode</strong> - No real charges</>
-                          ) : isIndia ? (
-                            <>Secure payment via <strong>Razorpay</strong></>
                           ) : (
-                            <>Secure payment via <strong>Stripe</strong></>
+                            <>Secure payment via <strong>Razorpay</strong></>
                           )}
                         </p>
                       </div>

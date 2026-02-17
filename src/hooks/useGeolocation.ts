@@ -20,15 +20,35 @@ const GEOLOCATION_API = 'https://ipapi.co/json/';
 const FALLBACK_API = 'https://ip-api.com/json/?fields=country,countryCode';
 
 export const useGeolocation = (): GeolocationState => {
+  // Default to India since this is an India-focused therapy service
   const [state, setState] = useState<GeolocationState>({
-    country: null,
-    countryCode: null,
-    isIndia: false,
+    country: 'India',
+    countryCode: 'IN',
+    isIndia: true,
     isLoading: true,
     error: null,
   });
 
   useEffect(() => {
+    // For now, always use India pricing (India-focused service)
+    // Clear any old cached non-India data
+    try {
+      localStorage.removeItem('mq_userCountry');
+    } catch {
+      // Storage not available
+    }
+    
+    // Set to India immediately
+    setState({
+      country: 'India',
+      countryCode: 'IN',
+      isIndia: true,
+      isLoading: false,
+      error: null,
+    });
+    
+    // Uncomment below to enable geolocation detection in the future
+    /*
     const detectCountry = async () => {
       // Check if we have cached result (country code is not PII)
       const cached = localStorage.getItem('mq_userCountry');
@@ -68,7 +88,7 @@ export const useGeolocation = (): GeolocationState => {
         
         // Handle different API response formats
         const country = data.country || data.country;
-        const countryCode = data.countryCode || (data as unknown as Record<string, string>).country_code || 'US';
+        const countryCode = data.countryCode || (data as unknown as Record<string, string>).country_code || 'IN';
 
         // Cache the result (country code is not PII)
         try {
@@ -92,18 +112,19 @@ export const useGeolocation = (): GeolocationState => {
           error: null,
         });
       } catch (error) {
-        // Default to international (non-India) if detection fails
+        // Default to India if detection fails (India-focused service)
         setState({
-          country: null,
-          countryCode: null,
-          isIndia: false,
+          country: 'India',
+          countryCode: 'IN',
+          isIndia: true,
           isLoading: false,
-          error: error instanceof Error ? error.message : 'Failed to detect location',
+          error: null,
         });
       }
     };
 
     detectCountry();
+    */
   }, []);
 
   return state;
@@ -129,8 +150,7 @@ export const getPriceInSmallestUnit = (
   isIndia: boolean
 ): number => {
   // Razorpay expects paise (1 INR = 100 paise)
-  // Stripe expects cents (1 USD = 100 cents)
-  return isIndia ? priceINR * 100 : priceUSD * 100;
+  return priceINR * 100;
 };
 
 export default useGeolocation;
