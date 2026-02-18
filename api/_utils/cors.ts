@@ -6,8 +6,10 @@ const ALLOWED_ORIGINS = [
   'https://www.mindfulqalb.com',
   'https://mindful-qalb.vercel.app',
   'https://mindfulqalb.vercel.app',
-  // Add staging URLs
+  // Staging URLs
   'https://mindfulqalb-staging.vercel.app',
+  'https://mindful-qalb-git-staging-noumaankhatibs-projects.vercel.app',
+  'https://mindful-qalb-7av274gjg-noumaankhatibs-projects.vercel.app',
   // Local development
   'http://localhost:5173',
   'http://localhost:3000',
