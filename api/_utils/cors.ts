@@ -20,16 +20,25 @@ if (VERCEL_URL && !ALLOWED_ORIGINS.includes(VERCEL_URL)) {
   ALLOWED_ORIGINS.push(VERCEL_URL);
 }
 
+// Check if origin is a valid Vercel preview URL for this project
+const isVercelPreviewUrl = (origin: string): boolean => {
+  if (!origin) return false;
+  // Match patterns like: mindful-qalb-*.vercel.app or mindfulqalb-*.vercel.app
+  const vercelPreviewPattern = /^https:\/\/(mindful-qalb|mindfulqalb)(-[a-z0-9-]+)?\.vercel\.app$/i;
+  // Also match noumaankhatibs-projects pattern
+  const projectPreviewPattern = /^https:\/\/[a-z0-9-]+-noumaankhatibs-projects\.vercel\.app$/i;
+  return vercelPreviewPattern.test(origin) || projectPreviewPattern.test(origin);
+};
+
 /**
  * Set CORS headers with origin validation
  */
 export const setCorsHeaders = (req: VercelRequest, res: VercelResponse): void => {
   const origin = req.headers.origin as string | undefined;
   
-  // Check if origin is allowed
-  const allowedOrigin = origin && ALLOWED_ORIGINS.includes(origin) 
-    ? origin 
-    : ALLOWED_ORIGINS[0];
+  // Check if origin is allowed (static list or dynamic Vercel preview URL)
+  const isAllowed = origin && (ALLOWED_ORIGINS.includes(origin) || isVercelPreviewUrl(origin));
+  const allowedOrigin = isAllowed ? origin : ALLOWED_ORIGINS[0];
   
   res.setHeader('Access-Control-Allow-Origin', allowedOrigin);
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
