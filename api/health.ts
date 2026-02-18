@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { handleCorsPrelight, validateMethod } from './_utils/cors';
+import { handleCorsPrelight, validateMethod } from './_utils/cors.js';
 
 export default function handler(req: VercelRequest, res: VercelResponse) {
   // Handle CORS

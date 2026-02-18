@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { handleCorsPrelight, validateMethod } from './_utils/cors';
-import { validateSessionType, validateDate } from './_utils/validation';
+import { handleCorsPrelight, validateMethod } from './_utils/cors.js';
+import { validateSessionType, validateDate } from './_utils/validation.js';
 
 interface TimeSlot {
   time: string;

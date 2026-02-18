@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { handleCorsPrelight, validateMethod } from '../_utils/cors';
-import { validateSessionType, validateFormat } from '../_utils/validation';
+import { handleCorsPrelight, validateMethod } from '../_utils/cors.js';
+import { validateSessionType, validateFormat } from '../_utils/validation.js';
 
 // Dynamic import for Razorpay (CommonJS module)
 const getRazorpay = async () => {

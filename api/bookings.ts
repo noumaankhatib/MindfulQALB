@@ -1,12 +1,12 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { handleCorsPrelight, validateMethod } from './_utils/cors';
+import { handleCorsPrelight, validateMethod } from './_utils/cors.js';
 import { 
   validateSessionType, 
   validateDate, 
   validateTime, 
   validateCustomer,
   sanitizeString 
-} from './_utils/validation';
+} from './_utils/validation.js';
 
 // Parse time to ISO
 const parseTimeToISO = (dateString: string, timeString: string): string => {

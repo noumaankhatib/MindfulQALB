@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import crypto from 'crypto';
-import { handleCorsPrelight, validateMethod } from '../_utils/cors';
+import { handleCorsPrelight, validateMethod } from '../_utils/cors.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Handle CORS

@@ -1,12 +1,12 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import crypto from 'crypto';
-import { handleCorsPrelight, validateMethod } from './_utils/cors';
+import { handleCorsPrelight, validateMethod } from './_utils/cors.js';
 import { 
   validateSessionType, 
   validateEmail, 
   validateConsentVersion, 
   validateAcknowledgments 
-} from './_utils/validation';
+} from './_utils/validation.js';
 
 // Simple hash for email (one-way)
 const hashEmail = (email: string): string => {
