@@ -1,7 +1,12 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import Razorpay from 'razorpay';
 import { handleCorsPrelight, validateMethod } from '../_utils/cors';
 import { validateSessionType, validateFormat } from '../_utils/validation';
+
+// Dynamic import for Razorpay (CommonJS module)
+const getRazorpay = async () => {
+  const Razorpay = (await import('razorpay')).default;
+  return Razorpay;
+};
 
 // Pricing configuration (server-side only - secure)
 const PRICING: Record<string, Record<string, number>> = {
@@ -63,6 +68,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
+    const Razorpay = await getRazorpay();
     const razorpay = new Razorpay({
       key_id: keyId,
       key_secret: keySecret,
