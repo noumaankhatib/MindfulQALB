@@ -5,8 +5,10 @@ import {
   validateDate, 
   validateTime, 
   validateCustomer,
-  sanitizeString 
+  sanitizeString,
+  validateNotes
 } from './_utils/validation.js';
+import { rateLimiters } from './_utils/rateLimit.js';
 
 // Parse time to ISO
 const parseTimeToISO = (dateString: string, timeString: string): string => {
@@ -25,18 +27,35 @@ const parseTimeToISO = (dateString: string, timeString: string): string => {
   return date.toISOString();
 };
 
+// Safely parse event type IDs from environment
+const parseEventTypeIds = (): Record<string, string> => {
+  const raw = process.env.CALCOM_EVENT_TYPE_IDS;
+  if (!raw) return {};
+  
+  try {
+    const parsed = JSON.parse(raw);
+    if (typeof parsed === 'object' && parsed !== null) {
+      return parsed as Record<string, string>;
+    }
+    return {};
+  } catch {
+    console.error('Invalid CALCOM_EVENT_TYPE_IDS JSON configuration');
+    return {};
+  }
+};
+
 // Create Cal.com booking
 const createCalComBooking = async (
   sessionType: string,
   date: string,
   time: string,
-  customer: { name: string; email: string; phone: string; notes?: string }
+  customer: { name: string; email: string; phone: string; notes?: string },
+  requestId: string
 ): Promise<{ success: boolean; bookingId?: string; error?: string }> => {
   const apiKey = process.env.CALCOM_API_KEY;
-  const eventTypeIds = JSON.parse(process.env.CALCOM_EVENT_TYPE_IDS || '{}');
+  const eventTypeIds = parseEventTypeIds();
 
   if (!apiKey) {
-    // Return mock booking ID for development
     return { success: true, bookingId: `dev_${Date.now()}` };
   }
 
@@ -47,11 +66,14 @@ const createCalComBooking = async (
     }
 
     const startTime = parseTimeToISO(date, time);
-    const url = `https://api.cal.com/v1/bookings?apiKey=${apiKey}`;
+    const url = 'https://api.cal.com/v1/bookings';
 
     const response = await fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+      },
       body: JSON.stringify({
         eventTypeId: parseInt(eventTypeId),
         start: startTime,
@@ -63,7 +85,7 @@ const createCalComBooking = async (
         },
         timeZone: 'Asia/Kolkata',
         language: 'en',
-        metadata: {},
+        metadata: { requestId },
       }),
     });
 
@@ -84,7 +106,13 @@ const createCalComBooking = async (
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Handle CORS
-  if (handleCorsPrelight(req, res)) return;
+  const corsResult = handleCorsPrelight(req, res);
+  if (corsResult === true) return;
+  const requestId = corsResult as string;
+  
+  // Rate limiting
+  if (rateLimiters.default(req, res)) return;
+  
   if (!validateMethod(req, res, ['POST'])) return;
 
   try {
@@ -93,31 +121,40 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Validate all inputs
     const sessionTypeResult = validateSessionType(sessionType);
     if (!sessionTypeResult.valid) {
-      return res.status(400).json({ error: sessionTypeResult.error });
+      return res.status(400).json({ error: sessionTypeResult.error, requestId });
     }
     
     const dateResult = validateDate(date);
     if (!dateResult.valid) {
-      return res.status(400).json({ error: dateResult.error });
+      return res.status(400).json({ error: dateResult.error, requestId });
     }
     
     const timeResult = validateTime(time);
     if (!timeResult.valid) {
-      return res.status(400).json({ error: timeResult.error });
+      return res.status(400).json({ error: timeResult.error, requestId });
     }
     
     const customerResult = validateCustomer(customer);
     if (!customerResult.valid) {
-      return res.status(400).json({ error: customerResult.error });
+      return res.status(400).json({ error: customerResult.error, requestId });
+    }
+    
+    // Validate notes length if provided
+    if (customer?.notes) {
+      const notesResult = validateNotes(customer.notes);
+      if (!notesResult.valid) {
+        return res.status(400).json({ error: notesResult.error, requestId });
+      }
     }
 
     // Create booking
-    const result = await createCalComBooking(sessionType, date, time, customer);
+    const result = await createCalComBooking(sessionType, date, time, customer, requestId);
 
     if (!result.success) {
       return res.status(500).json({
         success: false,
         error: result.error || 'Failed to create booking',
+        requestId,
       });
     }
 
@@ -125,12 +162,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       success: true,
       bookingId: result.bookingId,
       message: 'Booking created successfully',
+      requestId,
     });
   } catch (error) {
-    console.error('Booking error:', error);
+    console.error(`[${requestId}] Booking error:`, error instanceof Error ? error.message : 'Unknown error');
     res.status(500).json({
       success: false,
       error: 'Failed to create booking',
+      requestId,
     });
   }
 }

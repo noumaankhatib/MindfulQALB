@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { handleCorsPrelight, validateMethod } from '../_utils/cors.js';
 import { validateSessionType, validateFormat } from '../_utils/validation.js';
+import { rateLimiters } from '../_utils/rateLimit.js';
 
 // Dynamic import for Razorpay (CommonJS module)
 const getRazorpay = async () => {
@@ -18,7 +19,13 @@ const PRICING: Record<string, Record<string, number>> = {
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Handle CORS
-  if (handleCorsPrelight(req, res)) return;
+  const corsResult = handleCorsPrelight(req, res);
+  if (corsResult === true) return;
+  const requestId = corsResult as string;
+  
+  // Rate limiting for payment endpoints
+  if (rateLimiters.payment(req, res)) return;
+  
   if (!validateMethod(req, res, ['POST'])) return;
 
   const keyId = process.env.RAZORPAY_KEY_ID;
@@ -89,10 +96,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       keyId: keyId,
     });
   } catch (error) {
-    console.error('Create order error:', error);
+    console.error(`[${requestId}] Create order error:`, error instanceof Error ? error.message : 'Unknown error');
     res.status(500).json({
       success: false,
       error: 'Failed to create payment order',
+      requestId,
     });
   }
 }

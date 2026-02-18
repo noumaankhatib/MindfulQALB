@@ -1,10 +1,17 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import crypto from 'crypto';
 import { handleCorsPrelight, validateMethod } from '../_utils/cors.js';
+import { rateLimiters } from '../_utils/rateLimit.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Handle CORS
-  if (handleCorsPrelight(req, res)) return;
+  const corsResult = handleCorsPrelight(req, res);
+  if (corsResult === true) return;
+  const requestId = corsResult as string;
+  
+  // Strict rate limiting for payment verification
+  if (rateLimiters.strict(req, res)) return;
+  
   if (!validateMethod(req, res, ['POST'])) return;
 
   const keySecret = process.env.RAZORPAY_KEY_SECRET;
@@ -57,11 +64,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         paymentId: razorpay_payment_id,
       });
     } else {
-      // Log failed verification attempt (potential fraud)
-      console.warn('Payment verification failed:', {
-        orderId: razorpay_order_id,
-        paymentId: razorpay_payment_id,
-        ip: req.headers['x-forwarded-for'] || req.headers['x-real-ip'],
+      // Log failed verification attempt (potential fraud) - truncate sensitive data
+      console.warn(`[${requestId}] Payment verification failed:`, {
+        orderIdPrefix: razorpay_order_id.substring(0, 12) + '***',
         timestamp: new Date().toISOString(),
       });
       
@@ -69,13 +74,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         success: false,
         verified: false,
         error: 'Invalid payment signature',
+        requestId,
       });
     }
   } catch (error) {
-    console.error('Verify payment error:', error);
+    console.error(`[${requestId}] Verify payment error:`, error instanceof Error ? error.message : 'Unknown error');
     res.status(500).json({
       success: false,
       error: 'Payment verification failed',
+      requestId,
     });
   }
 }

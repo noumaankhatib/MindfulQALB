@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
+import { createBrowserRouter, RouterProvider } from 'react-router-dom'
 import { cleanupLegacyStorage } from './utils/secureStorage'
 import Navigation from './components/Navigation'
 import Hero from './components/Hero'
@@ -126,16 +126,14 @@ const HomePage = () => {
   )
 }
 
+const router = createBrowserRouter([
+  { path: '/', element: <HomePage /> },
+  { path: '/privacy', element: <PrivacyPolicyPage /> },
+  { path: '/terms', element: <TermsOfServicePage /> },
+])
+
 function App() {
-  return (
-    <Router>
-      <Routes>
-        <Route path="/" element={<HomePage />} />
-        <Route path="/privacy" element={<PrivacyPolicyPage />} />
-        <Route path="/terms" element={<TermsOfServicePage />} />
-      </Routes>
-    </Router>
-  )
+  return <RouterProvider router={router} />
 }
 
 export default App

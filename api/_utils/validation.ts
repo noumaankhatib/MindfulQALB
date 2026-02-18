@@ -194,6 +194,22 @@ export const sanitizeString = (input: string): string => {
 };
 
 /**
+ * Validate notes field (optional, with length limit)
+ */
+export const validateNotes = (notes: unknown): ValidationResult => {
+  if (notes === undefined || notes === null || notes === '') {
+    return { valid: true };
+  }
+  if (typeof notes !== 'string') {
+    return { valid: false, error: 'Notes must be a string' };
+  }
+  if (notes.length > 1000) {
+    return { valid: false, error: 'Notes exceed maximum length of 1000 characters' };
+  }
+  return { valid: true };
+};
+
+/**
  * Validate customer object
  */
 export const validateCustomer = (customer: unknown): ValidationResult => {
@@ -211,6 +227,12 @@ export const validateCustomer = (customer: unknown): ValidationResult => {
   
   const phoneResult = validatePhone(c.phone);
   if (!phoneResult.valid) return phoneResult;
+  
+  // Validate notes if provided
+  if (c.notes !== undefined) {
+    const notesResult = validateNotes(c.notes);
+    if (!notesResult.valid) return notesResult;
+  }
   
   return { valid: true };
 };

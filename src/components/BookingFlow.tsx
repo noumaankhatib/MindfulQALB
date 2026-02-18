@@ -239,12 +239,12 @@ const BookingFlow = ({ session, isOpen, onClose }: BookingFlowProps) => {
   } | null>(null);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
-  // Generate next 7 days for date selection
-  const availableDates = Array.from({ length: 7 }, (_, i) => {
+  // Generate next 14 days for date selection, filtering out weekends
+  const availableDates = Array.from({ length: 14 }, (_, i) => {
     const date = new Date();
     date.setDate(date.getDate() + i + 1);
     return date;
-  });
+  }).filter(date => AVAILABILITY_CONFIG.isDateAvailable(date)).slice(0, 7);
 
   // Define steps based on whether session is free
   const getSteps = () => {

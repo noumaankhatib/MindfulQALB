@@ -67,15 +67,15 @@ export const isCalComConfigured = (): boolean => {
 
 /**
  * Get fallback slots when API is unavailable
+ * Only allowed times: 9 AM, 10 AM, 5 PM, 6 PM, 7 PM, 8 PM
  */
 const getFallbackSlots = (): TimeSlot[] => [
+  { time: '9:00 AM', available: true },
   { time: '10:00 AM', available: true },
-  { time: '11:00 AM', available: true },
-  { time: '12:00 PM', available: false },
-  { time: '2:00 PM', available: true },
-  { time: '3:00 PM', available: true },
-  { time: '4:00 PM', available: true },
   { time: '5:00 PM', available: true },
+  { time: '6:00 PM', available: true },
+  { time: '7:00 PM', available: true },
+  { time: '8:00 PM', available: true },
 ];
 
 /**

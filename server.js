@@ -6,9 +6,24 @@
 import express from 'express';
 import cors from 'cors';
 import crypto from 'crypto';
+import dotenv from 'dotenv';
+
+// Load environment variables from .env file
+dotenv.config();
 
 const app = express();
 const PORT = 3001;
+
+// Razorpay configuration from environment
+const RAZORPAY_KEY_ID = process.env.RAZORPAY_KEY_ID;
+const RAZORPAY_KEY_SECRET = process.env.RAZORPAY_KEY_SECRET;
+
+// Debug: Log if Razorpay keys are configured
+if (RAZORPAY_KEY_ID && RAZORPAY_KEY_SECRET) {
+  console.log(`✅ Razorpay configured: ${RAZORPAY_KEY_ID.substring(0, 12)}...`);
+} else {
+  console.log('⚠️  Razorpay not configured - using mock mode');
+}
 
 // Middleware
 app.use(cors());
@@ -21,16 +36,22 @@ const PRICING = {
   family: { audio: 1799, video: 2499 },
 };
 
-// Mock time slots
+// Mock time slots (only allowed times: 9 AM, 10 AM, 5 PM, 6 PM, 7 PM, 8 PM)
 const getMockSlots = () => [
+  { time: '9:00 AM', available: true },
   { time: '10:00 AM', available: true },
-  { time: '11:00 AM', available: true },
-  { time: '12:00 PM', available: false },
-  { time: '2:00 PM', available: true },
-  { time: '3:00 PM', available: true },
-  { time: '4:00 PM', available: true },
   { time: '5:00 PM', available: true },
+  { time: '6:00 PM', available: true },
+  { time: '7:00 PM', available: true },
+  { time: '8:00 PM', available: true },
 ];
+
+// Check if date is a weekend (Saturday = 6, Sunday = 0)
+const isWeekend = (dateString) => {
+  const date = new Date(dateString);
+  const day = date.getDay();
+  return day === 0 || day === 6;
+};
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -49,6 +70,17 @@ app.post('/api/availability', (req, res) => {
     return res.status(400).json({ error: 'Date and sessionType required' });
   }
   
+  // Check if weekend - return empty slots
+  if (isWeekend(date)) {
+    return res.json({
+      success: true,
+      date,
+      slots: [],
+      isWeekend: true,
+      message: 'No slots available on weekends',
+    });
+  }
+  
   res.json({
     success: true,
     date,
@@ -56,8 +88,8 @@ app.post('/api/availability', (req, res) => {
   });
 });
 
-// Create payment order (mock)
-app.post('/api/payments/create-order', (req, res) => {
+// Create payment order
+app.post('/api/payments/create-order', async (req, res) => {
   const { sessionType, format } = req.body;
   
   if (!sessionType || !format) {
@@ -68,31 +100,90 @@ app.post('/api/payments/create-order', (req, res) => {
   if (!pricing) {
     return res.status(400).json({ error: 'Invalid session type or format' });
   }
-  
-  res.json({
-    success: true,
-    orderId: `order_mock_${Date.now()}`,
-    amount: pricing * 100,
-    currency: 'INR',
-    keyId: 'rzp_test_mock',
-    mode: 'mock',
-  });
+
+  // Check if Razorpay is configured
+  if (!RAZORPAY_KEY_ID || !RAZORPAY_KEY_SECRET) {
+    console.log('Razorpay not configured, using mock mode');
+    return res.json({
+      success: true,
+      orderId: `order_mock_${Date.now()}`,
+      amount: pricing * 100,
+      currency: 'INR',
+      keyId: 'rzp_test_mock',
+      mode: 'mock',
+    });
+  }
+
+  // Create real Razorpay order
+  try {
+    const Razorpay = (await import('razorpay')).default;
+    const razorpay = new Razorpay({
+      key_id: RAZORPAY_KEY_ID,
+      key_secret: RAZORPAY_KEY_SECRET,
+    });
+
+    const order = await razorpay.orders.create({
+      amount: pricing * 100,
+      currency: 'INR',
+      receipt: `receipt_${Date.now()}`,
+    });
+
+    res.json({
+      success: true,
+      orderId: order.id,
+      amount: order.amount,
+      currency: order.currency,
+      keyId: RAZORPAY_KEY_ID,
+      mode: 'live',
+    });
+  } catch (error) {
+    console.error('Razorpay order creation failed:', error);
+    res.status(500).json({ error: 'Failed to create payment order' });
+  }
 });
 
-// Verify payment (mock - always succeeds in dev)
+// Verify payment
 app.post('/api/payments/verify', (req, res) => {
-  const { razorpay_order_id, razorpay_payment_id } = req.body;
+  const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
   
   if (!razorpay_order_id || !razorpay_payment_id) {
     return res.status(400).json({ error: 'Missing payment details' });
   }
-  
-  res.json({
-    success: true,
-    verified: true,
-    paymentId: razorpay_payment_id,
-    mode: 'mock',
-  });
+
+  // If mock mode or no secret configured
+  if (!RAZORPAY_KEY_SECRET || razorpay_order_id.startsWith('order_mock_')) {
+    return res.json({
+      success: true,
+      verified: true,
+      paymentId: razorpay_payment_id,
+      mode: 'mock',
+    });
+  }
+
+  // Verify real Razorpay signature
+  if (!razorpay_signature) {
+    return res.status(400).json({ error: 'Missing signature for verification' });
+  }
+
+  const expectedSignature = crypto
+    .createHmac('sha256', RAZORPAY_KEY_SECRET)
+    .update(`${razorpay_order_id}|${razorpay_payment_id}`)
+    .digest('hex');
+
+  if (expectedSignature === razorpay_signature) {
+    res.json({
+      success: true,
+      verified: true,
+      paymentId: razorpay_payment_id,
+      mode: 'live',
+    });
+  } else {
+    res.status(400).json({
+      success: false,
+      verified: false,
+      error: 'Invalid payment signature',
+    });
+  }
 });
 
 // Create booking (mock)

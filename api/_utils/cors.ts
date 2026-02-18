@@ -25,18 +25,46 @@ if (VERCEL_URL && !ALLOWED_ORIGINS.includes(VERCEL_URL)) {
 // Check if origin is a valid Vercel preview URL for this project
 const isVercelPreviewUrl = (origin: string): boolean => {
   if (!origin) return false;
+  
   // Match patterns like: mindful-qalb-*.vercel.app or mindfulqalb-*.vercel.app
-  const vercelPreviewPattern = /^https:\/\/(mindful-qalb|mindfulqalb)(-[a-z0-9-]+)?\.vercel\.app$/i;
-  // Also match noumaankhatibs-projects pattern
-  const projectPreviewPattern = /^https:\/\/[a-z0-9-]+-noumaankhatibs-projects\.vercel\.app$/i;
+  // More restrictive: only allow alphanumeric and single hyphens, no consecutive hyphens
+  const vercelPreviewPattern = /^https:\/\/(mindful-qalb|mindfulqalb)(-[a-z0-9]+)*\.vercel\.app$/i;
+  
+  // More restrictive: require project name prefix to prevent attacker-controlled subdomains
+  const projectPreviewPattern = /^https:\/\/mindful-qalb(-[a-z0-9]+)*-noumaankhatibs-projects\.vercel\.app$/i;
+  
   return vercelPreviewPattern.test(origin) || projectPreviewPattern.test(origin);
+};
+
+/**
+ * Generate a unique request ID for audit trails
+ */
+export const generateRequestId = (): string => {
+  return `req_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`;
+};
+
+/**
+ * Set security headers for all responses
+ */
+export const setSecurityHeaders = (res: VercelResponse, requestId: string): void => {
+  res.setHeader('X-Request-ID', requestId);
+  res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
 };
 
 /**
  * Set CORS headers with origin validation
  */
-export const setCorsHeaders = (req: VercelRequest, res: VercelResponse): void => {
+export const setCorsHeaders = (req: VercelRequest, res: VercelResponse): string => {
   const origin = req.headers.origin as string | undefined;
+  const requestId = generateRequestId();
+  
+  // Set security headers first
+  setSecurityHeaders(res, requestId);
   
   // Check if origin is allowed (static list or dynamic Vercel preview URL)
   const isAllowed = origin && (ALLOWED_ORIGINS.includes(origin) || isVercelPreviewUrl(origin));
@@ -44,23 +72,25 @@ export const setCorsHeaders = (req: VercelRequest, res: VercelResponse): void =>
   
   res.setHeader('Access-Control-Allow-Origin', allowedOrigin);
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Request-ID');
   res.setHeader('Access-Control-Allow-Credentials', 'true');
+  
+  return requestId;
 };
 
 /**
  * Handle CORS preflight request
- * Returns true if this was a preflight request (already handled)
+ * Returns requestId if not a preflight, or true/false for preflight handling
  */
-export const handleCorsPrelight = (req: VercelRequest, res: VercelResponse): boolean => {
-  setCorsHeaders(req, res);
+export const handleCorsPrelight = (req: VercelRequest, res: VercelResponse): string | boolean => {
+  const requestId = setCorsHeaders(req, res);
   
   if (req.method === 'OPTIONS') {
     res.status(200).end();
     return true;
   }
   
-  return false;
+  return requestId;
 };
 
 /**
