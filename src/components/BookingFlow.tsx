@@ -16,7 +16,6 @@ import {
   Users,
   FileText,
   CalendarPlus,
-  RefreshCw,
   MessageSquare,
   Headphones,
   Shield,
@@ -1541,13 +1540,6 @@ const BookingFlow = ({ session, isOpen, onClose }: BookingFlowProps) => {
                         >
                           <CalendarPlus className="w-5 h-5" />
                           Add to Calendar
-                        </button>
-                        <button
-                          onClick={onClose}
-                          className="flex-1 px-4 py-3 border-2 border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium flex items-center justify-center gap-2"
-                        >
-                          <RefreshCw className="w-5 h-5" />
-                          Reschedule
                         </button>
                       </div>
                     </motion.div>
