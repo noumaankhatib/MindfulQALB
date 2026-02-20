@@ -128,34 +128,40 @@ export const createCalComBooking = async (
     email: string;
     phone: string;
     notes?: string;
-  }
+  },
+  options?: { userId?: string | null }
 ): Promise<BookingResult> => {
   try {
     // Parse session type and format from combined ID
     const parts = sessionTypeId.split('-');
     const sessionType = parts[0] || 'individual';
     const format = parts[1] || 'video';
-    
+
     // Format date as string
-    const dateStr = date instanceof Date 
-      ? date.toISOString().split('T')[0] 
+    const dateStr = date instanceof Date
+      ? date.toISOString().split('T')[0]
       : date;
-    
+
+    const body: Record<string, unknown> = {
+      sessionType,
+      format,
+      date: dateStr,
+      time,
+      customer: {
+        name: customerInfo.name,
+        email: customerInfo.email,
+        phone: customerInfo.phone,
+        notes: customerInfo.notes || '',
+      },
+    };
+    if (options?.userId) {
+      body.user_id = options.userId;
+    }
+
     const response = await fetch(`/api/bookings`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        sessionType,
-        format,
-        date: dateStr,
-        time,
-        customer: {
-          name: customerInfo.name,
-          email: customerInfo.email,
-          phone: customerInfo.phone,
-          notes: customerInfo.notes || '',
-        },
-      }),
+      body: JSON.stringify(body),
     });
     
     const data = await response.json();

@@ -97,6 +97,17 @@ See `backend/README.md` for full security documentation.
 | `VITE_BACKEND_URL` | Backend API URL | No (defaults to /api) |
 | `VITE_RAZORPAY_KEY_ID` | Razorpay publishable key | No |
 
+### Vercel API (for `/api/bookings` – Admin & My Bookings)
+
+Set these in Vercel → Project → Settings → Environment Variables so bookings are stored in Supabase:
+
+| Variable | Description | Required |
+|----------|-------------|----------|
+| `SUPABASE_URL` | Your Supabase project URL | Yes (for bookings to persist) |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key (server-only) | Yes (for bookings to persist) |
+
+Without these, Cal.com bookings still succeed but won’t appear in the Admin dashboard or My Bookings (no DB row).
+
 ### Backend (backend/.env)
 
 | Variable | Description | Required |

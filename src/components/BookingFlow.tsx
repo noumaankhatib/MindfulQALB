@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { SessionRecommendation } from '../data/chatbotFlow';
 import { useGeolocation, formatPrice } from '../hooks/useGeolocation';
+import { useAuth } from '../contexts/AuthContext';
 import { processPayment, isPaymentConfigured, isTestMode } from '../services/paymentService';
 import { AVAILABILITY_CONFIG } from '../config/paymentConfig';
 import { getPricing, isFormatEnabled, getDuration } from '../config/pricingConfig';
@@ -179,6 +180,7 @@ interface CustomerInfo {
 
 const BookingFlow = ({ session, isOpen, onClose }: BookingFlowProps) => {
   const { isIndia } = useGeolocation();
+  const { user } = useAuth();
   
   // Flow state
   const [currentStep, setCurrentStep] = useState<BookingStep>('therapy');
@@ -541,7 +543,7 @@ const BookingFlow = ({ session, isOpen, onClose }: BookingFlowProps) => {
     setIsProcessing(true);
     
     try {
-      // Create booking on Cal.com (or locally if Cal.com is not configured)
+      // Create booking on Cal.com and persist to Supabase (for Admin + My Bookings)
       const bookingResult = await createCalComBooking(
         selectedSessionType.id,
         selectedDate,
@@ -551,7 +553,8 @@ const BookingFlow = ({ session, isOpen, onClose }: BookingFlowProps) => {
           email: customerInfo.email,
           phone: customerInfo.phone,
           notes: customerInfo.notes,
-        }
+        },
+        { userId: user?.id ?? undefined }
       );
       
       if (!bookingResult.success) {
