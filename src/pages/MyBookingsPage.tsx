@@ -17,6 +17,7 @@ import Footer from '../components/Footer';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { formatPrice } from '../hooks/useGeolocation';
+import type { Payment as DbPayment } from '../types/database';
 
 interface BookingRow {
   id: string;
@@ -78,18 +79,20 @@ const MyBookingsPage = () => {
         return;
       }
 
-      setBookings(bookingsData || []);
+      const bookingsList = (bookingsData ?? []) as BookingRow[];
+      setBookings(bookingsList);
 
-      if (bookingsData?.length) {
-        const bookingIds = bookingsData.map((b) => b.id);
+      if (bookingsList.length > 0) {
+        const bookingIds = bookingsList.map((b) => b.id);
         const { data: paymentsData } = await supabase
           .from('payments')
           .select('id, booking_id, amount_paise, status, paid_at')
           .in('booking_id', bookingIds);
 
+        const paymentsList = (paymentsData ?? []) as DbPayment[];
         const map: Record<string, PaymentRow> = {};
-        paymentsData?.forEach((p) => {
-          if (p.booking_id) map[p.booking_id] = p;
+        paymentsList.forEach((p) => {
+          if (p.booking_id) map[p.booking_id] = { id: p.id, booking_id: p.booking_id, amount_paise: p.amount_paise, status: p.status, paid_at: p.paid_at };
         });
         setPaymentsByBooking(map);
       } else {

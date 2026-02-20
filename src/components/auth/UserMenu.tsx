@@ -14,7 +14,7 @@ const getRandomAvatar = (seed: string): string => {
 };
 
 export const UserMenu = ({ onOpenAuth }: UserMenuProps) => {
-  const { user, profile, loading, isConfigured, signOut } = useAuth();
+  const { user, profile, loading, signOut } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 

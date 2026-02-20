@@ -32,6 +32,8 @@ export interface SessionRecommendation {
   priceUSD: number;
   description: string;
   features: string[];
+  /** Session format (e.g. video, audio, chat) when coming from BookingsPage */
+  format?: string;
 }
 
 // Session types with pricing

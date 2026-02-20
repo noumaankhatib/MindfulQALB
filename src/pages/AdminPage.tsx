@@ -11,22 +11,20 @@ import {
   XCircle,
   AlertCircle,
   Search,
-  Filter,
-  Download,
   RefreshCw,
-  Eye,
   Mail,
   Phone,
   Video,
   Headphones,
   MessageSquare
 } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import Navigation from '../components/Navigation';
 import Footer from '../components/Footer';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { formatPrice } from '../hooks/useGeolocation';
+import type { Booking as DbBooking, Payment as DbPayment } from '../types/database';
 
 interface Booking {
   id: string;
@@ -63,7 +61,6 @@ interface DashboardStats {
 
 const AdminPage = () => {
   const { user, profile, loading: authLoading } = useAuth();
-  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'dashboard' | 'bookings' | 'payments'>('dashboard');
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
@@ -72,8 +69,6 @@ const AdminPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [accessDenied, setAccessDenied] = useState(false);
-
-  const isAdmin = profile?.role === 'admin';
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -94,6 +89,7 @@ const AdminPage = () => {
     }
   }, [user, profile, authLoading]);
 
+  // Security: Access control is enforced by Supabase RLS. See docs/SECURITY.md.
   const fetchData = async () => {
     setLoading(true);
     try {
@@ -102,28 +98,25 @@ const AdminPage = () => {
         supabase.from('payments').select('*').order('created_at', { ascending: false }),
       ]);
 
-      if (bookingsRes.data) {
-        setBookings(bookingsRes.data);
-        
-        const today = new Date().toISOString().split('T')[0];
-        const confirmed = bookingsRes.data.filter(b => b.status === 'confirmed').length;
-        const pending = bookingsRes.data.filter(b => b.status === 'pending').length;
-        const cancelled = bookingsRes.data.filter(b => b.status === 'cancelled').length;
-        const todayCount = bookingsRes.data.filter(b => b.scheduled_date === today).length;
+      const bookingsData = (bookingsRes.data ?? []) as DbBooking[];
+      const paymentsData = (paymentsRes.data ?? []) as DbPayment[];
 
-        setStats({
-          totalBookings: bookingsRes.data.length,
-          confirmedBookings: confirmed,
-          pendingBookings: pending,
-          cancelledBookings: cancelled,
-          totalRevenue: paymentsRes.data?.filter(p => p.status === 'paid').reduce((sum, p) => sum + p.amount_paise, 0) || 0,
-          todayBookings: todayCount,
-        });
-      }
+      setBookings(bookingsData as unknown as Booking[]);
+      setPayments(paymentsData as unknown as Payment[]);
 
-      if (paymentsRes.data) {
-        setPayments(paymentsRes.data);
-      }
+      const today = new Date().toISOString().split('T')[0];
+      const confirmed = bookingsData.filter(b => b.status === 'confirmed').length;
+      const pending = bookingsData.filter(b => b.status === 'pending').length;
+      const cancelled = bookingsData.filter(b => b.status === 'cancelled').length;
+      const todayCount = bookingsData.filter(b => b.scheduled_date === today).length;
+      setStats({
+        totalBookings: bookingsData.length,
+        confirmedBookings: confirmed,
+        pendingBookings: pending,
+        cancelledBookings: cancelled,
+        totalRevenue: paymentsData.filter(p => p.status === 'paid').reduce((sum, p) => sum + p.amount_paise, 0) || 0,
+        todayBookings: todayCount,
+      });
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
@@ -133,10 +126,11 @@ const AdminPage = () => {
 
   const updateBookingStatus = async (bookingId: string, newStatus: string) => {
     try {
-      const { error } = await supabase
-        .from('bookings')
-        .update({ status: newStatus, updated_at: new Date().toISOString() })
-        .eq('id', bookingId);
+      const payload = {
+        status: newStatus as DbBooking['status'],
+        updated_at: new Date().toISOString(),
+      };
+      const { error } = await supabase.from('bookings').update(payload as never).eq('id', bookingId);
 
       if (!error) {
         fetchData();

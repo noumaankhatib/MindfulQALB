@@ -45,17 +45,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(400).json({ error: 'Invalid payment ID format' });
     }
 
-    // Verify signature using HMAC SHA256
+    // Verify signature using HMAC SHA256 (constant-time comparison)
     const body = razorpay_order_id + '|' + razorpay_payment_id;
     const expectedSignature = crypto
       .createHmac('sha256', keySecret)
       .update(body)
       .digest('hex');
 
-    const isValid = crypto.timingSafeEqual(
-      Buffer.from(expectedSignature),
-      Buffer.from(razorpay_signature)
-    );
+    // timingSafeEqual throws if lengths differ; ensure same length to avoid throw + info leak
+    const expectedBuf = Buffer.from(expectedSignature, 'utf8');
+    const actualBuf = Buffer.from(razorpay_signature, 'utf8');
+    const isValid =
+      expectedBuf.length === actualBuf.length &&
+      crypto.timingSafeEqual(expectedBuf, actualBuf);
 
     if (isValid) {
       res.json({

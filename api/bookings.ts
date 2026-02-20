@@ -151,9 +151,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const result = await createCalComBooking(sessionType, date, time, customer, requestId);
 
     if (!result.success) {
+      // Do not expose internal/Cal.com error messages to the client
       return res.status(500).json({
         success: false,
-        error: result.error || 'Failed to create booking',
+        error: 'Failed to create booking. Please try again or contact support.',
         requestId,
       });
     }

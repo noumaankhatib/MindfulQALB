@@ -41,12 +41,18 @@ export const useGeolocation = (): GeolocationState => {
 };
 
 // Helper function to format price based on location
-export const formatPrice = (priceINR: number, _priceUSD: number, isIndia: boolean): string => {
-  if (isIndia) {
-    return `₹${priceINR.toLocaleString('en-IN')}`;
-  }
-  return `₹${priceINR.toLocaleString('en-IN')}`; // Always show INR for now
-};
+// Overload: (amount, isIndia) for simple display, or (priceINR, priceUSD, isIndia) for session pricing
+export function formatPrice(amount: number, isIndia: boolean): string;
+export function formatPrice(priceINR: number, _priceUSD: number, isIndia: boolean): string;
+export function formatPrice(
+  amountOrPriceINR: number,
+  priceUSDOrIsIndia: number | boolean,
+  _isIndia?: boolean
+): string {
+  const amount =
+    typeof priceUSDOrIsIndia === 'boolean' ? amountOrPriceINR : amountOrPriceINR;
+  return `₹${amount.toLocaleString('en-IN')}`;
+}
 
 // Helper function to get currency code
 export const getCurrency = (_isIndia: boolean): 'INR' | 'USD' => {

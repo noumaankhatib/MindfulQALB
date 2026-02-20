@@ -60,17 +60,18 @@ const STRICT_CONFIG: RateLimitConfig = {
 };
 
 /**
- * Get client identifier from request
+ * Get client identifier from request (for rate limiting).
+ * Prefer x-real-ip (set by Vercel/proxy) over x-forwarded-for to reduce
+ * spoofing risk — X-Forwarded-For can be set by the client.
  */
 const getClientIdentifier = (req: VercelRequest): string => {
-  const forwarded = req.headers['x-forwarded-for'];
   const realIp = req.headers['x-real-ip'];
-  
+  const forwarded = req.headers['x-forwarded-for'];
+  if (typeof realIp === 'string' && realIp.trim()) {
+    return realIp.trim();
+  }
   if (typeof forwarded === 'string') {
     return forwarded.split(',')[0].trim();
-  }
-  if (typeof realIp === 'string') {
-    return realIp;
   }
   return 'unknown';
 };

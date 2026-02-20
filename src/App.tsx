@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { createBrowserRouter, RouterProvider, Navigate, useLocation } from 'react-router-dom'
-import { AuthProvider } from './contexts/AuthContext'
+import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { cleanupLegacyStorage } from './utils/secureStorage'
 import Navigation from './components/Navigation'
 import Hero from './components/Hero'
@@ -140,13 +140,22 @@ const HomePage = () => {
   )
 }
 
+/** Protects /admin: only allows access when user is signed in and has role admin. Relies on Supabase RLS to enforce server-side. */
+function AdminRoute({ children }: { children: React.ReactNode }) {
+  const { user, profile, loading } = useAuth()
+  if (loading) return null
+  if (!user) return <Navigate to="/" replace />
+  if (profile?.role !== 'admin') return <Navigate to="/" replace />
+  return <>{children}</>
+}
+
 const router = createBrowserRouter([
   { path: '/', element: <HomePage /> },
   { path: '/privacy', element: <PrivacyPolicyPage /> },
   { path: '/terms', element: <TermsOfServicePage /> },
   { path: '/bookings', element: <Navigate to="/#get-help" replace /> },
   { path: '/my-bookings', element: <MyBookingsPage /> },
-  { path: '/admin', element: <AdminPage /> },
+  { path: '/admin', element: <AdminRoute><AdminPage /></AdminRoute> },
 ])
 
 function App() {

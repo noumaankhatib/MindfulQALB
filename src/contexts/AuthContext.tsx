@@ -144,10 +144,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     }
 
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ ...updates, updated_at: new Date().toISOString() })
-        .eq('id', user.id);
+      const payload = { ...updates, updated_at: new Date().toISOString() };
+      const { error } = await supabase.from('profiles').update(payload as never).eq('id', user.id);
 
       if (error) {
         return { error: new Error(error.message) };
