@@ -122,14 +122,17 @@ const AdminPage = () => {
 
       setBookings(bookingsData as unknown as Booking[]);
       setPayments(paymentsData as unknown as Payment[]);
-      setConsentRecords(consentData.map(c => ({
-        id: c.id,
-        email: c.email,
-        consent_version: c.consent_version,
-        session_type: c.session_type,
-        acknowledgments: Array.isArray(c.acknowledgments) ? c.acknowledgments : [],
-        consented_at: c.consented_at,
-      })));
+      setConsentRecords(consentData.map(c => {
+        const acks = Array.isArray(c.acknowledgments) ? c.acknowledgments : [];
+        return {
+          id: c.id,
+          email: c.email,
+          consent_version: c.consent_version,
+          session_type: c.session_type,
+          acknowledgments: acks.map((a): string => (typeof a === 'string' ? a : String(a ?? ''))),
+          consented_at: c.consented_at,
+        };
+      }));
 
       const today = new Date().toISOString().split('T')[0];
       const confirmed = bookingsData.filter(b => b.status === 'confirmed').length;
