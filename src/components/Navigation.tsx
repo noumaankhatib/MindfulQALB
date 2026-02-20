@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { ChevronDown, Menu, X } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Logo from './Logo'
+import { AuthModal, UserMenu } from './auth'
 
 // Navigation data structure with dropdowns
 interface DropdownItem {
@@ -65,6 +66,7 @@ const Navigation = () => {
   const [openDropdown, setOpenDropdown] = useState<string | null>(null)
   const [mobileOpenSection, setMobileOpenSection] = useState<string | null>(null)
   const [activeSection, setActiveSection] = useState<string>('home')
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false)
   const navRef = useRef<HTMLElement>(null)
 
   // Smooth scroll to section
@@ -174,7 +176,7 @@ const Navigation = () => {
           </a>
 
           {/* Desktop Navigation */}
-          <div className="hidden lg:flex items-center gap-1">
+          <div className="hidden lg:flex items-center gap-1 flex-1 justify-end">
             {navItems.map((item) => {
               // Check if this nav item or any of its dropdown items match the active section
               const isActive = item.href 
@@ -279,28 +281,38 @@ const Navigation = () => {
               )
             })}
             
-            {/* CTA Button */}
+            {/* CTA Button - Book Your Session section on homepage */}
             <a
-              href="#get-help"
-              onClick={(e) => scrollToSection(e, '#get-help')}
+              href="/#get-help"
+              onClick={closeMobileMenu}
               className="ml-4 px-6 py-2.5 rounded-full font-medium text-sm text-white bg-gradient-to-r from-lavender-600 to-lavender-700 shadow-lg shadow-lavender-500/25 hover:shadow-lavender-500/40 hover:-translate-y-0.5 transition-all duration-300"
             >
               Book a Session
             </a>
+            
+            {/* User Menu / Auth - Desktop */}
+            <div className="ml-3">
+              <UserMenu onOpenAuth={() => setIsAuthModalOpen(true)} />
+            </div>
           </div>
 
-          {/* Mobile Menu Button */}
-          <button
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className="lg:hidden p-2.5 rounded-xl hover:bg-lavender-50 transition-colors"
-            aria-label="Toggle menu"
-          >
-            {isMobileMenuOpen ? (
-              <X className="w-6 h-6 text-gray-700" />
-            ) : (
-              <Menu className="w-6 h-6 text-gray-700" />
-            )}
-          </button>
+          {/* Sign In Button - Always visible on all screen sizes */}
+          <div className="flex items-center gap-2 lg:hidden">
+            <UserMenu onOpenAuth={() => setIsAuthModalOpen(true)} />
+            
+            {/* Mobile Menu Button */}
+            <button
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              className="p-2.5 rounded-xl hover:bg-lavender-50 transition-colors"
+              aria-label="Toggle menu"
+            >
+              {isMobileMenuOpen ? (
+                <X className="w-6 h-6 text-gray-700" />
+              ) : (
+                <Menu className="w-6 h-6 text-gray-700" />
+              )}
+            </button>
+          </div>
         </div>
 
         {/* Mobile Menu */}
@@ -390,21 +402,33 @@ const Navigation = () => {
                   )
                 })}
                 
-                {/* Mobile CTA */}
-                <div className="pt-4 px-4">
+                {/* Mobile CTA - Book Your Session section on homepage */}
+                <div className="pt-4 px-4 space-y-3">
                   <a
-                    href="#get-help"
-                    onClick={(e) => scrollToSection(e, '#get-help')}
+                    href="/#get-help"
+                    onClick={closeMobileMenu}
                     className="block w-full text-center px-6 py-3 rounded-xl font-medium text-white bg-gradient-to-r from-lavender-600 to-lavender-700 shadow-lg shadow-lavender-500/25"
                   >
                     Book a Session
                   </a>
+                  <div className="flex justify-center">
+                    <UserMenu onOpenAuth={() => {
+                      closeMobileMenu();
+                      setIsAuthModalOpen(true);
+                    }} />
+                  </div>
                 </div>
               </div>
             </motion.div>
           )}
         </AnimatePresence>
       </div>
+      
+      {/* Auth Modal */}
+      <AuthModal 
+        isOpen={isAuthModalOpen} 
+        onClose={() => setIsAuthModalOpen(false)} 
+      />
     </nav>
   )
 }

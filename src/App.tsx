@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
-import { createBrowserRouter, RouterProvider } from 'react-router-dom'
+import { createBrowserRouter, RouterProvider, Navigate, useLocation } from 'react-router-dom'
+import { AuthProvider } from './contexts/AuthContext'
 import { cleanupLegacyStorage } from './utils/secureStorage'
 import Navigation from './components/Navigation'
 import Hero from './components/Hero'
@@ -23,9 +24,22 @@ import FAQ from './components/FAQ'
 import Chatbot from './components/Chatbot'
 import PrivacyPolicyPage from './pages/PrivacyPolicyPage'
 import TermsOfServicePage from './pages/TermsOfServicePage'
+import MyBookingsPage from './pages/MyBookingsPage'
+import AdminPage from './pages/AdminPage'
 
 // Home page component
 const HomePage = () => {
+  const location = useLocation()
+
+  useEffect(() => {
+    if (location.hash === '#get-help') {
+      const el = document.getElementById('get-help')
+      if (el) {
+        setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100)
+      }
+    }
+  }, [location.hash])
+
   useEffect(() => {
     // Clean up any legacy localStorage data that contained PII
     cleanupLegacyStorage();
@@ -130,10 +144,17 @@ const router = createBrowserRouter([
   { path: '/', element: <HomePage /> },
   { path: '/privacy', element: <PrivacyPolicyPage /> },
   { path: '/terms', element: <TermsOfServicePage /> },
+  { path: '/bookings', element: <Navigate to="/#get-help" replace /> },
+  { path: '/my-bookings', element: <MyBookingsPage /> },
+  { path: '/admin', element: <AdminPage /> },
 ])
 
 function App() {
-  return <RouterProvider router={router} />
+  return (
+    <AuthProvider>
+      <RouterProvider router={router} />
+    </AuthProvider>
+  )
 }
 
 export default App
