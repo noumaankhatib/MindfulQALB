@@ -2,6 +2,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { handleCorsPrelight, validateMethod } from '../_utils/cors.js';
 import { validateSessionType, validateFormat } from '../_utils/validation.js';
 import { rateLimiters } from '../_utils/rateLimit.js';
+import { getSupabaseServer } from '../_utils/supabase.js';
 
 // Dynamic import for Razorpay (CommonJS module)
 const getRazorpay = async () => {
@@ -81,17 +82,29 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       key_secret: keySecret,
     });
 
+    const amountPaise = amount * 100;
     const order = await razorpay.orders.create({
-      amount: amount * 100, // Amount in paise
+      amount: amountPaise,
       currency: 'INR',
       receipt: `receipt_${Date.now()}`,
       notes: { sessionType, format },
     });
 
+    const supabase = getSupabaseServer();
+    if (supabase) {
+      const { error: insertErr } = await supabase.from('payments').insert({
+        razorpay_order_id: order.id,
+        amount_paise: amountPaise,
+        currency: 'INR',
+        status: 'pending',
+      });
+      if (insertErr) console.error(`[${requestId}] Payment row insert failed:`, insertErr.message);
+    }
+
     res.json({
       success: true,
       orderId: order.id,
-      amount: amount * 100,
+      amount: amountPaise,
       currency: 'INR',
       keyId: keyId,
     });

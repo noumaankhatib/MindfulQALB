@@ -28,6 +28,7 @@ import { processPayment, isPaymentConfigured, isTestMode } from '../services/pay
 import { AVAILABILITY_CONFIG } from '../config/paymentConfig';
 import { getPricing, isFormatEnabled, getDuration } from '../config/pricingConfig';
 import { fetchCalComAvailability, createCalComBooking, isCalComConfigured, getCalComBookingLink } from '../services/calcomService';
+import { storeConsent } from '../services/apiService';
 import ConsentModal from './ConsentModal';
 import { ConsentRecord } from '../data/consentForm';
 
@@ -539,10 +540,28 @@ const BookingFlow = ({ session, isOpen, onClose }: BookingFlowProps) => {
       setError('Missing booking information. Please try again.');
       return;
     }
-    
+    if (!consentRecord) {
+      setError('Consent is required to complete the booking.');
+      return;
+    }
+
     setIsProcessing(true);
-    
+
     try {
+      // Store consent in database (for compliance) before creating the booking
+      const sessionTypeForApi = selectedSessionType.id.split('-')[0] || 'individual';
+      const consentResult = await storeConsent({
+        sessionType: sessionTypeForApi === 'free' ? 'individual' : sessionTypeForApi,
+        email: customerInfo.email,
+        consentVersion: consentRecord.consentVersion,
+        acknowledgments: consentRecord.acknowledgments,
+      });
+      if (!consentResult.success) {
+        setError(consentResult.error || 'Failed to record consent. Please try again.');
+        setIsProcessing(false);
+        return;
+      }
+
       // Create booking on Cal.com and persist to Supabase (for Admin + My Bookings)
       const bookingResult = await createCalComBooking(
         selectedSessionType.id,

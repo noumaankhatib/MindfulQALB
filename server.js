@@ -23,8 +23,13 @@ const PORT = 3001;
 const RAZORPAY_KEY_ID = process.env.RAZORPAY_KEY_ID;
 const RAZORPAY_KEY_SECRET = process.env.RAZORPAY_KEY_SECRET;
 // Use SUPABASE_URL or fallback to VITE_SUPABASE_URL (same value, different name)
-const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
-const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const SUPABASE_URL = (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '').trim();
+const SUPABASE_SERVICE_ROLE_KEY = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
+
+// Treat placeholders and invalid values as missing (avoids "Invalid API key undefined")
+const isValidKey = (v) => typeof v === 'string' && v.length > 20 && !/^undefined$|^your-|^<\w+>$/i.test(v);
+const supabaseUrlOk = SUPABASE_URL.length > 10 && SUPABASE_URL.startsWith('https://');
+const supabaseKeyOk = isValidKey(SUPABASE_SERVICE_ROLE_KEY);
 
 if (RAZORPAY_KEY_ID && RAZORPAY_KEY_SECRET) {
   console.log(`✅ Razorpay configured: ${RAZORPAY_KEY_ID.substring(0, 12)}...`);
@@ -32,10 +37,15 @@ if (RAZORPAY_KEY_ID && RAZORPAY_KEY_SECRET) {
   console.log('⚠️  Razorpay not configured - using mock mode');
 }
 
-if (SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY) {
+if (supabaseUrlOk && supabaseKeyOk) {
   console.log('✅ Supabase configured - bookings will be saved to database');
 } else {
-  console.log('⚠️  Supabase not configured - bookings are mock-only (set SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY in .env to persist)');
+  if (SUPABASE_URL || SUPABASE_SERVICE_ROLE_KEY) {
+    if (!supabaseUrlOk) console.log('⚠️  Supabase: SUPABASE_URL missing or invalid (need https://... in .env)');
+    if (!supabaseKeyOk) console.log('⚠️  Supabase: SUPABASE_SERVICE_ROLE_KEY missing or invalid (use service_role key from Supabase Dashboard → Settings → API)');
+  } else {
+    console.log('⚠️  Supabase not configured - bookings are mock-only (set SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY in .env to persist)');
+  }
 }
 
 // Middleware
@@ -66,12 +76,13 @@ const isWeekend = (dateString) => {
   return day === 0 || day === 6;
 };
 
-// Health check
+// Health check (includes DB config so you can verify before booking)
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'ok',
     timestamp: new Date().toISOString(),
     mode: 'local-development',
+    supabaseConfigured: !!(supabaseUrlOk && supabaseKeyOk),
   });
 });
 
@@ -135,11 +146,23 @@ app.post('/api/payments/create-order', async (req, res) => {
       key_secret: RAZORPAY_KEY_SECRET,
     });
 
+    const amountPaise = pricing * 100;
     const order = await razorpay.orders.create({
-      amount: pricing * 100,
+      amount: amountPaise,
       currency: 'INR',
       receipt: `receipt_${Date.now()}`,
     });
+
+    const supabase = getSupabase();
+    if (supabase) {
+      const { error: insertErr } = await supabase.from('payments').insert({
+        razorpay_order_id: order.id,
+        amount_paise: amountPaise,
+        currency: 'INR',
+        status: 'pending',
+      });
+      if (insertErr) console.error('Payment row insert failed:', insertErr.message);
+    }
 
     res.json({
       success: true,
@@ -156,7 +179,7 @@ app.post('/api/payments/create-order', async (req, res) => {
 });
 
 // Verify payment
-app.post('/api/payments/verify', (req, res) => {
+app.post('/api/payments/verify', async (req, res) => {
   const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
   
   if (!razorpay_order_id || !razorpay_payment_id) {
@@ -184,6 +207,19 @@ app.post('/api/payments/verify', (req, res) => {
     .digest('hex');
 
   if (expectedSignature === razorpay_signature) {
+    const supabase = getSupabase();
+    if (supabase) {
+      const { error: updateErr } = await supabase
+        .from('payments')
+        .update({
+          razorpay_payment_id: razorpay_payment_id,
+          razorpay_signature: razorpay_signature || null,
+          status: 'paid',
+          paid_at: new Date().toISOString(),
+        })
+        .eq('razorpay_order_id', razorpay_order_id);
+      if (updateErr) console.error('Payment update failed:', updateErr.message);
+    }
     res.json({
       success: true,
       verified: true,
@@ -206,7 +242,7 @@ const toDbFormat = (f) => (f === 'chat' || f === 'audio' ? f : 'video');
 const sanitize = (str) => (typeof str !== 'string' ? '' : str.replace(/</g, '&lt;').replace(/>/g, '&gt;').trim());
 
 function getSupabase() {
-  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) return null;
+  if (!supabaseUrlOk || !supabaseKeyOk) return null;
   return createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
@@ -247,13 +283,13 @@ app.post('/api/bookings', async (req, res) => {
       };
       const { data, error } = await supabase.from('bookings').insert(row).select('id').single();
       if (error) {
-        console.error('Supabase booking insert failed:', error.message, error.details);
+        console.error('Supabase booking insert failed:', error.code, error.message, JSON.stringify(error.details));
         return res.status(500).json({
           success: false,
-          error: 'Failed to save booking. Check server logs.',
+          error: 'Failed to save booking. Check server logs and docs/SUPABASE_SETUP.md (table + RLS).',
         });
       }
-      console.log('Booking saved to DB:', data.id, 'user_id:', userId || '(guest)');
+      console.log('Booking saved to DB:', data.id, 'user_id:', userId || '(guest)', 'email:', row.customer_email);
       return res.json({
         success: true,
         bookingId: data.id,
@@ -279,18 +315,47 @@ app.post('/api/bookings', async (req, res) => {
   });
 });
 
-// Store consent (mock)
-app.post('/api/consent', (req, res) => {
+// Store consent – insert into Supabase when configured (same table as api/consent.ts)
+app.post('/api/consent', async (req, res) => {
   const { sessionType, email, consentVersion, acknowledgments } = req.body;
-  
+
   if (!sessionType || !email || !consentVersion || !acknowledgments?.length) {
     return res.status(400).json({ error: 'Missing required fields' });
   }
-  
+
+  const supabase = getSupabase();
+  if (supabase) {
+    try {
+      const row = {
+        user_id: null,
+        email: String(email).toLowerCase().trim(),
+        consent_version: String(consentVersion).trim(),
+        session_type: toDbSessionType(String(sessionType).toLowerCase()),
+        acknowledgments: Array.isArray(acknowledgments) ? acknowledgments : [],
+        ip_address: req.ip || req.get('x-forwarded-for')?.split(',')[0]?.trim() || null,
+        user_agent: req.get('user-agent') || null,
+        consented_at: new Date().toISOString(),
+      };
+      const { data, error } = await supabase.from('consent_records').insert(row).select('id').single();
+      if (error) {
+        console.error('Supabase consent insert failed:', error.code, error.message);
+        return res.status(500).json({ success: false, error: 'Failed to store consent.' });
+      }
+      return res.json({
+        success: true,
+        consentId: data.id,
+        message: 'Consent recorded successfully',
+      });
+    } catch (err) {
+      console.error('Consent insert error:', err);
+      return res.status(500).json({ success: false, error: 'Failed to store consent.' });
+    }
+  }
+
   res.json({
     success: true,
     consentId: `consent_mock_${Date.now()}`,
-    message: 'Consent recorded (mock)',
+    message: 'Consent recorded (mock – set SUPABASE_* in .env to persist)',
   });
 });
 

@@ -8,10 +8,20 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 let serverClient: SupabaseClient | null = null;
 
+function isValidKey(v: string | undefined): boolean {
+  if (typeof v !== 'string' || v.length < 20) return false;
+  if (/^undefined$|^your-|^<\w+>$/i.test(v)) return false;
+  return true;
+}
+
+function isValidUrl(v: string | undefined): boolean {
+  return typeof v === 'string' && v.length > 10 && v.startsWith('https://');
+}
+
 export function getSupabaseServer(): SupabaseClient | null {
-  const url = process.env.SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !serviceRoleKey) return null;
+  const url = (process.env.SUPABASE_URL || '').trim();
+  const serviceRoleKey = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
+  if (!isValidUrl(url) || !isValidKey(serviceRoleKey)) return null;
   if (!serverClient) {
     serverClient = createClient(url, serviceRoleKey, {
       auth: { persistSession: false, autoRefreshToken: false },
@@ -21,5 +31,7 @@ export function getSupabaseServer(): SupabaseClient | null {
 }
 
 export function isSupabaseConfigured(): boolean {
-  return !!(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
+  const url = (process.env.SUPABASE_URL || '').trim();
+  const key = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
+  return isValidUrl(url) && isValidKey(key);
 }

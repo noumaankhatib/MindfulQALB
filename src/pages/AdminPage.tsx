@@ -16,7 +16,8 @@ import {
   Phone,
   Video,
   Headphones,
-  MessageSquare
+  MessageSquare,
+  FileCheck
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import Navigation from '../components/Navigation';
@@ -24,7 +25,7 @@ import Footer from '../components/Footer';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { formatPrice } from '../hooks/useGeolocation';
-import type { Booking as DbBooking, Payment as DbPayment } from '../types/database';
+import type { Booking as DbBooking, Payment as DbPayment, ConsentRecord as DbConsentRecord } from '../types/database';
 
 interface Booking {
   id: string;
@@ -50,6 +51,15 @@ interface Payment {
   paid_at: string | null;
 }
 
+interface ConsentRecordRow {
+  id: string;
+  email: string;
+  consent_version: string;
+  session_type: string;
+  acknowledgments: string[];
+  consented_at: string;
+}
+
 interface DashboardStats {
   totalBookings: number;
   confirmedBookings: number;
@@ -57,18 +67,22 @@ interface DashboardStats {
   cancelledBookings: number;
   totalRevenue: number;
   todayBookings: number;
+  totalConsents: number;
 }
 
 const AdminPage = () => {
   const { user, profile, loading: authLoading } = useAuth();
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'bookings' | 'payments'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'bookings' | 'payments' | 'consent'>('dashboard');
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
+  const [consentRecords, setConsentRecords] = useState<ConsentRecordRow[]>([]);
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [accessDenied, setAccessDenied] = useState(false);
+  const [consentLoadError, setConsentLoadError] = useState<string | null>(null);
+  const [paymentsLoadError, setPaymentsLoadError] = useState<string | null>(null);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -93,29 +107,44 @@ const AdminPage = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [bookingsRes, paymentsRes] = await Promise.all([
+      const [bookingsRes, paymentsRes, consentRes] = await Promise.all([
         supabase.from('bookings').select('*').order('created_at', { ascending: false }),
         supabase.from('payments').select('*').order('created_at', { ascending: false }),
+        supabase.from('consent_records').select('id, email, consent_version, session_type, acknowledgments, consented_at').order('consented_at', { ascending: false }),
       ]);
 
       const bookingsData = (bookingsRes.data ?? []) as DbBooking[];
-      const paymentsData = (paymentsRes.data ?? []) as DbPayment[];
+      const paymentsData = (paymentsRes.error ? [] : (paymentsRes.data ?? [])) as DbPayment[];
+      const consentData = (consentRes.error ? [] : (consentRes.data ?? [])) as DbConsentRecord[];
+
+      setConsentLoadError(consentRes.error ? consentRes.error.message : null);
+      setPaymentsLoadError(paymentsRes.error ? paymentsRes.error.message : null);
 
       setBookings(bookingsData as unknown as Booking[]);
       setPayments(paymentsData as unknown as Payment[]);
+      setConsentRecords(consentData.map(c => ({
+        id: c.id,
+        email: c.email,
+        consent_version: c.consent_version,
+        session_type: c.session_type,
+        acknowledgments: Array.isArray(c.acknowledgments) ? c.acknowledgments : [],
+        consented_at: c.consented_at,
+      })));
 
       const today = new Date().toISOString().split('T')[0];
       const confirmed = bookingsData.filter(b => b.status === 'confirmed').length;
       const pending = bookingsData.filter(b => b.status === 'pending').length;
       const cancelled = bookingsData.filter(b => b.status === 'cancelled').length;
       const todayCount = bookingsData.filter(b => b.scheduled_date === today).length;
+      const revenue = paymentsData.filter((p: DbPayment) => p.status === 'paid').reduce((sum: number, p: DbPayment) => sum + p.amount_paise, 0) || 0;
       setStats({
         totalBookings: bookingsData.length,
         confirmedBookings: confirmed,
         pendingBookings: pending,
         cancelledBookings: cancelled,
-        totalRevenue: paymentsData.filter(p => p.status === 'paid').reduce((sum, p) => sum + p.amount_paise, 0) || 0,
+        totalRevenue: revenue,
         todayBookings: todayCount,
+        totalConsents: consentData.length,
       });
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -253,10 +282,11 @@ const AdminPage = () => {
 
           {/* Tabs */}
           <div className="flex gap-1 mb-8 p-1 bg-white/80 rounded-2xl border border-lavender-100 shadow-sm w-fit">
-            {[
+              {[
               { id: 'dashboard', label: 'Dashboard', icon: BarChart3 },
-              { id: 'bookings', label: 'My Bookings', icon: Calendar },
+              { id: 'bookings', label: 'Bookings', icon: Calendar },
               { id: 'payments', label: 'Payments', icon: CreditCard },
+              { id: 'consent', label: 'Consent', icon: FileCheck },
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -289,6 +319,7 @@ const AdminPage = () => {
                   { label: 'Cancelled', value: stats.cancelledBookings, icon: XCircle, bg: 'bg-red-100', iconColor: 'text-red-600' },
                   { label: 'Revenue', value: formatPrice(stats.totalRevenue / 100, true), icon: CreditCard, bg: 'bg-lavender-100', iconColor: 'text-lavender-600' },
                   { label: 'Today', value: stats.todayBookings, icon: Users, bg: 'bg-lavender-50', iconColor: 'text-lavender-600' },
+                  { label: 'Consents', value: stats.totalConsents, icon: FileCheck, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
                 ].map((stat) => (
                   <div
                     key={stat.label}
@@ -508,6 +539,16 @@ const AdminPage = () => {
                 <p className="text-gray-600 ml-12">Payment history and transaction details</p>
               </div>
 
+              {paymentsLoadError && (
+                <div className="mb-4 p-4 rounded-xl bg-amber-50 border border-amber-200 flex items-start gap-3">
+                  <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-medium text-amber-800">Could not load payments</p>
+                    <p className="text-sm text-amber-700 mt-1">Create the <code className="bg-amber-100 px-1 rounded">payments</code> table and add the RLS policy &quot;Admins can read payments&quot; in Supabase (see <code className="bg-amber-100 px-1 rounded">docs/SUPABASE_SETUP.md</code>). Revenue and counts will then update.</p>
+                  </div>
+                </div>
+              )}
+
               <div className="bg-white rounded-2xl border border-lavender-100 shadow-gentle overflow-hidden">
                 <div className="overflow-x-auto">
                   <table className="w-full">
@@ -550,6 +591,81 @@ const AdminPage = () => {
                     </div>
                     <p className="text-gray-600 font-medium">No payments found</p>
                     <p className="text-sm text-gray-500 mt-1">Payments will appear here once customers complete checkout</p>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          )}
+
+          {/* Consent Tab – users who have given consent */}
+          {activeTab === 'consent' && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="space-y-6"
+            >
+              <div className="mb-6">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="p-2 rounded-xl bg-emerald-100 text-emerald-600">
+                    <FileCheck className="w-5 h-5" />
+                  </div>
+                  <h2 className="text-xl font-bold text-gray-900 font-display">Consent records</h2>
+                </div>
+                <p className="text-gray-600 ml-12">Users who have given informed consent before booking (for compliance)</p>
+              </div>
+
+              {consentLoadError && (
+                <div className="mb-4 p-4 rounded-xl bg-amber-50 border border-amber-200 flex items-start gap-3">
+                  <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-medium text-amber-800">Could not load consent records</p>
+                    <p className="text-sm text-amber-700 mt-1">Add the RLS policy so admins can read this table: in Supabase SQL Editor run the &quot;Admins can read consent records&quot; block from <code className="bg-amber-100 px-1 rounded">docs/SUPABASE_SETUP.md</code>. Ensure your user has <code className="bg-amber-100 px-1 rounded">profiles.role = &#39;admin&#39;</code>.</p>
+                  </div>
+                </div>
+              )}
+
+              <div className="bg-white rounded-2xl border border-lavender-100 shadow-gentle overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="bg-gradient-to-r from-emerald-50 to-lavender-50 border-b border-lavender-200">
+                        <th className="px-6 py-4 text-left text-xs font-semibold text-lavender-700 uppercase tracking-wider">Email</th>
+                        <th className="px-6 py-4 text-left text-xs font-semibold text-lavender-700 uppercase tracking-wider">Session type</th>
+                        <th className="px-6 py-4 text-left text-xs font-semibold text-lavender-700 uppercase tracking-wider">Version</th>
+                        <th className="px-6 py-4 text-left text-xs font-semibold text-lavender-700 uppercase tracking-wider">Acknowledgments</th>
+                        <th className="px-6 py-4 text-left text-xs font-semibold text-lavender-700 uppercase tracking-wider">Consented at</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-lavender-100">
+                      {consentRecords.map((record) => (
+                        <tr key={record.id} className="hover:bg-lavender-50/30 transition-colors">
+                          <td className="px-6 py-4">
+                            <p className="text-sm font-medium text-gray-900">{record.email}</p>
+                          </td>
+                          <td className="px-6 py-4">
+                            <span className="capitalize text-gray-700">{record.session_type}</span>
+                          </td>
+                          <td className="px-6 py-4 text-sm text-gray-600">{record.consent_version}</td>
+                          <td className="px-6 py-4">
+                            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">
+                              {record.acknowledgments.length} items
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-sm text-gray-600">
+                            {new Date(record.consented_at).toLocaleString()}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                {consentRecords.length === 0 && (
+                  <div className="p-12 text-center">
+                    <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-emerald-100 flex items-center justify-center">
+                      <FileCheck className="w-8 h-8 text-emerald-500" />
+                    </div>
+                    <p className="text-gray-600 font-medium">No consent records yet</p>
+                    <p className="text-sm text-gray-500 mt-1">Consent is recorded when users complete the booking flow and accept the consent form</p>
                   </div>
                 )}
               </div>

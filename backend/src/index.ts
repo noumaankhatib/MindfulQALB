@@ -99,8 +99,9 @@ app.use((err: Error, _req: express.Request, res: express.Response, _next: expres
 });
 
 // Start server
-app.listen(PORT, () => {
-  console.log(`🚀 MindfulQALB API server running on port ${PORT}`);
+const defaultPORT = 3001
+app.listen(PORT || defaultPORT, () => {
+  console.log(`🚀 MindfulQALB API server running on port ${PORT} || ${defaultPORT}`);
   console.log(`📍 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`🔒 CORS enabled for: ${allowedOrigins.join(', ')}`);
 });

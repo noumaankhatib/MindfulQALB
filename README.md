@@ -53,6 +53,10 @@ To see bookings in **My Bookings** and **Admin** while testing locally:
 
 Without `SUPABASE_SERVICE_ROLE_KEY`, the local API returns mock booking IDs and does not write to the database. Restart `npm run dev:api` after changing `.env`.
 
+**If bookings still don’t show in My Bookings or Admin:** the API inserts with the service role (bypasses RLS), but the app reads with the anon key. You must add **Row Level Security policies** in Supabase so the frontend can read rows. See **`docs/SUPABASE_SETUP.md`** for the exact SQL (create table + RLS policies). After running that SQL, My Bookings and Admin will show data.
+
+**Quick check:** Open `http://localhost:3001/api/health` — if `supabaseConfigured` is `true`, the API will write to the DB when you book.
+
 ### Development (Full Stack)
 
 For production-ready security, run both frontend and backend:
@@ -108,38 +112,28 @@ See `backend/README.md` for full security documentation.
 
 ## Environment Variables
 
-### Frontend (.env)
+### Root (.env) – Frontend + Local API
 
-| Variable | Description | Required |
-|----------|-------------|----------|
-| `VITE_USE_BACKEND_API` | Use secure backend API | Yes (production) |
-| `VITE_BACKEND_URL` | Backend API URL | No (defaults to /api) |
-| `VITE_RAZORPAY_KEY_ID` | Razorpay publishable key | No |
+Use `.env.example` as reference. Same file is used by Vite (frontend) and server.js (local API); only `VITE_*` are exposed to the client.
 
-### Vercel API (for `/api/bookings` – Admin & My Bookings)
+| Variable | Description |
+|----------|-------------|
+| `VITE_SUPABASE_URL` | Supabase project URL |
+| `VITE_SUPABASE_ANON_KEY` | Supabase anon (public) key |
+| `VITE_USE_BACKEND_API` | Use backend API (e.g. true in production) |
+| `VITE_BACKEND_URL` | Backend API base URL (default /api) |
+| `SUPABASE_URL` | Supabase URL for server-side bookings |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key (server-only) |
+| `CALCOM_API_KEY`, `CALCOM_USERNAME`, `CALCOM_EVENT_TYPE_IDS` | Cal.com config |
+| `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET` | Razorpay config |
 
-Set these in Vercel → Project → Settings → Environment Variables so bookings are stored in Supabase:
+### Vercel
 
-| Variable | Description | Required |
-|----------|-------------|----------|
-| `SUPABASE_URL` | Your Supabase project URL | Yes (for bookings to persist) |
-| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key (server-only) | Yes (for bookings to persist) |
-
-Without these, Cal.com bookings still succeed but won’t appear in the Admin dashboard or My Bookings (no DB row).
+For **Vercel**, set the same server variables (SUPABASE_*, CALCOM_*, RAZORPAY_*) in Project → Settings → Environment Variables so `/api/*` and bookings work. Without SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY, bookings won't persist to the DB.
 
 ### Backend (backend/.env)
 
-| Variable | Description | Required |
-|----------|-------------|----------|
-| `PORT` | Server port | No (default: 3001) |
-| `NODE_ENV` | Environment mode | No |
-| `ALLOWED_ORIGINS` | CORS allowed origins | Yes (production) |
-| `CALCOM_API_KEY` | Cal.com API key | Yes |
-| `CALCOM_USERNAME` | Cal.com username | Yes |
-| `CALCOM_EVENT_TYPE_IDS` | Event type IDs (JSON) | Yes |
-| `RAZORPAY_KEY_ID` | Razorpay key ID | Yes |
-| `RAZORPAY_KEY_SECRET` | Razorpay key secret | Yes |
-| `ENCRYPTION_KEY` | Data encryption key | Yes |
+Used only when running the Express backend (`cd backend && npm run dev`). See `backend/.env.example` for the full list: PORT, NODE_ENV, ALLOWED_ORIGINS, CALCOM_*, RAZORPAY_*, ENCRYPTION_KEY.
 
 ## Tech Stack
 

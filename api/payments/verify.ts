@@ -2,6 +2,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import crypto from 'crypto';
 import { handleCorsPrelight, validateMethod } from '../_utils/cors.js';
 import { rateLimiters } from '../_utils/rateLimit.js';
+import { getSupabaseServer } from '../_utils/supabase.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Handle CORS
@@ -60,6 +61,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       crypto.timingSafeEqual(expectedBuf, actualBuf);
 
     if (isValid) {
+      const supabase = getSupabaseServer();
+      if (supabase) {
+        const { error: updateErr } = await supabase
+          .from('payments')
+          .update({
+            razorpay_payment_id,
+            razorpay_signature: razorpay_signature || null,
+            status: 'paid',
+            paid_at: new Date().toISOString(),
+          })
+          .eq('razorpay_order_id', razorpay_order_id);
+        if (updateErr) console.warn('Payment update failed:', updateErr.message);
+      }
       res.json({
         success: true,
         verified: true,

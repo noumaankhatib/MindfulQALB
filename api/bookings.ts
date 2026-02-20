@@ -184,7 +184,7 @@ const insertBookingToSupabase = async (params: {
   const { data, error } = await supabase.from('bookings').insert(row).select('id').single();
 
   if (error) {
-    console.error(`[${requestId}] Supabase booking insert failed:`, error.message);
+    console.error(`[${requestId}] Supabase booking insert failed:`, error.code, error.message, error.details);
     return null;
   }
   return data as { id: string };
