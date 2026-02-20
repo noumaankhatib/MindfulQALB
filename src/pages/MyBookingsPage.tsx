@@ -65,21 +65,44 @@ const MyBookingsPage = () => {
     if (!user) return;
     setLoading(true);
     try {
-      const { data: bookingsData, error: bookingsError } = await supabase
+      // Fetch by user_id (primary) or by customer_email (fallback if user_id wasn't stored)
+      const { data: byUserId, error: err1 } = await supabase
         .from('bookings')
         .select('id, session_type, session_format, duration_minutes, scheduled_date, scheduled_time, status, customer_name, customer_email, created_at')
         .eq('user_id', user.id)
         .order('scheduled_date', { ascending: false })
         .order('scheduled_time', { ascending: false });
 
-      if (bookingsError) {
-        console.error('Error fetching bookings:', bookingsError);
+      if (err1) {
+        console.error('Error fetching bookings by user_id:', err1);
         setBookings([]);
         setLoading(false);
         return;
       }
 
-      const bookingsList = (bookingsData ?? []) as BookingRow[];
+      let bookingsList = (byUserId ?? []) as BookingRow[];
+      const seenIds = new Set(bookingsList.map((b) => b.id));
+
+      if (user.email) {
+        const { data: byEmail } = await supabase
+          .from('bookings')
+          .select('id, session_type, session_format, duration_minutes, scheduled_date, scheduled_time, status, customer_name, customer_email, created_at')
+          .ilike('customer_email', user.email)
+          .order('scheduled_date', { ascending: false })
+          .order('scheduled_time', { ascending: false });
+        const byEmailList = (byEmail ?? []) as BookingRow[];
+        for (const b of byEmailList) {
+          if (!seenIds.has(b.id)) {
+            seenIds.add(b.id);
+            bookingsList.push(b);
+          }
+        }
+        bookingsList.sort((a, b) => {
+          if (a.scheduled_date !== b.scheduled_date) return b.scheduled_date.localeCompare(a.scheduled_date);
+          return (b.scheduled_time || '').localeCompare(a.scheduled_time || '');
+        });
+      }
+
       setBookings(bookingsList);
 
       if (bookingsList.length > 0) {

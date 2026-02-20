@@ -34,6 +34,25 @@ npm run dev
 
 The frontend will be available at http://localhost:5173
 
+### Development (Frontend + Local API with DB persistence)
+
+To see bookings in **My Bookings** and **Admin** while testing locally:
+
+1. **Terminal 1 – API:** `npm run dev:api` (runs Express on port 3001)
+2. **Terminal 2 – Frontend:** `npm run dev` (Vite proxies `/api` to 3001)
+3. In **root `.env`** (same folder as `server.js`), set:
+   - `SUPABASE_URL` = your Supabase project URL
+   - `SUPABASE_SERVICE_ROLE_KEY` = Supabase **service role** key (Dashboard → Settings → API)
+
+**Required in root `.env` for DB + My Bookings to work:**
+
+| Variable | Where to get it |
+|----------|------------------|
+| `SUPABASE_URL` | Same as your `VITE_SUPABASE_URL` (or set both). |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase Dashboard → Project Settings → API → **service_role** (secret, server-only). |
+
+Without `SUPABASE_SERVICE_ROLE_KEY`, the local API returns mock booking IDs and does not write to the database. Restart `npm run dev:api` after changing `.env`.
+
 ### Development (Full Stack)
 
 For production-ready security, run both frontend and backend:

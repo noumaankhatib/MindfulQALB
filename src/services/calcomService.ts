@@ -1,3 +1,5 @@
+import { safeParseJson } from '../utils/safeJson';
+
 /**
  * Cal.com Integration Service
  * 
@@ -97,11 +99,9 @@ export const fetchCalComAvailability = async (
     });
     
     if (response.ok) {
-      const data = await response.json();
+      const data = await safeParseJson<{ slots?: TimeSlot[] }>(response);
       return data.slots || getFallbackSlots();
     }
-    
-    // API error - return fallback slots
     console.warn('Availability API error, using fallback slots');
     return getFallbackSlots();
   } catch (error) {
@@ -163,9 +163,9 @@ export const createCalComBooking = async (
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     });
-    
-    const data = await response.json();
-    
+
+    const data = await safeParseJson<{ success?: boolean; bookingId?: string; message?: string; error?: string }>(response);
+
     if (response.ok && data.success) {
       return {
         success: true,
@@ -173,7 +173,6 @@ export const createCalComBooking = async (
         message: data.message || 'Booking created successfully',
       };
     }
-    
     return {
       success: false,
       error: data.error || 'Failed to create booking',

@@ -1,28 +1,41 @@
 /**
  * Local development server for API functions
  * Runs the API endpoints without requiring Vercel CLI login
+ * When SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY are set, bookings are inserted into Supabase (same as Vercel).
  */
 
 import express from 'express';
 import cors from 'cors';
 import crypto from 'crypto';
 import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { createClient } from '@supabase/supabase-js';
 
-// Load environment variables from .env file
-dotenv.config();
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+// Load .env from project root (where server.js lives) so SUPABASE_* are always found
+dotenv.config({ path: path.resolve(__dirname, '.env') });
+dotenv.config({ path: path.resolve(__dirname, '.env.local') });
 
 const app = express();
 const PORT = 3001;
 
-// Razorpay configuration from environment
 const RAZORPAY_KEY_ID = process.env.RAZORPAY_KEY_ID;
 const RAZORPAY_KEY_SECRET = process.env.RAZORPAY_KEY_SECRET;
+// Use SUPABASE_URL or fallback to VITE_SUPABASE_URL (same value, different name)
+const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-// Debug: Log if Razorpay keys are configured
 if (RAZORPAY_KEY_ID && RAZORPAY_KEY_SECRET) {
   console.log(`✅ Razorpay configured: ${RAZORPAY_KEY_ID.substring(0, 12)}...`);
 } else {
   console.log('⚠️  Razorpay not configured - using mock mode');
+}
+
+if (SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY) {
+  console.log('✅ Supabase configured - bookings will be saved to database');
+} else {
+  console.log('⚠️  Supabase not configured - bookings are mock-only (set SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY in .env to persist)');
 }
 
 // Middleware
@@ -186,18 +199,83 @@ app.post('/api/payments/verify', (req, res) => {
   }
 });
 
-// Create booking (mock)
-app.post('/api/bookings', (req, res) => {
-  const { sessionType, date, time, customer } = req.body;
-  
+// Helpers for Supabase booking insert (match api/bookings.ts schema)
+const DURATION_BY_FORMAT = { chat: 30, audio: 45, video: 60 };
+const toDbSessionType = (s) => (s === 'couples' || s === 'family' ? s : 'individual');
+const toDbFormat = (f) => (f === 'chat' || f === 'audio' ? f : 'video');
+const sanitize = (str) => (typeof str !== 'string' ? '' : str.replace(/</g, '&lt;').replace(/>/g, '&gt;').trim());
+
+function getSupabase() {
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) return null;
+  return createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+}
+
+// Create booking – insert into Supabase when configured so My Bookings & Admin show data
+app.post('/api/bookings', async (req, res) => {
+  const { sessionType, format, date, time, customer, user_id: userId } = req.body;
+
   if (!sessionType || !date || !time || !customer?.name || !customer?.email) {
     return res.status(400).json({ error: 'Missing required fields' });
   }
-  
+  const fmt = format || 'video';
+  const bookingId = `local_${Date.now()}`;
+
+  const supabase = getSupabase();
+  if (supabase) {
+    try {
+      const session_type = toDbSessionType(String(sessionType).toLowerCase());
+      const session_format = toDbFormat(String(fmt).toLowerCase());
+      const row = {
+        user_id: userId || null,
+        session_type,
+        session_format,
+        duration_minutes: DURATION_BY_FORMAT[session_format] ?? 60,
+        scheduled_date: date,
+        scheduled_time: time,
+        timezone: 'Asia/Kolkata',
+        status: 'pending',
+        calcom_booking_id: bookingId,
+        calcom_booking_uid: null,
+        customer_name: sanitize(customer.name),
+        customer_email: String(customer.email).toLowerCase().trim(),
+        customer_phone: customer.phone ? String(customer.phone).trim() : null,
+        notes: customer.notes ? sanitize(customer.notes) : null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+      const { data, error } = await supabase.from('bookings').insert(row).select('id').single();
+      if (error) {
+        console.error('Supabase booking insert failed:', error.message, error.details);
+        return res.status(500).json({
+          success: false,
+          error: 'Failed to save booking. Check server logs.',
+        });
+      }
+      console.log('Booking saved to DB:', data.id, 'user_id:', userId || '(guest)');
+      return res.json({
+        success: true,
+        bookingId: data.id,
+        databaseId: data.id,
+        message: 'Booking created successfully',
+        savedToDatabase: true,
+      });
+    } catch (err) {
+      console.error('Booking insert error:', err);
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to save booking.',
+      });
+    }
+  }
+
+  console.log('Booking mock (no DB) – add SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY to .env to persist');
   res.json({
     success: true,
-    bookingId: `booking_mock_${Date.now()}`,
-    message: 'Booking created successfully (mock)',
+    bookingId,
+    message: 'Booking created successfully (mock – set SUPABASE_SERVICE_ROLE_KEY in .env to save to DB)',
+    savedToDatabase: false,
   });
 });
 

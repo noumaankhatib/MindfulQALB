@@ -2,6 +2,7 @@
 
 import { SessionRecommendation } from '../data/chatbotFlow';
 import { PAYMENT_CONFIG } from '../config/paymentConfig';
+import { safeParseJson } from '../utils/safeJson';
 
 
 // Types
@@ -90,9 +91,9 @@ export const processRazorpayPayment = async (
 
   // SECURITY: Always create orders via backend API
   // This ensures server-side price verification and prevents price manipulation
-  let orderId: string;
-  let amount: number;
-  let keyId: string;
+  let orderId: string | undefined;
+  let amount: number | undefined;
+  let keyId: string | undefined;
 
   try {
     const response = await fetch(`/api/payments/create-order`, {
@@ -105,9 +106,7 @@ export const processRazorpayPayment = async (
     });
     
     if (response.ok) {
-      const data = await response.json();
-      
-      // Handle free sessions
+      const data = await safeParseJson<{ isFree?: boolean; orderId?: string; amount?: number; keyId?: string }>(response);
       if (data.isFree) {
         return {
           success: true,
@@ -115,12 +114,17 @@ export const processRazorpayPayment = async (
           orderId: data.orderId,
         };
       }
-      
+      if (data.orderId == null || data.amount == null || !data.keyId) {
+        return {
+          success: false,
+          error: 'Invalid response from payment server. Please try again.',
+        };
+      }
       orderId = data.orderId;
       amount = data.amount;
       keyId = data.keyId;
     } else {
-      const errorData = await response.json();
+      const errorData = await safeParseJson<{ error?: string }>(response);
       return {
         success: false,
         error: errorData.error || 'Failed to create payment order',
@@ -133,8 +137,7 @@ export const processRazorpayPayment = async (
     };
   }
   
-  // Fallback check - should not happen if API is working
-  if (!keyId || !orderId) {
+  if (!keyId || !orderId || amount == null) {
     return {
       success: false,
       error: 'Payment configuration error. Please contact support.',
@@ -144,7 +147,7 @@ export const processRazorpayPayment = async (
   return new Promise((resolve) => {
     const options: RazorpayOptions = {
       key: keyId,
-      amount: amount,
+      amount,
       currency: 'INR',
       name: 'MindfulQALB',
       description: `${session.title} - ${session.duration}`,
@@ -180,7 +183,7 @@ export const processRazorpayPayment = async (
           });
           
           if (verifyResponse.ok) {
-            const data = await verifyResponse.json();
+            const data = await safeParseJson<{ verified?: boolean }>(verifyResponse);
             if (data.verified) {
               resolve({
                 success: true,
