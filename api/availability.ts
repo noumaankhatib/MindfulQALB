@@ -137,14 +137,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (!validateMethod(req, res, ['POST'])) return;
 
   try {
-    const { date, sessionType } = req.body;
-    
-    // Validate inputs
+    const { date, sessionType: rawSessionType } = req.body;
+    // Frontend may send combined id (e.g. "individual-audio"); use first segment for validation
+    const sessionType =
+      typeof rawSessionType === 'string' && rawSessionType.includes('-')
+        ? rawSessionType.split('-')[0]
+        : rawSessionType ?? 'individual';
+
     const sessionTypeResult = validateSessionType(sessionType);
     if (!sessionTypeResult.valid) {
       return res.status(400).json({ error: sessionTypeResult.error, requestId });
     }
-    
+
     const dateResult = validateDate(date);
     if (!dateResult.valid) {
       return res.status(400).json({ error: dateResult.error, requestId });

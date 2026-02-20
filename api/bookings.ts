@@ -248,7 +248,39 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       requestId
     );
 
+    // If Cal.com failed, still try to persist to Supabase so the booking shows in Admin/My Bookings
+    const bookingId = result.bookingId ?? `local_${Date.now()}`;
+    const calComUid = result.calComUid ?? null;
+
+    let dbRow: { id: string } | null = null;
+    try {
+      dbRow = await insertBookingToSupabase({
+        sessionType,
+        format,
+        date,
+        time,
+        customer,
+        calComBookingId: result.success ? bookingId : null,
+        calComUid: result.success ? calComUid : null,
+        userId: typeof userId === 'string' ? userId : null,
+        requestId,
+      });
+    } catch (dbErr) {
+      console.error(`[${requestId}] Supabase insert error:`, dbErr instanceof Error ? dbErr.message : dbErr);
+    }
+
     if (!result.success) {
+      console.error(`[${requestId}] Cal.com booking failed (booking saved to DB):`, result.error);
+      // Still return 200 if we saved to Supabase so user sees confirmation and booking in admin
+      if (dbRow) {
+        return res.json({
+          success: true,
+          bookingId: dbRow.id,
+          databaseId: dbRow.id,
+          message: 'Booking saved. Calendar sync may follow.',
+          requestId,
+        });
+      }
       return res.status(500).json({
         success: false,
         error: 'Failed to create booking. Please try again or contact support.',
@@ -256,31 +288,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
-    // Persist to Supabase so Admin and My Bookings show the booking
-    const dbRow = await insertBookingToSupabase({
-      sessionType,
-      format,
-      date,
-      time,
-      customer,
-      calComBookingId: result.bookingId ?? null,
-      calComUid: result.calComUid ?? null,
-      userId: typeof userId === 'string' ? userId : null,
-      requestId,
-    });
-
     res.json({
       success: true,
-      bookingId: result.bookingId,
+      bookingId,
       databaseId: dbRow?.id ?? undefined,
       message: 'Booking created successfully',
       requestId,
     });
   } catch (error) {
-    console.error(`[${requestId}] Booking error:`, error instanceof Error ? error.message : 'Unknown error');
+    const errMsg = error instanceof Error ? error.message : 'Unknown error';
+    console.error(`[${requestId}] Booking error:`, errMsg, error instanceof Error ? error.stack : '');
     res.status(500).json({
       success: false,
-      error: 'Failed to create booking',
+      error: 'Failed to create booking. Please try again or contact support.',
       requestId,
     });
   }
