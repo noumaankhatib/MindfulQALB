@@ -129,7 +129,12 @@ Use `.env.example` as reference. Same file is used by Vite (frontend) and server
 
 ### Vercel
 
-For **Vercel**, set the same server variables (SUPABASE_*, CALCOM_*, RAZORPAY_*) in Project → Settings → Environment Variables so `/api/*` and bookings work. Without SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY, bookings won't persist to the DB.
+In **Project → Settings → Environment Variables** add:
+
+- **Frontend (required for Google login):** `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` — use your real Supabase project URL (e.g. `https://xxxxx.supabase.co`) and anon key. If these are missing, the build uses a placeholder and **Google sign-in will redirect to a broken URL** (`placeholder.supabase.co`).
+- **Server:** `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `CALCOM_*`, `RAZORPAY_*` so `/api/*` and bookings work.
+
+Redeploy after adding or changing env vars.
 
 ### Backend (backend/.env)
 
