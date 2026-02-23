@@ -24,11 +24,13 @@ import Navigation from '../components/Navigation';
 import Footer from '../components/Footer';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
+import { requestRefund } from '../services/apiService';
 import { formatPrice } from '../hooks/useGeolocation';
-import type { Booking as DbBooking, Payment as DbPayment, ConsentRecord as DbConsentRecord } from '../types/database';
+import type { Booking as DbBooking, Payment as DbPayment, ConsentRecord as DbConsentRecord, Profile as DbProfile } from '../types/database';
 
 interface Booking {
   id: string;
+  user_id?: string | null;
   customer_name: string;
   customer_email: string;
   customer_phone: string | null;
@@ -45,6 +47,7 @@ interface Payment {
   id: string;
   razorpay_order_id: string;
   razorpay_payment_id: string | null;
+  booking_id: string | null;
   amount_paise: number;
   status: string;
   created_at: string;
@@ -60,6 +63,15 @@ interface ConsentRecordRow {
   consented_at: string;
 }
 
+interface ProfileRow {
+  id: string;
+  email: string | null;
+  full_name: string | null;
+  phone: string | null;
+  role: string;
+  created_at: string;
+}
+
 interface DashboardStats {
   totalBookings: number;
   confirmedBookings: number;
@@ -68,21 +80,28 @@ interface DashboardStats {
   totalRevenue: number;
   todayBookings: number;
   totalConsents: number;
+  totalUsers: number;
 }
 
 const AdminPage = () => {
   const { user, profile, loading: authLoading } = useAuth();
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'bookings' | 'payments' | 'consent'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'bookings' | 'payments' | 'consent' | 'users'>('dashboard');
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [consentRecords, setConsentRecords] = useState<ConsentRecordRow[]>([]);
+  const [profiles, setProfiles] = useState<ProfileRow[]>([]);
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [accessDenied, setAccessDenied] = useState(false);
+  const [cancellingId, setCancellingId] = useState<string | null>(null);
+  const [cancelError, setCancelError] = useState<string | null>(null);
+  const [refundingPaymentId, setRefundingPaymentId] = useState<string | null>(null);
   const [consentLoadError, setConsentLoadError] = useState<string | null>(null);
   const [paymentsLoadError, setPaymentsLoadError] = useState<string | null>(null);
+  const [profilesLoadError, setProfilesLoadError] = useState<string | null>(null);
+  const [bookingsLoadError, setBookingsLoadError] = useState<string | null>(null);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -107,18 +126,22 @@ const AdminPage = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [bookingsRes, paymentsRes, consentRes] = await Promise.all([
+      const [bookingsRes, paymentsRes, consentRes, profilesRes] = await Promise.all([
         supabase.from('bookings').select('*').order('created_at', { ascending: false }),
         supabase.from('payments').select('*').order('created_at', { ascending: false }),
         supabase.from('consent_records').select('id, email, consent_version, session_type, acknowledgments, consented_at').order('consented_at', { ascending: false }),
+        supabase.from('profiles').select('id, email, full_name, phone, role, created_at').order('created_at', { ascending: false }),
       ]);
 
-      const bookingsData = (bookingsRes.data ?? []) as DbBooking[];
+      const bookingsData = (bookingsRes.error ? [] : (bookingsRes.data ?? [])) as DbBooking[];
       const paymentsData = (paymentsRes.error ? [] : (paymentsRes.data ?? [])) as DbPayment[];
       const consentData = (consentRes.error ? [] : (consentRes.data ?? [])) as DbConsentRecord[];
+      const profilesData = (profilesRes.error ? [] : (profilesRes.data ?? [])) as DbProfile[];
 
+      setBookingsLoadError(bookingsRes.error ? bookingsRes.error.message : null);
       setConsentLoadError(consentRes.error ? consentRes.error.message : null);
       setPaymentsLoadError(paymentsRes.error ? paymentsRes.error.message : null);
+      setProfilesLoadError(profilesRes.error ? profilesRes.error.message : null);
 
       setBookings(bookingsData as unknown as Booking[]);
       setPayments(paymentsData as unknown as Payment[]);
@@ -133,6 +156,14 @@ const AdminPage = () => {
           consented_at: c.consented_at,
         };
       }));
+      setProfiles(profilesData.map(p => ({
+        id: p.id,
+        email: p.email ?? null,
+        full_name: p.full_name ?? null,
+        phone: p.phone ?? null,
+        role: p.role,
+        created_at: p.created_at,
+      })));
 
       const today = new Date().toISOString().split('T')[0];
       const confirmed = bookingsData.filter(b => b.status === 'confirmed').length;
@@ -148,6 +179,7 @@ const AdminPage = () => {
         totalRevenue: revenue,
         todayBookings: todayCount,
         totalConsents: consentData.length,
+        totalUsers: profilesData.length,
       });
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -158,10 +190,13 @@ const AdminPage = () => {
 
   const updateBookingStatus = async (bookingId: string, newStatus: string) => {
     try {
-      const payload = {
+      const payload: Record<string, unknown> = {
         status: newStatus as DbBooking['status'],
         updated_at: new Date().toISOString(),
       };
+      if (newStatus === 'cancelled') {
+        payload.cancelled_at = new Date().toISOString();
+      }
       const { error } = await supabase.from('bookings').update(payload as never).eq('id', bookingId);
 
       if (!error) {
@@ -169,6 +204,36 @@ const AdminPage = () => {
       }
     } catch (error) {
       console.error('Error updating booking:', error);
+    }
+  };
+
+  const cancelAndRefund = async (bookingId: string) => {
+    if (!window.confirm('Cancel this booking and process refund? (24+ hours before session: full refund; less: 50%)')) return;
+    setCancelError(null);
+    setCancellingId(bookingId);
+    try {
+      const refundRes = await requestRefund({ booking_id: bookingId });
+      if (!refundRes.success && refundRes.error && !refundRes.error.includes('No paid payment')) {
+        setCancelError(refundRes.error);
+        setCancellingId(null);
+        return;
+      }
+      await updateBookingStatus(bookingId, 'cancelled');
+    } catch (e) {
+      setCancelError(e instanceof Error ? e.message : 'Cancel/refund failed');
+    } finally {
+      setCancellingId(null);
+    }
+  };
+
+  const refundPayment = async (razorpayPaymentId: string) => {
+    if (!window.confirm('Process refund for this payment? (24+ hours before linked session: full; else 50%)')) return;
+    setRefundingPaymentId(razorpayPaymentId);
+    try {
+      const res = await requestRefund({ razorpay_payment_id: razorpayPaymentId });
+      if (res.success) fetchData();
+    } finally {
+      setRefundingPaymentId(null);
     }
   };
 
@@ -180,6 +245,7 @@ const AdminPage = () => {
       completed: 'bg-blue-100 text-blue-700',
       paid: 'bg-green-100 text-green-700',
       failed: 'bg-red-100 text-red-700',
+      refunded: 'bg-gray-100 text-gray-700',
     };
     return styles[status] || 'bg-gray-100 text-gray-700';
   };
@@ -290,6 +356,7 @@ const AdminPage = () => {
               { id: 'bookings', label: 'Bookings', icon: Calendar },
               { id: 'payments', label: 'Payments', icon: CreditCard },
               { id: 'consent', label: 'Consent', icon: FileCheck },
+              { id: 'users', label: 'Users', icon: Users },
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -323,6 +390,7 @@ const AdminPage = () => {
                   { label: 'Revenue', value: formatPrice(stats.totalRevenue / 100, true), icon: CreditCard, bg: 'bg-lavender-100', iconColor: 'text-lavender-600' },
                   { label: 'Today', value: stats.todayBookings, icon: Users, bg: 'bg-lavender-50', iconColor: 'text-lavender-600' },
                   { label: 'Consents', value: stats.totalConsents, icon: FileCheck, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+                  { label: 'Users', value: stats.totalUsers, icon: Users, bg: 'bg-lavender-50', iconColor: 'text-lavender-600' },
                 ].map((stat) => (
                   <div
                     key={stat.label}
@@ -336,6 +404,16 @@ const AdminPage = () => {
                   </div>
                 ))}
               </div>
+
+              {!bookingsLoadError && stats.totalBookings === 0 && (
+                <div className="p-4 rounded-xl bg-sky-50 border border-sky-200 flex items-start gap-3">
+                  <AlertCircle className="w-5 h-5 text-sky-600 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-medium text-sky-800">No bookings loaded</p>
+                    <p className="text-sm text-sky-700 mt-1">If you expect bookings, run <code className="bg-sky-100 px-1 rounded">docs/supabase-full-setup.sql</code> in Supabase (creates <code className="bg-sky-100 px-1 rounded">is_admin()</code> and RLS). Then set your user’s <code className="bg-sky-100 px-1 rounded">profiles.role</code> to <code className="bg-sky-100 px-1 rounded">admin</code> and refresh.</p>
+                  </div>
+                </div>
+              )}
 
               {/* Recent Bookings */}
               <div className="bg-white rounded-2xl border border-lavender-100 shadow-gentle overflow-hidden">
@@ -400,6 +478,27 @@ const AdminPage = () => {
                 </div>
                 <p className="text-gray-600 ml-12">View and manage all therapy session bookings</p>
               </div>
+
+              {cancelError && (
+                <div className="mb-4 p-4 rounded-xl bg-red-50 border border-red-200 flex items-start gap-3">
+                  <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="font-medium text-red-800">Cancel/refund issue</p>
+                    <p className="text-sm text-red-700 mt-1">{cancelError}</p>
+                  </div>
+                  <button type="button" onClick={() => setCancelError(null)} className="text-red-600 hover:text-red-800">Dismiss</button>
+                </div>
+              )}
+
+              {bookingsLoadError && (
+                <div className="mb-4 p-4 rounded-xl bg-amber-50 border border-amber-200 flex items-start gap-3">
+                  <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-medium text-amber-800">Could not load bookings</p>
+                    <p className="text-sm text-amber-700 mt-1">Run the <code className="bg-amber-100 px-1 rounded">is_admin()</code> function and admin RLS policies in Supabase (see <code className="bg-amber-100 px-1 rounded">docs/SUPABASE_SETUP.md</code> or run <code className="bg-amber-100 px-1 rounded">docs/supabase-full-setup.sql</code>). Ensure your user has <code className="bg-amber-100 px-1 rounded">profiles.role = &#39;admin&#39;</code>.</p>
+                  </div>
+                </div>
+              )}
 
               {/* Filters - match site input styling */}
               <div className="flex flex-col sm:flex-row gap-4">
@@ -488,22 +587,33 @@ const AdminPage = () => {
                                     <CheckCircle className="w-5 h-5" />
                                   </button>
                                   <button
-                                    onClick={() => updateBookingStatus(booking.id, 'cancelled')}
-                                    className="p-2 text-red-600 hover:bg-red-50 rounded-xl transition-colors"
-                                    title="Cancel"
+                                    onClick={() => cancelAndRefund(booking.id)}
+                                    disabled={cancellingId === booking.id}
+                                    className="p-2 text-red-600 hover:bg-red-50 rounded-xl transition-colors disabled:opacity-50"
+                                    title="Cancel & refund (per policy)"
                                   >
                                     <XCircle className="w-5 h-5" />
                                   </button>
                                 </>
                               )}
                               {booking.status === 'confirmed' && (
-                                <button
-                                  onClick={() => updateBookingStatus(booking.id, 'completed')}
-                                  className="p-2 text-lavender-600 hover:bg-lavender-50 rounded-xl transition-colors"
-                                  title="Mark Complete"
-                                >
-                                  <CheckCircle className="w-5 h-5" />
-                                </button>
+                                <>
+                                  <button
+                                    onClick={() => updateBookingStatus(booking.id, 'completed')}
+                                    className="p-2 text-lavender-600 hover:bg-lavender-50 rounded-xl transition-colors"
+                                    title="Mark Complete"
+                                  >
+                                    <CheckCircle className="w-5 h-5" />
+                                  </button>
+                                  <button
+                                    onClick={() => cancelAndRefund(booking.id)}
+                                    disabled={cancellingId === booking.id}
+                                    className="p-2 text-red-600 hover:bg-red-50 rounded-xl transition-colors disabled:opacity-50"
+                                    title="Cancel & refund (per policy)"
+                                  >
+                                    <XCircle className="w-5 h-5" />
+                                  </button>
+                                </>
                               )}
                             </div>
                           </td>
@@ -518,7 +628,11 @@ const AdminPage = () => {
                       <Calendar className="w-8 h-8 text-lavender-500" />
                     </div>
                     <p className="text-gray-600 font-medium">No bookings found</p>
-                    <p className="text-sm text-gray-500 mt-1">Try adjusting your search or filters</p>
+                    <p className="text-sm text-gray-500 mt-1">
+                      {!bookingsLoadError && bookings.length === 0
+                        ? 'Run docs/supabase-full-setup.sql in Supabase and set your profile role to admin, then refresh.'
+                        : 'Try adjusting your search or filters'}
+                    </p>
                   </div>
                 )}
               </div>
@@ -557,16 +671,30 @@ const AdminPage = () => {
                   <table className="w-full">
                     <thead>
                       <tr className="bg-gradient-to-r from-lavender-50 to-lavender-50/50 border-b border-lavender-200">
+                        <th className="px-6 py-4 text-left text-xs font-semibold text-lavender-700 uppercase tracking-wider">Customer</th>
                         <th className="px-6 py-4 text-left text-xs font-semibold text-lavender-700 uppercase tracking-wider">Order ID</th>
                         <th className="px-6 py-4 text-left text-xs font-semibold text-lavender-700 uppercase tracking-wider">Payment ID</th>
                         <th className="px-6 py-4 text-left text-xs font-semibold text-lavender-700 uppercase tracking-wider">Amount</th>
                         <th className="px-6 py-4 text-left text-xs font-semibold text-lavender-700 uppercase tracking-wider">Status</th>
                         <th className="px-6 py-4 text-left text-xs font-semibold text-lavender-700 uppercase tracking-wider">Date</th>
+                        <th className="px-6 py-4 text-left text-xs font-semibold text-lavender-700 uppercase tracking-wider">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-lavender-100">
-                      {payments.map((payment) => (
+                      {payments.map((payment) => {
+                        const linkedBooking = payment.booking_id ? bookings.find((b) => b.id === payment.booking_id) : null;
+                        const customerName = linkedBooking?.customer_name ?? '–';
+                        const customerEmail = linkedBooking?.customer_email ?? '';
+                        return (
                         <tr key={payment.id} className="hover:bg-lavender-50/30 transition-colors">
+                          <td className="px-6 py-4">
+                            <div>
+                              <p className="font-medium text-gray-900">{customerName}</p>
+                              {customerEmail && (
+                                <p className="text-xs text-gray-500 truncate max-w-[180px]" title={customerEmail}>{customerEmail}</p>
+                              )}
+                            </div>
+                          </td>
                           <td className="px-6 py-4 font-mono text-sm text-gray-700">{payment.razorpay_order_id}</td>
                           <td className="px-6 py-4 font-mono text-sm text-gray-600">
                             {payment.razorpay_payment_id || '–'}
@@ -582,8 +710,21 @@ const AdminPage = () => {
                           <td className="px-6 py-4 text-sm text-gray-600">
                             {new Date(payment.created_at).toLocaleString()}
                           </td>
+                          <td className="px-6 py-4">
+                            {payment.status === 'paid' && payment.razorpay_payment_id && (
+                              <button
+                                type="button"
+                                onClick={() => refundPayment(payment.razorpay_payment_id!)}
+                                disabled={refundingPaymentId === payment.razorpay_payment_id}
+                                className="text-sm text-red-600 hover:text-red-800 font-medium disabled:opacity-50"
+                              >
+                                Refund
+                              </button>
+                            )}
+                          </td>
                         </tr>
-                      ))}
+                      );
+                      })}
                     </tbody>
                   </table>
                 </div>
@@ -669,6 +810,94 @@ const AdminPage = () => {
                     </div>
                     <p className="text-gray-600 font-medium">No consent records yet</p>
                     <p className="text-sm text-gray-500 mt-1">Consent is recorded when users complete the booking flow and accept the consent form</p>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          )}
+
+          {/* Users Tab – all registered users (profiles) */}
+          {activeTab === 'users' && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="space-y-6"
+            >
+              <div className="mb-6">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="p-2 rounded-xl bg-lavender-100 text-lavender-600">
+                    <Users className="w-5 h-5" />
+                  </div>
+                  <h2 className="text-xl font-bold text-gray-900 font-display">Users</h2>
+                </div>
+                <p className="text-gray-600 ml-12">All registered users (profiles). Bookings and consents are derived from existing data.</p>
+              </div>
+
+              {profilesLoadError && (
+                <div className="mb-4 p-4 rounded-xl bg-amber-50 border border-amber-200 flex items-start gap-3">
+                  <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-medium text-amber-800">Could not load users</p>
+                    <p className="text-sm text-amber-700 mt-1">Create the <code className="bg-amber-100 px-1 rounded">profiles</code> table and add RLS so admins can read (see <code className="bg-amber-100 px-1 rounded">docs/SUPABASE_SETUP.md</code>).</p>
+                  </div>
+                </div>
+              )}
+
+              <div className="bg-white rounded-2xl border border-lavender-100 shadow-gentle overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="bg-gradient-to-r from-lavender-50 to-lavender-50/50 border-b border-lavender-200">
+                        <th className="px-6 py-4 text-left text-xs font-semibold text-lavender-700 uppercase tracking-wider">Email</th>
+                        <th className="px-6 py-4 text-left text-xs font-semibold text-lavender-700 uppercase tracking-wider">Name</th>
+                        <th className="px-6 py-4 text-left text-xs font-semibold text-lavender-700 uppercase tracking-wider">Phone</th>
+                        <th className="px-6 py-4 text-left text-xs font-semibold text-lavender-700 uppercase tracking-wider">Role</th>
+                        <th className="px-6 py-4 text-left text-xs font-semibold text-lavender-700 uppercase tracking-wider">Bookings</th>
+                        <th className="px-6 py-4 text-left text-xs font-semibold text-lavender-700 uppercase tracking-wider">Consents</th>
+                        <th className="px-6 py-4 text-left text-xs font-semibold text-lavender-700 uppercase tracking-wider">Joined</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-lavender-100">
+                      {profiles.map((p) => {
+                        const profileEmail = p.email?.toLowerCase();
+                        const bookingCount = bookings.filter(
+                          (b) => b.user_id === p.id || (profileEmail && b.customer_email?.toLowerCase() === profileEmail)
+                        ).length;
+                        const consentCount = consentRecords.filter(
+                          (c) => p.email && c.email && c.email.toLowerCase() === p.email.toLowerCase()
+                        ).length;
+                        return (
+                          <tr key={p.id} className="hover:bg-lavender-50/30 transition-colors">
+                            <td className="px-6 py-4">
+                              <p className="text-sm font-medium text-gray-900">{p.email ?? '–'}</p>
+                            </td>
+                            <td className="px-6 py-4 text-sm text-gray-700">{p.full_name ?? '–'}</td>
+                            <td className="px-6 py-4 text-sm text-gray-600">{p.phone ?? '–'}</td>
+                            <td className="px-6 py-4">
+                              <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium ${
+                                p.role === 'admin' ? 'bg-purple-100 text-purple-800' : p.role === 'therapist' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'
+                              }`}>
+                                {p.role}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 text-sm text-gray-600">{bookingCount}</td>
+                            <td className="px-6 py-4 text-sm text-gray-600">{consentCount}</td>
+                            <td className="px-6 py-4 text-sm text-gray-600">
+                              {new Date(p.created_at).toLocaleDateString()}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+                {profiles.length === 0 && !profilesLoadError && (
+                  <div className="p-12 text-center">
+                    <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-lavender-100 flex items-center justify-center">
+                      <Users className="w-8 h-8 text-lavender-500" />
+                    </div>
+                    <p className="text-gray-600 font-medium">No users yet</p>
+                    <p className="text-sm text-gray-500 mt-1">Users appear here after they sign up (Google or email)</p>
                   </div>
                 )}
               </div>

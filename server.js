@@ -235,6 +235,125 @@ app.post('/api/payments/verify', async (req, res) => {
   }
 });
 
+// Link payment to booking (so refunds can be done by booking_id)
+app.post('/api/payments/link', async (req, res) => {
+  const { razorpay_order_id, booking_id } = req.body || {};
+  if (!razorpay_order_id || !booking_id) {
+    return res.status(400).json({ error: 'razorpay_order_id and booking_id required' });
+  }
+  const supabase = getSupabase();
+  if (!supabase) {
+    return res.status(503).json({ error: 'Database not configured' });
+  }
+  const { error } = await supabase
+    .from('payments')
+    .update({ booking_id })
+    .eq('razorpay_order_id', razorpay_order_id)
+    .eq('status', 'paid');
+  if (error) {
+    console.error('Payment link failed:', error.message);
+    return res.status(500).json({ error: 'Failed to link payment to booking' });
+  }
+  res.json({ success: true });
+});
+
+// Refund: by booking_id or razorpay_payment_id. Applies 24h policy (full vs 50%).
+const TWENTY_FOUR_HOURS_MS = 24 * 60 * 60 * 1000;
+function parseTimeToMinutes(s) {
+  const match = String(s).trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)?$/i);
+  if (!match) return null;
+  let h = parseInt(match[1], 10);
+  const m = parseInt(match[2], 10);
+  const ampm = (match[3] || '').toUpperCase();
+  if (ampm === 'PM' && h !== 12) h += 12;
+  if (ampm === 'AM' && h === 12) h = 0;
+  return h * 60 + m;
+}
+function getSessionStartUtc(scheduledDate, scheduledTime) {
+  const min = parseTimeToMinutes(scheduledTime);
+  if (min === null) return null;
+  const parts = scheduledDate.split('-').map(Number);
+  if (!parts[0] || !parts[1] || !parts[2]) return null;
+  const utcMs = Date.UTC(parts[0], parts[1] - 1, parts[2], 0, 0, 0, 0) + (min - (5 * 60 + 30)) * 60 * 1000;
+  const d = new Date(utcMs);
+  return isNaN(d.getTime()) ? null : d;
+}
+function getRefundAmountPaise(amountPaise, sessionStartUtc) {
+  if (!sessionStartUtc) return amountPaise;
+  if (sessionStartUtc.getTime() - Date.now() >= TWENTY_FOUR_HOURS_MS) return amountPaise;
+  return Math.floor(amountPaise / 2);
+}
+app.post('/api/payments/refund', async (req, res) => {
+  try {
+    const { booking_id: bookingId, razorpay_payment_id: paymentId } = req.body || {};
+    if (!bookingId && !paymentId) {
+      return res.status(400).json({ error: 'Provide booking_id or razorpay_payment_id' });
+    }
+    const supabase = getSupabase();
+    if (!supabase) {
+      return res.status(503).json({ error: 'Database not configured' });
+    }
+    let payment = null;
+    let sessionStartUtc = null;
+    if (bookingId) {
+      const { data: booking } = await supabase.from('bookings').select('id, scheduled_date, scheduled_time').eq('id', bookingId).single();
+      if (!booking) return res.status(404).json({ error: 'Booking not found' });
+      sessionStartUtc = getSessionStartUtc(String(booking.scheduled_date || ''), String(booking.scheduled_time || ''));
+      const { data: p } = await supabase.from('payments').select('id, razorpay_order_id, razorpay_payment_id, booking_id, amount_paise, status').eq('booking_id', bookingId).eq('status', 'paid').maybeSingle();
+      payment = p;
+    } else {
+      const { data: p } = await supabase.from('payments').select('id, razorpay_order_id, razorpay_payment_id, booking_id, amount_paise, status').eq('razorpay_payment_id', paymentId).eq('status', 'paid').maybeSingle();
+      payment = p;
+      if (payment?.booking_id) {
+        const { data: b } = await supabase.from('bookings').select('scheduled_date, scheduled_time').eq('id', payment.booking_id).single();
+        if (b) sessionStartUtc = getSessionStartUtc(String(b.scheduled_date || ''), String(b.scheduled_time || ''));
+      }
+    }
+    if (!payment) {
+      return res.status(404).json({ success: false, error: 'No paid payment found for this booking/payment' });
+    }
+    if (payment.status !== 'paid') {
+      return res.status(400).json({ success: false, error: 'Payment is not in paid state' });
+    }
+    const razorpayPaymentId = payment.razorpay_payment_id;
+    if (!razorpayPaymentId || String(razorpayPaymentId).startsWith('pay_mock_')) {
+      const { error: updateErr } = await supabase.from('payments').update({ status: 'refunded', refunded_at: new Date().toISOString() }).eq('id', payment.id);
+      if (updateErr) {
+        console.error('Refund mock update failed:', updateErr.message, updateErr.details);
+        return res.status(500).json({ success: false, error: updateErr.message || 'Failed to update payment. Ensure payments table has refunded_at column (run docs/supabase-full-setup.sql).' });
+      }
+      return res.json({ success: true, refunded: true, amount_paise: payment.amount_paise, mode: 'mock' });
+    }
+    if (!RAZORPAY_KEY_SECRET) {
+      return res.status(503).json({ success: false, error: 'Payment service not configured' });
+    }
+    const refundPaise = getRefundAmountPaise(payment.amount_paise, sessionStartUtc);
+    if (refundPaise <= 0) {
+      return res.status(400).json({ success: false, error: 'No refund amount (session may have passed)' });
+    }
+    try {
+      const Razorpay = (await import('razorpay')).default;
+      const razorpay = new Razorpay({ key_id: process.env.RAZORPAY_KEY_ID, key_secret: RAZORPAY_KEY_SECRET });
+      const refundParams = { notes: { booking_id: bookingId || payment.booking_id || '', reason: 'cancellation' } };
+      if (refundPaise < payment.amount_paise) refundParams.amount = refundPaise;
+      await razorpay.payments.refund(razorpayPaymentId, refundParams);
+    } catch (err) {
+      console.error('Razorpay refund error:', err);
+      return res.status(502).json({ success: false, error: err?.message || 'Razorpay refund failed' });
+    }
+    const { error: updateErr } = await supabase.from('payments').update({ status: 'refunded', refunded_at: new Date().toISOString() }).eq('id', payment.id);
+    if (updateErr) {
+      console.error('Refund DB update failed:', updateErr.message, updateErr.details);
+      return res.status(500).json({ success: false, error: updateErr.message || 'Refund issued but failed to update payment record. Ensure payments table has refunded_at (run docs/supabase-full-setup.sql).' });
+    }
+    return res.json({ success: true, refunded: true, amount_paise: refundPaise, full_refund: refundPaise >= payment.amount_paise });
+  } catch (err) {
+    console.error('Refund handler error:', err);
+    const msg = err?.message || 'Refund request failed';
+    return res.status(500).json({ success: false, error: msg });
+  }
+});
+
 // Helpers for Supabase booking insert (match api/bookings.ts schema)
 const DURATION_BY_FORMAT = { chat: 30, audio: 45, video: 60 };
 const toDbSessionType = (s) => (s === 'couples' || s === 'family' ? s : 'individual');

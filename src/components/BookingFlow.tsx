@@ -28,7 +28,7 @@ import { processPayment, isPaymentConfigured, isTestMode } from '../services/pay
 import { AVAILABILITY_CONFIG } from '../config/paymentConfig';
 import { getPricing, isFormatEnabled, getDuration } from '../config/pricingConfig';
 import { fetchCalComAvailability, createCalComBooking, isCalComConfigured, getCalComBookingLink } from '../services/calcomService';
-import { storeConsent } from '../services/apiService';
+import { storeConsent, linkPaymentToBooking } from '../services/apiService';
 import ConsentModal from './ConsentModal';
 import { ConsentRecord } from '../data/consentForm';
 
@@ -524,7 +524,7 @@ const BookingFlow = ({ session, isOpen, onClose }: BookingFlowProps) => {
       const result = await processPayment(sessionForPayment, isIndia, customerInfo);
 
       if (result.success) {
-        await completeBooking(result.paymentId);
+        await completeBooking(result.paymentId, result.orderId);
       } else {
         setError(result.error || 'Payment failed. Please try again.');
       }
@@ -535,7 +535,7 @@ const BookingFlow = ({ session, isOpen, onClose }: BookingFlowProps) => {
     }
   };
 
-  const completeBooking = async (paymentId?: string) => {
+  const completeBooking = async (paymentId?: string, orderId?: string) => {
     if (!selectedDate || !selectedSlot || !selectedSessionType) {
       setError('Missing booking information. Please try again.');
       return;
@@ -581,6 +581,15 @@ const BookingFlow = ({ session, isOpen, onClose }: BookingFlowProps) => {
       }
       
       const bookingId = bookingResult.bookingId || `BK${Date.now().toString(36).toUpperCase()}`;
+
+      // Link payment to booking so refunds can be processed by booking_id (e.g. on cancel)
+      if (orderId && !selectedSessionType.isFree) {
+        try {
+          await linkPaymentToBooking(bookingId, orderId);
+        } catch {
+          // Non-blocking: booking is created; refund-by-booking may not work for this one
+        }
+      }
       
       setPaymentResult({
         success: true,

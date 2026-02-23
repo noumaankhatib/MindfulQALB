@@ -156,13 +156,37 @@ Used only when running the Express backend (`cd backend && npm run dev`). See `b
 
 ## Deployment
 
+You can run on **free tier**: Supabase (500 MB DB) + Vercel (frontend and serverless `/api`). No separate backend server required for Vercel.
+
+### Before going live (three-step checklist)
+
+**Step 1 – Supabase**
+
+- [ ] Open Supabase Dashboard → SQL Editor. Run the full setup file **[docs/supabase-full-setup.sql](docs/supabase-full-setup.sql)** (one file = all tables + RLS). Or follow [docs/SUPABASE_SETUP.md](docs/SUPABASE_SETUP.md) section by section.
+- [ ] Sign up or log in once so a profile row exists, then in Table Editor → `profiles` set your row’s `role` to `admin`.
+
+**Step 2 – Vercel**
+
+- [ ] Project → Settings → Environment Variables: add `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` (from Supabase → Project Settings → API).
+- [ ] Add `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` (same project; use the **service_role** key, not anon).
+- [ ] Add `CALCOM_API_KEY`, `CALCOM_USERNAME`, `CALCOM_EVENT_TYPE_IDS` and `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET` if you use bookings and payments.
+- [ ] Redeploy (Deployments → … → Redeploy or push a commit). Optional: run `npm run check:env` locally to verify required env vars (or use same vars in Vercel).
+
+**Step 3 – Smoke test**
+
+- [ ] Open your live URL and sign in with Google (no redirect to placeholder.supabase.co).
+- [ ] Complete one test booking (consent → details → payment or free slot).
+- [ ] As admin, open the Admin dashboard and confirm Bookings, Payments, Consent, and Users tabs load (and show data if any).
+
 ### Frontend (Vercel/Netlify)
+
 ```bash
 npm run build
-# Deploy dist/ folder
+# Deploy dist/ folder (Vercel auto-builds from git)
 ```
 
-### Backend (Vercel/Railway/Docker)
+### Backend (optional, for self-hosted API)
+
 ```bash
 cd backend
 npm run build

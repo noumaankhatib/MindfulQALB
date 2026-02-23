@@ -121,6 +121,58 @@ export const verifyPayment = async (
 };
 
 /**
+ * Link a payment (by order ID) to a booking after creation (for refund-by-booking).
+ */
+export const linkPaymentToBooking = async (
+  bookingId: string,
+  razorpayOrderId: string
+): Promise<ApiResponse<Record<string, never>>> => {
+  if (!API_CONFIG.USE_BACKEND_API) {
+    return { success: false, error: 'Backend API not configured' };
+  }
+  try {
+    const response = await fetch(`${API_CONFIG.BACKEND_URL}/payments/link`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ razorpay_order_id: razorpayOrderId, booking_id: bookingId }),
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      return { success: false, error: (err as { error?: string }).error || 'Failed to link payment' };
+    }
+    return { success: true };
+  } catch {
+    return { success: false, error: 'Failed to link payment to booking' };
+  }
+};
+
+/**
+ * Request a refund (by booking_id or razorpay_payment_id). Applies 24h policy: full refund if 24+ hours before session, else 50%.
+ */
+export const requestRefund = async (params: {
+  booking_id?: string;
+  razorpay_payment_id?: string;
+}): Promise<ApiResponse<{ refunded?: boolean; amount_paise?: number; full_refund?: boolean }>> => {
+  if (!API_CONFIG.USE_BACKEND_API) {
+    return { success: false, error: 'Backend API not configured' };
+  }
+  try {
+    const response = await fetch(`${API_CONFIG.BACKEND_URL}/payments/refund`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(params),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      return { success: false, error: (data as { error?: string }).error || 'Refund failed' };
+    }
+    return { success: true, data };
+  } catch {
+    return { success: false, error: 'Refund request failed' };
+  }
+};
+
+/**
  * Create a booking
  */
 export const createBooking = async (booking: {

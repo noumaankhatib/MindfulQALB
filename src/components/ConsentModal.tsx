@@ -52,6 +52,16 @@ const ConsentModal = ({
     }
   }, [isOpen, preSelectAll]);
 
+  // Close on Escape
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [isOpen, onClose]);
+
   // Track scroll to bottom
   const handleScroll = () => {
     if (contentRef.current) {

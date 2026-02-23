@@ -2,6 +2,16 @@
 
 Without this, **inserts from the API will succeed** (using the service role key), but **the frontend will get no rows** when reading because Row Level Security (RLS) blocks access by default.
 
+**Free tier (Supabase):** The free plan includes 500 MB database, 1 GB file storage, and 50K monthly active users. This setup keeps storage low with minimal indexes and no optional audit tables, so you can run comfortably on the free tier.
+
+**Quick option:** Run the full setup in Supabase:
+
+1. **Dashboard:** [Supabase Dashboard](https://supabase.com/dashboard) → your project → **SQL Editor** → **New query** → paste **[supabase-full-setup.sql](supabase-full-setup.sql)** → **Run**.
+2. **Or with Supabase MCP:** If Supabase MCP is connected (e.g. in Cursor), you can run the contents of `docs/supabase-full-setup.sql` via the MCP **execute_sql** tool against your project.
+3. Then do Section 3 (set admin role) and Section 4 (env vars).
+
+The blocks below are the same SQL, split by section for reference.
+
 ## 1. Create the `bookings` table (if not exists)
 
 Run in Supabase Dashboard → SQL Editor:
@@ -80,9 +90,54 @@ create index if not exists idx_payments_status on public.payments(status);
 create index if not exists idx_payments_created_at on public.payments(created_at);
 ```
 
+**Profiles table** (required for auth and admin; match [src/types/database.ts](src/types/database.ts)):
+
+```sql
+-- Profiles: one per auth.users row (id = auth.users.id)
+create table if not exists public.profiles (
+  id uuid primary key references auth.users(id) on delete cascade,
+  email text,
+  full_name text,
+  phone text,
+  avatar_url text,
+  role text not null default 'user' check (role in ('user', 'admin', 'therapist')),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+-- Create profile on signup (Google, email, etc.)
+create or replace function public.handle_new_user()
+returns trigger as $$
+begin
+  insert into public.profiles (id, email, full_name)
+  values (
+    new.id,
+    new.email,
+    coalesce(new.raw_user_meta_data->>'full_name', new.raw_user_meta_data->>'name', split_part(new.email, '@', 1))
+  );
+  return new;
+end;
+$$ language plpgsql security definer;
+
+drop trigger if exists on_auth_user_created on auth.users;
+create trigger on_auth_user_created
+  after insert on auth.users
+  for each row execute function public.handle_new_user();
+```
+
 ## 2. Enable RLS and add policies (required for My Bookings & Admin to show data)
 
-Run in Supabase Dashboard → SQL Editor:
+**Important:** Create the `is_admin()` function first so admin policies are not blocked by RLS when checking `profiles`. Run this once:
+
+```sql
+create or replace function public.is_admin()
+returns boolean language sql security definer stable set search_path = public
+as $$
+  select exists (select 1 from public.profiles where id = auth.uid() and role = 'admin');
+$$;
+```
+
+Then run in Supabase Dashboard → SQL Editor:
 
 ```sql
 -- Enable RLS on bookings
@@ -101,28 +156,17 @@ create policy "Users can read own bookings by email"
     and lower(customer_email) = lower(auth.jwt() ->> 'email')
   );
 
--- Policy: Admins (profiles.role = 'admin') can read all bookings
+-- Policy: Admins can read all bookings (uses is_admin() so RLS does not block)
 create policy "Admins can read all bookings"
   on public.bookings for select
-  using (
-    exists (
-      select 1 from public.profiles
-      where profiles.id = auth.uid() and profiles.role = 'admin'
-    )
-  );
+  using (public.is_admin());
 
 -- Policy: Admins can update booking status
 create policy "Admins can update bookings"
   on public.bookings for update
-  using (
-    exists (
-      select 1 from public.profiles
-      where profiles.id = auth.uid() and profiles.role = 'admin'
-    )
-  );
+  using (public.is_admin());
 
 -- Service role (API) bypasses RLS, so no policy needed for insert.
--- Only the above SELECT/UPDATE policies are for the frontend (anon key).
 ```
 
 **Consent records (required for Admin → Consent tab):** The API inserts with the service role. So admins can see consent in the dashboard, run:
@@ -132,12 +176,7 @@ alter table public.consent_records enable row level security;
 
 create policy "Admins can read consent records"
   on public.consent_records for select
-  using (
-    exists (
-      select 1 from public.profiles
-      where profiles.id = auth.uid() and profiles.role = 'admin'
-    )
-  );
+  using (public.is_admin());
 ```
 
 **Payments (required for Admin → Payments tab and revenue):** The API inserts/updates with the service role. So admins can see payments and revenue, run:
@@ -147,17 +186,32 @@ alter table public.payments enable row level security;
 
 create policy "Admins can read payments"
   on public.payments for select
-  using (
-    exists (
-      select 1 from public.profiles
-      where profiles.id = auth.uid() and profiles.role = 'admin'
-    )
-  );
+  using (public.is_admin());
 ```
 
-## 3. Ensure `profiles` exists and has `role`
+**Profiles (required for Admin → Users tab and role checks):** Users read/update their own row; admins can read all.
 
-Admin detection uses `profiles.role = 'admin'`. Your app should have a `profiles` table with at least `id` (uuid, matches auth.users.id) and `role` (text: 'user' | 'admin' | 'therapist'). If not, create it and add a trigger to create a profile on signup.
+```sql
+alter table public.profiles enable row level security;
+
+create policy "Users can read own profile"
+  on public.profiles for select
+  using (auth.uid() = id);
+
+create policy "Users can update own profile"
+  on public.profiles for update
+  using (auth.uid() = id);
+
+create policy "Admins can read all profiles"
+  on public.profiles for select
+  using (public.is_admin());
+```
+
+(Trigger `handle_new_user` inserts new profiles; use service role or a definer function if the trigger must insert before the user has a profile. The trigger above uses `security definer` so it runs with elevated rights.)
+
+## 3. Set your first admin
+
+After creating the `profiles` table and trigger, sign up or log in once so a profile row exists. Then in Supabase Table Editor open `profiles`, find your row, and set `role` to `admin`. Admin detection uses `profiles.role = 'admin'`.
 
 ## 4. Environment variables
 
@@ -175,8 +229,24 @@ Restart the API after changing env vars.
 - **Cause:** `SUPABASE_SERVICE_ROLE_KEY` is missing, empty, or still a placeholder (e.g. `your-service-role-key` or literally `undefined`).
 - **Fix:** In Supabase Dashboard go to **Project Settings → API**. Under "Project API keys", copy the **`service_role`** key (secret, not the anon key). Put it in root `.env` as `SUPABASE_SERVICE_ROLE_KEY=<paste>` with no quotes. Restart the local API (`npm run dev:api`) or redeploy on Vercel.
 
+### Admin cannot see all bookings (or "Could not load bookings")
+
+- **Cause:** The admin RLS policies use a subquery on `profiles` to check `role = 'admin'`. That check can be blocked by RLS on `profiles`, so the admin policy never passes and no rows are returned.
+- **Fix:** Create the **`public.is_admin()`** function (SECURITY DEFINER) and use it in all admin policies so the check bypasses RLS. Run the SQL at the start of Section 2 in this doc, or re-run **[supabase-full-setup.sql](supabase-full-setup.sql)** (it includes `is_admin()` and policies that use it). Then ensure your user has `profiles.role = 'admin'`.
+
 ### Consent or Payments not showing on Admin dashboard (or "Could not load...")
 
 - **Cause:** The admin dashboard uses the **anon** key and RLS. If there is no policy allowing admins to **select** from `consent_records` or `payments`, the queries return no rows (or an error).
 - **Fix:** Run the RLS blocks in this doc: **"Admins can read consent records"** and **"Admins can read payments"**. Ensure the logged-in admin user has a row in `profiles` with `role = 'admin'`. Then refresh the dashboard.
 - **Payments table:** If the `payments` table does not exist, create it with the SQL in section 1, then add the RLS policy. Payments are written by the API when users create an order and complete verification.
+
+---
+
+## Go-live checklist (Supabase only)
+
+Use this with the **three-step checklist** in the main [README](../README.md#before-going-live-three-step-checklist) (Step 1 = Supabase, Step 2 = Vercel, Step 3 = Smoke test).
+
+- [ ] **Section 1:** Create all tables (`bookings`, `consent_records`, `payments`, `profiles`) and run the `handle_new_user` trigger in SQL Editor.
+- [ ] **Section 2:** Enable RLS and add all policies (bookings, consent_records, payments, profiles).
+- [ ] **Section 3:** Set your profile `role` to `admin` in Table Editor → `profiles`.
+- [ ] **Section 4:** Set env vars (Vercel: see README Step 2). Optionally update `index.html` structured data (e.g. telephone) before production.

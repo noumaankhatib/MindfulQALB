@@ -1,6 +1,8 @@
 import { useEffect } from 'react'
 import { createBrowserRouter, RouterProvider, Navigate, useLocation } from 'react-router-dom'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
+import { AppErrorBoundary, NotFoundPage } from './components/AppErrorBoundary'
+import { Outlet } from 'react-router-dom'
 import { cleanupLegacyStorage } from './utils/secureStorage'
 import Navigation from './components/Navigation'
 import Hero from './components/Hero'
@@ -25,6 +27,7 @@ import Chatbot from './components/Chatbot'
 import PrivacyPolicyPage from './pages/PrivacyPolicyPage'
 import TermsOfServicePage from './pages/TermsOfServicePage'
 import MyBookingsPage from './pages/MyBookingsPage'
+import ProfilePage from './pages/ProfilePage'
 import AdminPage from './pages/AdminPage'
 
 // Home page component
@@ -98,7 +101,7 @@ const HomePage = () => {
     document.head.appendChild(script)
 
     return () => {
-      document.head.removeChild(script)
+      if (script.parentNode) script.parentNode.removeChild(script)
     }
   }, [])
 
@@ -143,19 +146,36 @@ const HomePage = () => {
 /** Protects /admin: only allows access when user is signed in and has role admin. Relies on Supabase RLS to enforce server-side. */
 function AdminRoute({ children }: { children: React.ReactNode }) {
   const { user, profile, loading } = useAuth()
-  if (loading) return null
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="animate-pulse flex flex-col items-center gap-3">
+          <div className="w-10 h-10 rounded-full border-2 border-lavender-200 border-t-lavender-600 animate-spin" />
+          <p className="text-sm text-gray-500">Loading...</p>
+        </div>
+      </div>
+    )
+  }
   if (!user) return <Navigate to="/" replace />
   if (profile?.role !== 'admin') return <Navigate to="/" replace />
   return <>{children}</>
 }
 
 const router = createBrowserRouter([
-  { path: '/', element: <HomePage /> },
-  { path: '/privacy', element: <PrivacyPolicyPage /> },
-  { path: '/terms', element: <TermsOfServicePage /> },
-  { path: '/bookings', element: <Navigate to="/#get-help" replace /> },
-  { path: '/my-bookings', element: <MyBookingsPage /> },
-  { path: '/admin', element: <AdminRoute><AdminPage /></AdminRoute> },
+  {
+    element: <Outlet />,
+    errorElement: <AppErrorBoundary />,
+    children: [
+      { path: '/', element: <HomePage /> },
+      { path: '/privacy', element: <PrivacyPolicyPage /> },
+      { path: '/terms', element: <TermsOfServicePage /> },
+      { path: '/bookings', element: <Navigate to="/#get-help" replace /> },
+      { path: '/my-bookings', element: <MyBookingsPage /> },
+      { path: '/profile', element: <ProfilePage /> },
+      { path: '/admin', element: <AdminRoute><AdminPage /></AdminRoute> },
+      { path: '*', element: <NotFoundPage /> },
+    ],
+  },
 ])
 
 function App() {

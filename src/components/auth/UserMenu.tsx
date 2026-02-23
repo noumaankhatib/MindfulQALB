@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { User, LogOut, Calendar, Settings, ChevronDown, Shield } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
@@ -14,6 +15,7 @@ const getRandomAvatar = (seed: string): string => {
 };
 
 export const UserMenu = ({ onOpenAuth }: UserMenuProps) => {
+  const navigate = useNavigate();
   const { user, profile, loading, signOut } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -58,7 +60,11 @@ export const UserMenu = ({ onOpenAuth }: UserMenuProps) => {
   return (
     <div ref={menuRef} className="relative">
       <button
+        type="button"
         onClick={() => setIsOpen(!isOpen)}
+        aria-expanded={isOpen}
+        aria-haspopup="true"
+        aria-label={isOpen ? 'Close user menu' : 'Open user menu'}
         className="flex items-center gap-2 p-1.5 pr-3 rounded-full bg-lavender-50 hover:bg-lavender-100 transition-colors border border-lavender-100"
       >
         <img
@@ -106,7 +112,7 @@ export const UserMenu = ({ onOpenAuth }: UserMenuProps) => {
                 <button
                   onClick={() => {
                     setIsOpen(false);
-                    window.location.href = '/admin';
+                    navigate('/admin');
                   }}
                   className="w-full flex items-center gap-3 px-4 py-2.5 text-purple-700 hover:bg-purple-50 rounded-xl transition-colors text-left"
                 >
@@ -117,7 +123,7 @@ export const UserMenu = ({ onOpenAuth }: UserMenuProps) => {
               <button
                 onClick={() => {
                   setIsOpen(false);
-                  window.location.href = '/my-bookings';
+                  navigate('/my-bookings');
                 }}
                 className="w-full flex items-center gap-3 px-4 py-2.5 text-gray-700 hover:bg-lavender-50 rounded-xl transition-colors text-left"
               >
@@ -127,12 +133,12 @@ export const UserMenu = ({ onOpenAuth }: UserMenuProps) => {
               <button
                 onClick={() => {
                   setIsOpen(false);
-                  window.location.href = '/profile';
+                  navigate('/profile');
                 }}
                 className="w-full flex items-center gap-3 px-4 py-2.5 text-gray-700 hover:bg-lavender-50 rounded-xl transition-colors text-left"
               >
                 <Settings className="w-5 h-5 text-lavender-500" />
-                <span>Settings</span>
+                <span>Profile &amp; settings</span>
               </button>
             </div>
 

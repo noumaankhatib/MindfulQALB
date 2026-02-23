@@ -1,6 +1,6 @@
 import { Instagram, Linkedin } from 'lucide-react'
 import { motion } from 'framer-motion'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import Logo from './Logo'
 
 // Social media links with actual brand colors
@@ -28,6 +28,8 @@ const socialLinks = [
 ]
 
 const Footer = () => {
+  const location = useLocation()
+  const isHomePage = location.pathname === '/'
   const footerLinks = {
     quickLinks: [
       { href: '#mental-health', label: 'Mental Health' },
@@ -110,9 +112,15 @@ const Footer = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-10">
             {/* Brand */}
             <div>
-              <a href="#home" className="inline-block mb-5">
-                <Logo size="lg" showText={true} />
-              </a>
+              {isHomePage ? (
+                <a href="#home" className="inline-block mb-5">
+                  <Logo size="lg" showText={true} />
+                </a>
+              ) : (
+                <Link to="/" className="inline-block mb-5">
+                  <Logo size="lg" showText={true} />
+                </Link>
+              )}
               <p className="text-gray-600 leading-relaxed text-sm">
                 Evidence-based mental health care for individuals and couples—accessible, human, and private.
               </p>
@@ -124,12 +132,21 @@ const Footer = () => {
               <ul className="space-y-3">
                 {footerLinks.quickLinks.map((link) => (
                   <li key={link.label}>
-                    <a 
-                      href={link.href} 
-                      className="text-gray-600 hover:text-lavender-600 transition-colors duration-300 text-sm link-underline inline-block"
-                    >
-                      {link.label}
-                    </a>
+                    {isHomePage ? (
+                      <a
+                        href={link.href}
+                        className="text-gray-600 hover:text-lavender-600 transition-colors duration-300 text-sm link-underline inline-block"
+                      >
+                        {link.label}
+                      </a>
+                    ) : (
+                      <Link
+                        to={`/${link.href}`}
+                        className="text-gray-600 hover:text-lavender-600 transition-colors duration-300 text-sm link-underline inline-block"
+                      >
+                        {link.label}
+                      </Link>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -142,19 +159,26 @@ const Footer = () => {
                 {footerLinks.resources.map((link) => (
                   <li key={link.label}>
                     {link.isRoute ? (
-                      <Link 
-                        to={link.href} 
+                      <Link
+                        to={link.href}
                         className="text-gray-600 hover:text-lavender-600 transition-colors duration-300 text-sm link-underline inline-block"
                       >
                         {link.label}
                       </Link>
-                    ) : (
-                      <a 
-                        href={link.href} 
+                    ) : isHomePage ? (
+                      <a
+                        href={link.href}
                         className="text-gray-600 hover:text-lavender-600 transition-colors duration-300 text-sm link-underline inline-block"
                       >
                         {link.label}
                       </a>
+                    ) : (
+                      <Link
+                        to={`/${link.href}`}
+                        className="text-gray-600 hover:text-lavender-600 transition-colors duration-300 text-sm link-underline inline-block"
+                      >
+                        {link.label}
+                      </Link>
                     )}
                   </li>
                 ))}
@@ -167,12 +191,28 @@ const Footer = () => {
               <ul className="space-y-3 mb-5">
                 {footerLinks.contact.map((link) => (
                   <li key={link.label}>
-                    <a 
-                      href={link.href} 
-                      className="text-gray-600 hover:text-lavender-600 transition-colors duration-300 text-sm link-underline inline-block"
-                    >
-                      {link.label}
-                    </a>
+                    {link.href.startsWith('mailto:') || link.href === '#' ? (
+                      <a
+                        href={link.href}
+                        className="text-gray-600 hover:text-lavender-600 transition-colors duration-300 text-sm link-underline inline-block"
+                      >
+                        {link.label}
+                      </a>
+                    ) : isHomePage ? (
+                      <a
+                        href={link.href}
+                        className="text-gray-600 hover:text-lavender-600 transition-colors duration-300 text-sm link-underline inline-block"
+                      >
+                        {link.label}
+                      </a>
+                    ) : (
+                      <Link
+                        to={`/${link.href}`}
+                        className="text-gray-600 hover:text-lavender-600 transition-colors duration-300 text-sm link-underline inline-block"
+                      >
+                        {link.label}
+                      </Link>
+                    )}
                   </li>
                 ))}
               </ul>

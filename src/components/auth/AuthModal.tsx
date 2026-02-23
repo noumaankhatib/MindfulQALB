@@ -33,6 +33,15 @@ export const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
     };
   }, [isOpen]);
 
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [isOpen, onClose]);
+
   const handleGoogleSignIn = async () => {
     setLoading(true);
     setError(null);
@@ -125,6 +134,9 @@ export const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
       >
         <motion.div
           key="auth-modal-content"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="auth-modal-title"
           initial={{ scale: 0.9, opacity: 0, y: 30 }}
           animate={{ scale: 1, opacity: 1, y: 0 }}
           exit={{ scale: 0.9, opacity: 0, y: 30 }}
@@ -178,7 +190,7 @@ export const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
               flexShrink: 0,
             }}
           >
-            <h2 style={{ fontSize: '24px', fontWeight: 700, margin: 0, lineHeight: 1.3 }}>
+            <h2 id="auth-modal-title" style={{ fontSize: '24px', fontWeight: 700, margin: 0, lineHeight: 1.3 }}>
               {mode === 'signin' && 'Welcome Back'}
               {mode === 'signup' && 'Create Account'}
               {mode === 'magic-link' && 'Sign In with Email'}

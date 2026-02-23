@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { useLocation, Link } from 'react-router-dom'
 import { ChevronDown, Menu, X } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Logo from './Logo'
@@ -61,6 +62,8 @@ const navItems: NavItem[] = [
 const sectionIds = ['home', 'about', 'approach', 'mental-health', 'couples', 'family', 'holistic', 'self-help', 'groups', 'get-help', 'ethics', 'faq']
 
 const Navigation = () => {
+  const location = useLocation()
+  const isHomePage = location.pathname === '/'
   const [isScrolled, setIsScrolled] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [openDropdown, setOpenDropdown] = useState<string | null>(null)
@@ -69,8 +72,12 @@ const Navigation = () => {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false)
   const navRef = useRef<HTMLElement>(null)
 
-  // Smooth scroll to section
+  // Smooth scroll to section (only on home page where sections exist)
   const scrollToSection = useCallback((e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
+    if (!isHomePage) {
+      // On other pages, let the link navigate to /#section (no preventDefault)
+      return
+    }
     e.preventDefault()
     const targetId = href.replace('#', '')
     const element = document.getElementById(targetId)
@@ -85,15 +92,13 @@ const Navigation = () => {
         behavior: 'smooth'
       })
       
-      // Update URL without triggering scroll
       window.history.pushState(null, '', href)
       setActiveSection(targetId)
     }
     
-    // Close dropdowns and mobile menu
     setOpenDropdown(null)
     closeMobileMenu()
-  }, [])
+  }, [isHomePage])
 
   // Handle scroll and active section detection
   useEffect(() => {
@@ -167,13 +172,19 @@ const Navigation = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16 lg:h-18">
           {/* Logo */}
-          <a 
-            href="#home" 
-            className="flex items-center group"
-            onClick={() => closeMobileMenu()}
-          >
-            <Logo size="md" showText={true} />
-          </a>
+          {isHomePage ? (
+            <a
+              href="#home"
+              className="flex items-center group"
+              onClick={(e) => { scrollToSection(e, '#home'); closeMobileMenu(); }}
+            >
+              <Logo size="md" showText={true} />
+            </a>
+          ) : (
+            <Link to="/" className="flex items-center group" onClick={() => closeMobileMenu()}>
+              <Logo size="md" showText={true} />
+            </Link>
+          )}
 
           {/* Desktop Navigation */}
           <div className="hidden lg:flex items-center gap-1 flex-1 justify-end">
@@ -222,10 +233,13 @@ const Navigation = () => {
                               {item.dropdown.map((subItem, index) => {
                                 const isSubActive = activeSection === subItem.href.replace('#', '')
                                 return (
-                                  <a
+                                  <Link
                                     key={index}
-                                    href={subItem.href}
-                                    onClick={(e) => scrollToSection(e, subItem.href)}
+                                    to={isHomePage ? subItem.href : `/${subItem.href}`}
+                                    onClick={(e) => {
+                                      scrollToSection(e, subItem.href);
+                                      if (!isHomePage) closeMobileMenu();
+                                    }}
                                     className={`flex items-start gap-3 px-4 py-3 rounded-xl transition-colors duration-150 group ${
                                       isSubActive ? 'bg-lavender-100' : 'hover:bg-lavender-50'
                                     }`}
@@ -245,28 +259,28 @@ const Navigation = () => {
                                         </span>
                                       )}
                                     </div>
-                                  </a>
+                                  </Link>
                                 )
                               })}
                             </div>
                             
                             {/* Dropdown Footer CTA */}
                             <div className="bg-lavender-50/50 p-3 border-t border-lavender-100">
-                              <a 
-                                href="#get-help"
+                              <Link
+                                to={isHomePage ? '#get-help' : '/#get-help'}
                                 onClick={(e) => scrollToSection(e, '#get-help')}
                                 className="block text-center text-sm font-medium text-lavender-700 hover:text-lavender-800 transition-colors"
                               >
                                 View All {item.label} →
-                              </a>
+                              </Link>
                             </div>
                           </motion.div>
                         )}
                       </AnimatePresence>
                     </>
                   ) : (
-                    <a
-                      href={item.href}
+                    <Link
+                      to={isHomePage ? (item.href ?? '/') : `/${item.href ?? ''}`}
                       onClick={(e) => scrollToSection(e, item.href!)}
                       className={`px-4 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 ${
                         isActive
@@ -275,20 +289,20 @@ const Navigation = () => {
                       }`}
                     >
                       {item.label}
-                    </a>
+                    </Link>
                   )}
                 </div>
               )
             })}
             
             {/* CTA Button - Book Your Session section on homepage */}
-            <a
-              href="/#get-help"
+            <Link
+              to="/#get-help"
               onClick={closeMobileMenu}
               className="ml-4 px-6 py-2.5 rounded-full font-medium text-sm text-white bg-gradient-to-r from-lavender-600 to-lavender-700 shadow-lg shadow-lavender-500/25 hover:shadow-lavender-500/40 hover:-translate-y-0.5 transition-all duration-300"
             >
               Book a Session
-            </a>
+            </Link>
             
             {/* User Menu / Auth - Desktop */}
             <div className="ml-3">
@@ -362,10 +376,13 @@ const Navigation = () => {
                                   {item.dropdown.map((subItem, index) => {
                                     const isSubActive = activeSection === subItem.href.replace('#', '')
                                     return (
-                                      <a
+                                      <Link
                                         key={index}
-                                        href={subItem.href}
-                                        onClick={(e) => scrollToSection(e, subItem.href)}
+                                        to={isHomePage ? subItem.href : `/${subItem.href}`}
+                                        onClick={(e) => {
+                                          scrollToSection(e, subItem.href);
+                                          if (!isHomePage) closeMobileMenu();
+                                        }}
                                         className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${
                                           isSubActive 
                                             ? 'bg-lavender-100 text-lavender-700' 
@@ -379,7 +396,7 @@ const Navigation = () => {
                                             {subItem.description}
                                           </span>
                                         </div>
-                                      </a>
+                                      </Link>
                                     )
                                   })}
                                 </div>
@@ -388,15 +405,18 @@ const Navigation = () => {
                           </AnimatePresence>
                         </>
                       ) : (
-                        <a
-                          href={item.href}
-                          onClick={(e) => scrollToSection(e, item.href!)}
+                        <Link
+                          to={isHomePage ? (item.href ?? '/') : `/${item.href ?? ''}`}
+                          onClick={(e) => {
+                            scrollToSection(e, item.href!);
+                            if (!isHomePage) closeMobileMenu();
+                          }}
                           className={`block px-4 py-3 rounded-xl font-medium transition-colors ${
                             isActive ? 'bg-lavender-100 text-lavender-700' : 'text-gray-700 hover:bg-lavender-50'
                           }`}
                         >
                           {item.label}
-                        </a>
+                        </Link>
                       )}
                     </div>
                   )
@@ -404,13 +424,13 @@ const Navigation = () => {
                 
                 {/* Mobile CTA - Book Your Session section on homepage */}
                 <div className="pt-4 px-4 space-y-3">
-                  <a
-                    href="/#get-help"
+                  <Link
+                    to="/#get-help"
                     onClick={closeMobileMenu}
                     className="block w-full text-center px-6 py-3 rounded-xl font-medium text-white bg-gradient-to-r from-lavender-600 to-lavender-700 shadow-lg shadow-lavender-500/25"
                   >
                     Book a Session
-                  </a>
+                  </Link>
                   <div className="flex justify-center">
                     <UserMenu onOpenAuth={() => {
                       closeMobileMenu();
