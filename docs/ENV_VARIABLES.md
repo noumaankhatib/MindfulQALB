@@ -34,6 +34,7 @@ Used by the Vite app. Only variables prefixed with `VITE_` are exposed to the br
 | `VITE_SUPABASE_ANON_KEY` | Yes | Supabase **anon/public** key. **Different key** from service_role — safe to expose in the frontend. |
 | `VITE_BACKEND_URL` | No | API base URL. Default: `/api` (Vite proxy to local server). Set to `http://localhost:3001/api` for direct API in dev. |
 | `VITE_USE_BACKEND_API` | No | Set to `false` to disable backend API usage. Default: `true`. |
+| `VITE_SKIP_AUTH_FOR_TESTING` | No | Set to `true` in dev only to bypass sign-in for booking flow E2E testing. **Never** use in production. |
 
 **File:** Project root `.env` (same folder as `package.json` and `vite.config.ts`).
 
