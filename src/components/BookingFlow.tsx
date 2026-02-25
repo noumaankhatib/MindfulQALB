@@ -184,7 +184,8 @@ interface CustomerInfo {
 const BookingFlow = ({ session, isOpen, onClose }: BookingFlowProps) => {
   const { isIndia } = useGeolocation();
   const { user, profile } = useAuth();
-  const authRequired = isSupabaseConfigured() && !user;
+  const skipAuthForTesting = import.meta.env.DEV && import.meta.env.VITE_SKIP_AUTH_FOR_TESTING === 'true';
+  const authRequired = isSupabaseConfigured() && !user && !skipAuthForTesting;
   
   // Flow state
   const [currentStep, setCurrentStep] = useState<BookingStep>('therapy');
@@ -252,21 +253,15 @@ const BookingFlow = ({ session, isOpen, onClose }: BookingFlowProps) => {
   const appliedCouponRef = useRef<{ code: string; discountPaise: number } | null>(null);
   appliedCouponRef.current = appliedCoupon;
 
-  // When user is logged in, pre-fill name, email, and phone from profile/auth
-  useEffect(() => {
-    if (!user && !profile) return;
+  // Build pre-filled customer info from user profile/auth
+  const getPrefilledCustomerInfo = (): CustomerInfo => {
     const fromProfileOrUser = (profileVal: string | null | undefined, userVal: unknown) =>
       (typeof profileVal === 'string' && profileVal.trim()) ? profileVal.trim() : (typeof userVal === 'string' && userVal.trim()) ? userVal.trim() : '';
     const name = fromProfileOrUser(profile?.full_name, user?.user_metadata?.full_name ?? user?.user_metadata?.name);
     const email = (typeof profile?.email === 'string' && profile.email.trim()) ? profile.email.trim() : (typeof user?.email === 'string' && user.email) ? user.email : '';
     const phone = (typeof profile?.phone === 'string' && profile.phone.trim()) ? profile.phone.trim() : '';
-    setCustomerInfo((prev) => ({
-      ...prev,
-      name,
-      email,
-      ...(phone && !prev.phone ? { phone } : {}),
-    }));
-  }, [user?.id, user?.email, user?.user_metadata?.full_name, user?.user_metadata?.name, profile?.full_name, profile?.email, profile?.phone]);
+    return { name, email, phone, notes: '' };
+  };
 
   // Generate next 14 days for date selection, filtering out weekends
   const availableDates = Array.from({ length: 14 }, (_, i) => {
@@ -342,7 +337,7 @@ const BookingFlow = ({ session, isOpen, onClose }: BookingFlowProps) => {
       setConsentAccepted(false);
       setPaymentResult(null);
       setError(null);
-      setCustomerInfo({ name: '', email: '', phone: '', notes: '' });
+      setCustomerInfo(getPrefilledCustomerInfo());
       setFormErrors({});
       setCouponCode('');
       setAppliedCoupon(null);
