@@ -8,16 +8,34 @@ interface UserMenuProps {
   onOpenAuth: () => void;
 }
 
-const getRandomAvatar = (seed: string): string => {
-  const styles = ['avataaars', 'bottts', 'fun-emoji', 'lorelei', 'notionists'];
-  const style = styles[Math.abs(seed.charCodeAt(0) || 0) % styles.length];
-  return `https://api.dicebear.com/7.x/${style}/svg?seed=${encodeURIComponent(seed)}`;
-};
+function getInitials(displayName: string): string {
+  const trimmed = displayName.trim();
+  if (!trimmed) return '?';
+  const parts = trimmed.split(/\s+/);
+  if (parts.length >= 2) {
+    return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
+  }
+  const first = trimmed.charAt(0);
+  const last = trimmed.charAt(trimmed.length - 1);
+  return (first + last).toUpperCase();
+}
+
+const AVATAR_BG_COLORS = [
+  '#8B7BA8', '#9B8BB5', '#7B6B95', '#A78BAA', '#6B5B85', '#B59BC4', '#5B4B75',
+];
+
+function getAvatarBgColor(seed: string): string {
+  let h = 0;
+  for (let i = 0; i < seed.length; i++) h = (h << 5) - h + seed.charCodeAt(i);
+  const index = Math.abs(h) % AVATAR_BG_COLORS.length;
+  return AVATAR_BG_COLORS[index];
+}
 
 export const UserMenu = ({ onOpenAuth }: UserMenuProps) => {
   const navigate = useNavigate();
   const { user, profile, loading, signOut } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
+  const [imageError, setImageError] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -30,6 +48,10 @@ export const UserMenu = ({ onOpenAuth }: UserMenuProps) => {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  useEffect(() => {
+    setImageError(false);
+  }, [user?.id, profile?.avatar_url, user?.user_metadata?.avatar_url]);
 
   if (loading) {
     return (
@@ -55,7 +77,34 @@ export const UserMenu = ({ onOpenAuth }: UserMenuProps) => {
   }
 
   const displayName = profile?.full_name || user.email?.split('@')[0] || 'User';
-  const avatarUrl = profile?.avatar_url || user.user_metadata?.avatar_url || getRandomAvatar(user.email || user.id);
+  const avatarUrl = profile?.avatar_url || user.user_metadata?.avatar_url || null;
+  const showImage = avatarUrl && !imageError;
+  const initials = getInitials(displayName);
+  const avatarBgColor = getAvatarBgColor(displayName || user.id);
+
+  const avatarEl = (size: 'sm' | 'md') => {
+    const sizeClass = size === 'sm' ? 'w-8 h-8 text-xs' : 'w-12 h-12 text-base';
+    const borderClass = size === 'sm' ? '' : 'border-2 border-white shadow-sm';
+    if (showImage && avatarUrl) {
+      return (
+        <img
+          src={avatarUrl}
+          alt={displayName}
+          className={`${sizeClass} rounded-full object-cover bg-lavender-200 ${borderClass}`.trim()}
+          onError={() => setImageError(true)}
+        />
+      );
+    }
+    return (
+      <div
+        className={`${sizeClass} rounded-full flex items-center justify-center font-semibold text-white shrink-0 ${borderClass}`.trim()}
+        style={{ backgroundColor: avatarBgColor }}
+        aria-hidden
+      >
+        {initials}
+      </div>
+    );
+  };
 
   return (
     <div ref={menuRef} className="relative">
@@ -67,15 +116,7 @@ export const UserMenu = ({ onOpenAuth }: UserMenuProps) => {
         aria-label={isOpen ? 'Close user menu' : 'Open user menu'}
         className="flex items-center gap-2 p-1.5 pr-3 rounded-full bg-lavender-50 hover:bg-lavender-100 transition-colors border border-lavender-100"
       >
-        <img
-          src={avatarUrl}
-          alt={displayName}
-          className="w-8 h-8 rounded-full object-cover bg-lavender-200"
-          onError={(e) => {
-            const target = e.target as HTMLImageElement;
-            target.src = getRandomAvatar(user.email || user.id);
-          }}
-        />
+        {avatarEl('sm')}
         <span className="text-sm font-medium text-gray-700 max-w-[100px] truncate hidden sm:block">
           {displayName}
         </span>
@@ -94,11 +135,7 @@ export const UserMenu = ({ onOpenAuth }: UserMenuProps) => {
             {/* User Info Header */}
             <div className="p-4 bg-gradient-to-r from-lavender-50 to-purple-50 border-b border-lavender-100">
               <div className="flex items-center gap-3">
-                <img
-                  src={avatarUrl}
-                  alt={displayName}
-                  className="w-12 h-12 rounded-full object-cover border-2 border-white shadow-sm"
-                />
+                {avatarEl('md')}
                 <div className="flex-1 min-w-0">
                   <p className="font-semibold text-gray-900 truncate">{displayName}</p>
                   <p className="text-sm text-gray-500 truncate">{user.email}</p>

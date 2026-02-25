@@ -4,6 +4,7 @@ import { ChevronDown, Menu, X } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Logo from './Logo'
 import { AuthModal, UserMenu } from './auth'
+import { NotificationBell } from './NotificationBell'
 
 // Navigation data structure with dropdowns
 interface DropdownItem {
@@ -53,13 +54,13 @@ const navItems: NavItem[] = [
       { label: 'Meet Aqsa Khatib', href: '#about', description: 'Your therapist', icon: '👩‍⚕️' },
       { label: 'Ethics & Privacy', href: '#ethics', description: 'Your trust matters', icon: '🔒' },
       { label: 'FAQs', href: '#faq', description: 'Common questions', icon: '❓' },
-      { label: 'Contact Me', href: '#get-help', description: 'Get in touch', icon: '📧' },
+      { label: 'Contact details', href: '/contact', description: 'Email & social', icon: '📧' },
     ],
   },
 ]
 
 // Sections to track for active highlighting
-const sectionIds = ['home', 'about', 'approach', 'mental-health', 'couples', 'family', 'holistic', 'self-help', 'groups', 'get-help', 'ethics', 'faq']
+const sectionIds = ['home', 'about', 'approach', 'mental-health', 'couples', 'therapy', 'family', 'holistic', 'self-help', 'groups', 'get-help', 'ethics', 'faq']
 
 const Navigation = () => {
   const location = useLocation()
@@ -75,27 +76,21 @@ const Navigation = () => {
   // Smooth scroll to section (only on home page where sections exist)
   const scrollToSection = useCallback((e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
     if (!isHomePage) {
-      // On other pages, let the link navigate to /#section (no preventDefault)
       return
     }
-    e.preventDefault()
-    const targetId = href.replace('#', '')
-    const element = document.getElementById(targetId)
-    
+    const targetId = href.replace('#', '').trim()
+    const element = targetId ? document.getElementById(targetId) : null
+
     if (element) {
-      const navHeight = 80 // Account for fixed nav
+      e.preventDefault()
+      const navHeight = 80
       const elementPosition = element.getBoundingClientRect().top + window.scrollY
       const offsetPosition = elementPosition - navHeight
-
-      window.scrollTo({
-        top: offsetPosition,
-        behavior: 'smooth'
-      })
-      
+      window.scrollTo({ top: offsetPosition, behavior: 'smooth' })
       window.history.pushState(null, '', href)
       setActiveSection(targetId)
     }
-    
+
     setOpenDropdown(null)
     closeMobileMenu()
   }, [isHomePage])
@@ -159,6 +154,12 @@ const Navigation = () => {
     setIsMobileMenuOpen(false)
     setMobileOpenSection(null)
   }
+
+  useEffect(() => {
+    const handler = () => setIsAuthModalOpen(true)
+    window.addEventListener('openAuthModal', handler)
+    return () => window.removeEventListener('openAuthModal', handler)
+  }, [])
 
   return (
     <nav 
@@ -231,19 +232,14 @@ const Navigation = () => {
                           >
                             <div className="p-2">
                               {item.dropdown.map((subItem, index) => {
-                                const isSubActive = activeSection === subItem.href.replace('#', '')
-                                return (
-                                  <Link
-                                    key={index}
-                                    to={isHomePage ? subItem.href : `/${subItem.href}`}
-                                    onClick={(e) => {
-                                      scrollToSection(e, subItem.href);
-                                      if (!isHomePage) closeMobileMenu();
-                                    }}
-                                    className={`flex items-start gap-3 px-4 py-3 rounded-xl transition-colors duration-150 group ${
-                                      isSubActive ? 'bg-lavender-100' : 'hover:bg-lavender-50'
-                                    }`}
-                                  >
+                                const isRoute = subItem.href.startsWith('/');
+                                const isHash = subItem.href.startsWith('#');
+                                const isSubActive = !isRoute && activeSection === subItem.href.replace('#', '');
+                                const className = `flex items-start gap-3 px-4 py-3 rounded-xl transition-colors duration-150 group ${
+                                  isSubActive ? 'bg-lavender-100' : 'hover:bg-lavender-50'
+                                }`;
+                                const content = (
+                                  <>
                                     <span className="text-xl mt-0.5">{subItem.icon}</span>
                                     <div>
                                       <span className={`block font-medium transition-colors ${
@@ -259,8 +255,42 @@ const Navigation = () => {
                                         </span>
                                       )}
                                     </div>
+                                  </>
+                                );
+                                if (isRoute) {
+                                  return (
+                                    <Link
+                                      key={index}
+                                      to={subItem.href}
+                                      onClick={() => { setOpenDropdown(null); closeMobileMenu(); }}
+                                      className={className}
+                                    >
+                                      {content}
+                                    </Link>
+                                  );
+                                }
+                                if (isHash && isHomePage) {
+                                  return (
+                                    <a
+                                      key={index}
+                                      href={subItem.href}
+                                      onClick={(e) => scrollToSection(e, subItem.href)}
+                                      className={className}
+                                    >
+                                      {content}
+                                    </a>
+                                  );
+                                }
+                                return (
+                                  <Link
+                                    key={index}
+                                    to={`/${subItem.href}`}
+                                    onClick={() => closeMobileMenu()}
+                                    className={className}
+                                  >
+                                    {content}
                                   </Link>
-                                )
+                                );
                               })}
                             </div>
                             
@@ -303,15 +333,21 @@ const Navigation = () => {
             >
               Book a Session
             </Link>
+
+            {/* Notifications - Desktop */}
+            <div className="ml-2">
+              <NotificationBell />
+            </div>
             
             {/* User Menu / Auth - Desktop */}
-            <div className="ml-3">
+            <div className="ml-2">
               <UserMenu onOpenAuth={() => setIsAuthModalOpen(true)} />
             </div>
           </div>
 
-          {/* Sign In Button - Always visible on all screen sizes */}
-          <div className="flex items-center gap-2 lg:hidden">
+          {/* Mobile: Notifications + Auth + Menu */}
+          <div className="flex items-center gap-1 lg:hidden">
+            <NotificationBell />
             <UserMenu onOpenAuth={() => setIsAuthModalOpen(true)} />
             
             {/* Mobile Menu Button */}
@@ -374,21 +410,14 @@ const Navigation = () => {
                               >
                                 <div className="pl-4 py-2 space-y-1">
                                   {item.dropdown.map((subItem, index) => {
-                                    const isSubActive = activeSection === subItem.href.replace('#', '')
-                                    return (
-                                      <Link
-                                        key={index}
-                                        to={isHomePage ? subItem.href : `/${subItem.href}`}
-                                        onClick={(e) => {
-                                          scrollToSection(e, subItem.href);
-                                          if (!isHomePage) closeMobileMenu();
-                                        }}
-                                        className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${
-                                          isSubActive 
-                                            ? 'bg-lavender-100 text-lavender-700' 
-                                            : 'text-gray-600 hover:bg-lavender-50 hover:text-lavender-700'
-                                        }`}
-                                      >
+                                    const isRoute = subItem.href.startsWith('/');
+                                    const isHash = subItem.href.startsWith('#');
+                                    const isSubActive = !isRoute && activeSection === subItem.href.replace('#', '');
+                                    const mobileClassName = `flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${
+                                      isSubActive ? 'bg-lavender-100 text-lavender-700' : 'text-gray-600 hover:bg-lavender-50 hover:text-lavender-700'
+                                    }`;
+                                    const mobileContent = (
+                                      <>
                                         <span className="text-lg">{subItem.icon}</span>
                                         <div>
                                           <span className="block font-medium text-sm">{subItem.label}</span>
@@ -396,8 +425,27 @@ const Navigation = () => {
                                             {subItem.description}
                                           </span>
                                         </div>
+                                      </>
+                                    );
+                                    if (isRoute) {
+                                      return (
+                                        <Link key={index} to={subItem.href} onClick={closeMobileMenu} className={mobileClassName}>
+                                          {mobileContent}
+                                        </Link>
+                                      );
+                                    }
+                                    if (isHash && isHomePage) {
+                                      return (
+                                        <a key={index} href={subItem.href} onClick={(e) => { scrollToSection(e, subItem.href); closeMobileMenu(); }} className={mobileClassName}>
+                                          {mobileContent}
+                                        </a>
+                                      );
+                                    }
+                                    return (
+                                      <Link key={index} to={`/${subItem.href}`} onClick={closeMobileMenu} className={mobileClassName}>
+                                        {mobileContent}
                                       </Link>
-                                    )
+                                    );
                                   })}
                                 </div>
                               </motion.div>

@@ -1,4 +1,5 @@
 import { safeParseJson } from '../utils/safeJson';
+import { logWarn, logError } from '../lib/logger';
 
 /**
  * Cal.com Integration Service
@@ -102,10 +103,10 @@ export const fetchCalComAvailability = async (
       const data = await safeParseJson<{ slots?: TimeSlot[] }>(response);
       return data.slots || getFallbackSlots();
     }
-    console.warn('Availability API error, using fallback slots');
+    logWarn('Availability API error, using fallback slots');
     return getFallbackSlots();
   } catch (error) {
-    console.error('Failed to fetch availability:', error);
+    logError('Failed to fetch availability', error);
     return getFallbackSlots();
   }
 };
@@ -178,7 +179,7 @@ export const createCalComBooking = async (
       error: data.error || 'Failed to create booking',
     };
   } catch (error) {
-    console.error('Booking creation error:', error);
+    logError('Booking creation error', error);
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Booking failed',

@@ -63,6 +63,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (isValid) {
       const supabase = getSupabaseServer();
       if (supabase) {
+        const { data: payment } = await supabase
+          .from('payments')
+          .select('id, metadata')
+          .eq('razorpay_order_id', razorpay_order_id)
+          .maybeSingle();
         const { error: updateErr } = await supabase
           .from('payments')
           .update({
@@ -73,6 +78,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           })
           .eq('razorpay_order_id', razorpay_order_id);
         if (updateErr) console.warn('Payment update failed:', updateErr.message);
+        const couponId = payment?.metadata?.coupon_id;
+        if (couponId) {
+          const { data: c } = await supabase.from('coupons').select('used_count').eq('id', couponId).single();
+          if (c) await supabase.from('coupons').update({ used_count: (c.used_count ?? 0) + 1, updated_at: new Date().toISOString() }).eq('id', couponId);
+        }
       }
       res.json({
         success: true,

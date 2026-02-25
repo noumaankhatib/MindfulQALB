@@ -12,6 +12,7 @@ import TrustSignals from './components/TrustSignals'
 import QuickAccess from './components/QuickAccess'
 import MentalHealth from './components/MentalHealth'
 import CouplesRelationships from './components/CouplesRelationships'
+import TherapySupport from './components/TherapySupport'
 import FamilyCounseling from './components/FamilyCounseling'
 import HolisticWellness from './components/HolisticWellness'
 import SelfHelpTools from './components/SelfHelpTools'
@@ -29,14 +30,16 @@ import TermsOfServicePage from './pages/TermsOfServicePage'
 import MyBookingsPage from './pages/MyBookingsPage'
 import ProfilePage from './pages/ProfilePage'
 import AdminPage from './pages/AdminPage'
+import ContactPage from './pages/ContactPage'
 
 // Home page component
 const HomePage = () => {
   const location = useLocation()
 
   useEffect(() => {
-    if (location.hash === '#get-help') {
-      const el = document.getElementById('get-help')
+    const hash = location.hash.replace('#', '')
+    if (hash) {
+      const el = document.getElementById(hash)
       if (el) {
         setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100)
       }
@@ -126,6 +129,7 @@ const HomePage = () => {
         <QuickAccess />
         <MentalHealth />
         <CouplesRelationships />
+        <TherapySupport />
         <FamilyCounseling />
         <HolisticWellness />
         <SelfHelpTools />
@@ -161,27 +165,30 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>
 }
 
-const router = createBrowserRouter([
-  {
-    element: <Outlet />,
-    errorElement: <AppErrorBoundary />,
-    children: [
-      { path: '/', element: <HomePage /> },
-      { path: '/privacy', element: <PrivacyPolicyPage /> },
-      { path: '/terms', element: <TermsOfServicePage /> },
-      { path: '/bookings', element: <Navigate to="/#get-help" replace /> },
-      { path: '/my-bookings', element: <MyBookingsPage /> },
-      { path: '/profile', element: <ProfilePage /> },
-      { path: '/admin', element: <AdminRoute><AdminPage /></AdminRoute> },
-      { path: '*', element: <NotFoundPage /> },
-    ],
-  },
-])
+const router = createBrowserRouter(
+  [
+    {
+      element: <Outlet />,
+      errorElement: <AppErrorBoundary />,
+      children: [
+        { path: '/', element: <HomePage /> },
+        { path: '/privacy', element: <PrivacyPolicyPage /> },
+        { path: '/terms', element: <TermsOfServicePage /> },
+        { path: '/contact', element: <ContactPage /> },
+        { path: '/bookings', element: <Navigate to="/#get-help" replace /> },
+        { path: '/my-bookings', element: <MyBookingsPage /> },
+        { path: '/profile', element: <ProfilePage /> },
+        { path: '/admin', element: <AdminRoute><AdminPage /></AdminRoute> },
+        { path: '*', element: <NotFoundPage /> },
+      ],
+    },
+  ],
+);
 
 function App() {
   return (
     <AuthProvider>
-      <RouterProvider router={router} />
+      <RouterProvider router={router} future={{ v7_startTransition: true }} />
     </AuthProvider>
   )
 }

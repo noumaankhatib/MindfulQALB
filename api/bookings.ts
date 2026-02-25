@@ -12,21 +12,20 @@ import {
 import { rateLimiters } from './_utils/rateLimit.js';
 import { getSupabaseServer } from './_utils/supabase.js';
 
-// Parse time to ISO
-const parseTimeToISO = (dateString: string, timeString: string): string => {
+// Parse date+time as Asia/Kolkata and return UTC ISO for Cal.com v2 (start must be UTC)
+const parseTimeToUTCISO = (dateString: string, timeString: string): string => {
   const match = timeString.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
   if (!match) throw new Error('Invalid time format');
 
-  let hours = parseInt(match[1]);
-  const minutes = parseInt(match[2]);
+  let hours = parseInt(match[1], 10);
+  const minutes = parseInt(match[2], 10);
   const period = match[3].toUpperCase();
-
   if (period === 'PM' && hours !== 12) hours += 12;
   else if (period === 'AM' && hours === 12) hours = 0;
 
-  const date = new Date(dateString);
-  date.setHours(hours, minutes, 0, 0);
-  return date.toISOString();
+  const time24 = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:00`;
+  const isoInKolkata = `${dateString}T${time24}+05:30`;
+  return new Date(isoInKolkata).toISOString();
 };
 
 // Safely parse event type IDs from environment (keys e.g. "individual-video", "individual-chat")
@@ -67,7 +66,9 @@ const toDbFormat = (format: string): 'chat' | 'audio' | 'video' => {
   return 'video';
 };
 
-// Create Cal.com booking (sessionType and format used for event type key e.g. "individual-video")
+const CALCOM_V2_VERSION = '2024-08-13';
+
+// Create Cal.com booking via v2 API (v1 deprecated). Session type + format → event type key e.g. "individual-video"
 const createCalComBooking = async (
   sessionType: string,
   format: string,
@@ -76,52 +77,56 @@ const createCalComBooking = async (
   customer: { name: string; email: string; phone: string; notes?: string },
   requestId: string
 ): Promise<{ success: boolean; bookingId?: string; calComUid?: string; error?: string }> => {
-  const apiKey = process.env.CALCOM_API_KEY;
+  const apiKey = process.env.CALCOM_API_KEY?.trim();
   const eventTypeIds = parseEventTypeIds();
   const combinedKey = `${sessionType}-${format}`;
 
-  if (!apiKey) {
-    return { success: true, bookingId: `dev_${Date.now()}` };
+  if (!apiKey || apiKey.length < 20) {
+    return { success: false, error: 'Cal.com API key not set. Add CALCOM_API_KEY in environment.' };
+  }
+
+  const eventTypeId = eventTypeIds[combinedKey] ?? eventTypeIds[sessionType];
+  if (!eventTypeId) {
+    return { success: false, error: `Cal.com event type missing for "${combinedKey}". Set CALCOM_EVENT_TYPE_IDS (e.g. {"individual-video":"123"}).` };
   }
 
   try {
-    const eventTypeId = eventTypeIds[combinedKey] ?? eventTypeIds[sessionType];
-    if (!eventTypeId) {
-      return { success: true, bookingId: `local_${Date.now()}` };
-    }
-
-    const startTime = parseTimeToISO(date, time);
-    const url = 'https://api.cal.com/v1/bookings';
+    const startTime = parseTimeToUTCISO(date, time);
+    const url = 'https://api.cal.com/v2/bookings';
 
     const response = await fetch(url, {
       method: 'POST',
-      headers: { 
+      headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${apiKey}`,
+        'cal-api-version': CALCOM_V2_VERSION,
       },
       body: JSON.stringify({
-        eventTypeId: parseInt(eventTypeId),
+        eventTypeId: parseInt(eventTypeId, 10),
         start: startTime,
-        responses: {
+        attendee: {
           name: sanitizeString(customer.name),
           email: customer.email.toLowerCase().trim(),
-          phone: customer.phone,
-          notes: customer.notes ? sanitizeString(customer.notes) : '',
+          timeZone: 'Asia/Kolkata',
+          language: 'en',
+          ...(customer.phone ? { phoneNumber: customer.phone } : {}),
         },
-        timeZone: 'Asia/Kolkata',
-        language: 'en',
         metadata: { requestId },
       }),
     });
 
+    const json = await response.json().catch(() => ({})) as { status?: string; data?: { uid?: string; id?: number }; message?: string };
     if (!response.ok) {
-      const errorData = await response.json() as { message?: string };
-      throw new Error(errorData.message || 'Booking failed');
+      const msg = json.message ?? (typeof json === 'object' && json !== null && 'error' in json ? String((json as { error?: string }).error) : null) ?? `Cal.com API ${response.status}`;
+      throw new Error(msg);
+    }
+    if (json.status === 'error') {
+      throw new Error(json.message || 'Cal.com returned error');
     }
 
-    const bookingData = await response.json() as { uid?: string };
-    const uid = bookingData.uid || `CAL-${Date.now()}`;
-    return { success: true, bookingId: uid, calComUid: bookingData.uid };
+    const data = json.data;
+    const uid = (data?.uid ?? data?.id != null ? String(data.id) : null) ?? `CAL-${Date.now()}`;
+    return { success: true, bookingId: uid, calComUid: data?.uid ?? (data?.id != null ? String(data.id) : null) ?? undefined };
   } catch (error) {
     return {
       success: false,

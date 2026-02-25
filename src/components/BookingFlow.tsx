@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   X,
@@ -20,11 +20,13 @@ import {
   Headphones,
   Shield,
   Lock,
+  Tag,
 } from 'lucide-react';
 import { SessionRecommendation } from '../data/chatbotFlow';
 import { useGeolocation, formatPrice } from '../hooks/useGeolocation';
 import { useAuth } from '../contexts/AuthContext';
-import { processPayment, isPaymentConfigured, isTestMode } from '../services/paymentService';
+import { isSupabaseConfigured } from '../lib/supabase';
+import { processPayment, isPaymentConfigured, isTestMode, validateCoupon } from '../services/paymentService';
 import { AVAILABILITY_CONFIG } from '../config/paymentConfig';
 import { getPricing, isFormatEnabled, getDuration } from '../config/pricingConfig';
 import { fetchCalComAvailability, createCalComBooking, isCalComConfigured, getCalComBookingLink } from '../services/calcomService';
@@ -182,6 +184,7 @@ interface CustomerInfo {
 const BookingFlow = ({ session, isOpen, onClose }: BookingFlowProps) => {
   const { isIndia } = useGeolocation();
   const { user } = useAuth();
+  const authRequired = isSupabaseConfigured() && !user;
   
   // Flow state
   const [currentStep, setCurrentStep] = useState<BookingStep>('therapy');
@@ -238,8 +241,16 @@ const BookingFlow = ({ session, isOpen, onClose }: BookingFlowProps) => {
     success: boolean;
     paymentId?: string;
     bookingId?: string;
+    amountPaise?: number;
+    discountPaise?: number;
   } | null>(null);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  const [couponCode, setCouponCode] = useState('');
+  const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; discountPaise: number } | null>(null);
+  const [couponMessage, setCouponMessage] = useState<string | null>(null);
+  const [couponValidating, setCouponValidating] = useState(false);
+  const appliedCouponRef = useRef<{ code: string; discountPaise: number } | null>(null);
+  appliedCouponRef.current = appliedCoupon;
 
   // Generate next 14 days for date selection, filtering out weekends
   const availableDates = Array.from({ length: 14 }, (_, i) => {
@@ -317,6 +328,9 @@ const BookingFlow = ({ session, isOpen, onClose }: BookingFlowProps) => {
       setError(null);
       setCustomerInfo({ name: '', email: '', phone: '', notes: '' });
       setFormErrors({});
+      setCouponCode('');
+      setAppliedCoupon(null);
+      setCouponMessage(null);
     }
   }, [isOpen, session]);
 
@@ -402,24 +416,52 @@ const BookingFlow = ({ session, isOpen, onClose }: BookingFlowProps) => {
   const validateCustomerInfo = (): boolean => {
     const errors: Record<string, string> = {};
 
-    if (!customerInfo.name.trim()) {
+    const name = customerInfo.name.trim();
+    if (!name) {
       errors.name = 'Name is required';
+    } else if (name.length < 2) {
+      errors.name = 'Name must be at least 2 characters';
     }
 
-    if (!customerInfo.email.trim()) {
+    const email = customerInfo.email.trim();
+    if (!email) {
       errors.email = 'Email is required';
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customerInfo.email)) {
-      errors.email = 'Please enter a valid email';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      errors.email = 'Please enter a valid email address';
     }
 
-    if (!customerInfo.phone.trim()) {
+    const digits = (customerInfo.phone || '').replace(/\D/g, '');
+    if (!customerInfo.phone?.trim()) {
       errors.phone = 'Phone number is required';
-    } else if (!/^[+]?[\d\s-]{10,}$/.test(customerInfo.phone.replace(/\D/g, ''))) {
-      errors.phone = 'Please enter a valid phone number';
+    } else if (digits.length < 10) {
+      errors.phone = 'Please enter a valid phone number (at least 10 digits)';
     }
 
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
+  };
+
+  const validateDetailsField = (field: 'name' | 'email' | 'phone', value: string) => {
+    const errors: Record<string, string> = { ...formErrors };
+    if (field === 'name') {
+      const v = value.trim();
+      if (!v) errors.name = 'Name is required';
+      else if (v.length < 2) errors.name = 'Name must be at least 2 characters';
+      else delete errors.name;
+    }
+    if (field === 'email') {
+      const v = value.trim();
+      if (!v) errors.email = 'Email is required';
+      else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) errors.email = 'Please enter a valid email address';
+      else delete errors.email;
+    }
+    if (field === 'phone') {
+      const digits = value.replace(/\D/g, '');
+      if (!value.trim()) errors.phone = 'Phone number is required';
+      else if (digits.length < 10) errors.phone = 'Please enter a valid phone number (at least 10 digits)';
+      else delete errors.phone;
+    }
+    setFormErrors(errors);
   };
 
   // Handle therapy type selection (Step 1)
@@ -521,10 +563,16 @@ const BookingFlow = ({ session, isOpen, onClose }: BookingFlowProps) => {
         features: selectedSessionType.features,
       };
 
-      const result = await processPayment(sessionForPayment, isIndia, customerInfo);
+      const couponToUse =
+        appliedCouponRef.current?.code ??
+        appliedCoupon?.code ??
+        (currentStep === 'payment' && couponCode?.trim() ? couponCode.trim() : undefined);
+      const result = await processPayment(sessionForPayment, isIndia, customerInfo, {
+        couponCode: couponToUse ?? undefined,
+      });
 
       if (result.success) {
-        await completeBooking(result.paymentId, result.orderId);
+        await completeBooking(result.paymentId, result.orderId, result.amountPaise, result.discountPaise);
       } else {
         setError(result.error || 'Payment failed. Please try again.');
       }
@@ -535,7 +583,7 @@ const BookingFlow = ({ session, isOpen, onClose }: BookingFlowProps) => {
     }
   };
 
-  const completeBooking = async (paymentId?: string, orderId?: string) => {
+  const completeBooking = async (paymentId?: string, orderId?: string, amountPaise?: number, discountPaise?: number) => {
     if (!selectedDate || !selectedSlot || !selectedSessionType) {
       setError('Missing booking information. Please try again.');
       return;
@@ -595,6 +643,8 @@ const BookingFlow = ({ session, isOpen, onClose }: BookingFlowProps) => {
         success: true,
         paymentId: paymentId || 'FREE',
         bookingId,
+        amountPaise,
+        discountPaise,
       });
 
       // Store minimal booking reference in sessionStorage (not full PII)
@@ -691,6 +741,7 @@ const BookingFlow = ({ session, isOpen, onClose }: BookingFlowProps) => {
               aria-modal="true"
               aria-labelledby="booking-dialog-title"
             >
+              <div className="flex flex-col h-full min-h-0">
               {/* Header */}
               <div className="bg-gradient-to-r from-lavender-500 to-lavender-600 text-white p-4 flex-shrink-0">
                 <h2 id="booking-dialog-title" className="sr-only">Book Your Therapy Session</h2>
@@ -706,7 +757,6 @@ const BookingFlow = ({ session, isOpen, onClose }: BookingFlowProps) => {
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
-                    {/* Test Mode Indicator */}
                     {isTestMode() && (
                       <div className="flex items-center gap-1.5 px-3 py-1 bg-amber-400/20 border border-amber-300/50 rounded-full text-amber-100 text-xs font-medium">
                         <span>🧪</span>
@@ -723,7 +773,7 @@ const BookingFlow = ({ session, isOpen, onClose }: BookingFlowProps) => {
                   </div>
                 </div>
 
-                {/* Enhanced Progress Steps */}
+                {!authRequired && (
                 <div className="flex items-center justify-between gap-1 px-2">
                   {steps.map((step, index) => {
                     const isActive = step.id === currentStep;
@@ -788,9 +838,29 @@ const BookingFlow = ({ session, isOpen, onClose }: BookingFlowProps) => {
                     );
                   })}
                 </div>
+                )}
 
               </div>
 
+              {authRequired ? (
+                <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
+                  <div className="max-w-sm mx-auto">
+                    <div className="w-16 h-16 rounded-full bg-lavender-100 flex items-center justify-center mx-auto mb-4">
+                      <User className="w-8 h-8 text-lavender-600" />
+                    </div>
+                    <h3 className="text-lg font-semibold text-gray-800 mb-2">Sign in to book a session</h3>
+                    <p className="text-gray-600 text-sm mb-6">You need to be signed in to schedule a therapy session.</p>
+                    <button
+                      type="button"
+                      onClick={() => window.dispatchEvent(new CustomEvent('openAuthModal'))}
+                      className="w-full px-6 py-3 bg-gradient-to-r from-lavender-500 to-lavender-600 text-white rounded-xl font-medium hover:from-lavender-600 hover:to-lavender-700 transition-all"
+                    >
+                      Sign In
+                    </button>
+                  </div>
+                </div>
+              ) : (
+              <>
               {/* Main Content - Two Column Layout */}
               <div className="flex-1 overflow-hidden flex">
                 {/* Left Side - Fee Structure Image */}
@@ -1310,9 +1380,11 @@ const BookingFlow = ({ session, isOpen, onClose }: BookingFlowProps) => {
                             id="booking-name"
                             type="text"
                             value={customerInfo.name}
-                            onChange={(e) =>
-                              setCustomerInfo((prev) => ({ ...prev, name: e.target.value }))
-                            }
+                            onChange={(e) => {
+                              setCustomerInfo((prev) => ({ ...prev, name: e.target.value }));
+                              if (formErrors.name) setFormErrors((prev) => ({ ...prev, name: '' }));
+                            }}
+                            onBlur={(e) => validateDetailsField('name', e.target.value)}
                             className={`w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:ring-lavender-300 focus:border-lavender-400 transition-colors bg-white text-gray-900 placeholder-gray-400 ${
                               formErrors.name ? 'border-red-300' : 'border-gray-200'
                             }`}
@@ -1333,9 +1405,11 @@ const BookingFlow = ({ session, isOpen, onClose }: BookingFlowProps) => {
                             id="booking-email"
                             type="email"
                             value={customerInfo.email}
-                            onChange={(e) =>
-                              setCustomerInfo((prev) => ({ ...prev, email: e.target.value }))
-                            }
+                            onChange={(e) => {
+                              setCustomerInfo((prev) => ({ ...prev, email: e.target.value }));
+                              if (formErrors.email) setFormErrors((prev) => ({ ...prev, email: '' }));
+                            }}
+                            onBlur={(e) => validateDetailsField('email', e.target.value)}
                             className={`w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:ring-lavender-300 focus:border-lavender-400 transition-colors bg-white text-gray-900 placeholder-gray-400 ${
                               formErrors.email ? 'border-red-300' : 'border-gray-200'
                             }`}
@@ -1356,9 +1430,11 @@ const BookingFlow = ({ session, isOpen, onClose }: BookingFlowProps) => {
                             id="booking-phone"
                             type="tel"
                             value={customerInfo.phone}
-                            onChange={(e) =>
-                              setCustomerInfo((prev) => ({ ...prev, phone: e.target.value }))
-                            }
+                            onChange={(e) => {
+                              setCustomerInfo((prev) => ({ ...prev, phone: e.target.value }));
+                              if (formErrors.phone) setFormErrors((prev) => ({ ...prev, phone: '' }));
+                            }}
+                            onBlur={(e) => validateDetailsField('phone', e.target.value)}
                             className={`w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:ring-lavender-300 focus:border-lavender-400 transition-colors bg-white text-gray-900 placeholder-gray-400 ${
                               formErrors.phone ? 'border-red-300' : 'border-gray-200'
                             }`}
@@ -1449,6 +1525,75 @@ const BookingFlow = ({ session, isOpen, onClose }: BookingFlowProps) => {
                           <span className="text-xl font-bold text-lavender-600">
                             {formatPrice(selectedSessionType.priceINR, selectedSessionType.priceUSD, isIndia)}
                           </span>
+                        </div>
+
+                        {/* Coupon */}
+                        <div className="mt-3 pt-3 border-t border-lavender-200">
+                          {appliedCoupon ? (
+                            <div className="flex items-center justify-between flex-wrap gap-2">
+                              <span className="text-sm text-green-800 font-medium flex items-center gap-1">
+                                <Tag className="w-4 h-4" />
+                                {appliedCoupon.code} applied (−₹{Math.round(appliedCoupon.discountPaise / 100)})
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => { setAppliedCoupon(null); setCouponMessage(null); setCouponCode(''); }}
+                                className="text-sm text-gray-700 hover:text-gray-900 underline font-medium"
+                              >
+                                Remove
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="flex gap-2 flex-wrap items-end">
+                              <div className="flex-1 min-w-[140px]">
+                                <label className="block text-xs font-medium text-gray-900 mb-1">Coupon code</label>
+                                <input
+                                  type="text"
+                                  value={couponCode}
+                                  onChange={(e) => { setCouponCode(e.target.value.toUpperCase()); setCouponMessage(null); }}
+                                  placeholder="e.g. WELCOME10"
+                                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 placeholder:text-gray-500 focus:ring-2 focus:ring-lavender-500 focus:border-lavender-500"
+                                />
+                              </div>
+                              <button
+                                type="button"
+                                onClick={async () => {
+                                  const code = couponCode.trim();
+                                  if (!code) { setCouponMessage('Enter a coupon code'); return; }
+                                  setCouponValidating(true);
+                                  setCouponMessage(null);
+                                  const amountPaise = selectedSessionType.priceINR * 100;
+                                  const result = await validateCoupon(code, amountPaise);
+                                  setCouponValidating(false);
+                                  if (result.valid && result.discountPaise != null) {
+                                    setAppliedCoupon({ code: result.code || code, discountPaise: result.discountPaise });
+                                    setCouponMessage(null);
+                                  } else {
+                                    setCouponMessage(result.message || 'Invalid coupon');
+                                  }
+                                }}
+                                disabled={couponValidating || !couponCode.trim()}
+                                className="px-4 py-2 rounded-lg text-sm font-medium text-gray-900 bg-lavender-100 text-lavender-800 hover:bg-lavender-200 disabled:opacity-50"
+                              >
+                                {couponValidating ? 'Checking…' : 'Apply'}
+                              </button>
+                            </div>
+                          )}
+                          {couponMessage && !appliedCoupon && (
+                            <p className="text-sm text-red-700 font-medium mt-1">{couponMessage}</p>
+                          )}
+                          {appliedCoupon && (
+                            <div className="flex justify-between text-sm mt-2">
+                              <span className="text-gray-900 font-medium">Amount to pay</span>
+                              <span className="font-semibold text-gray-900">
+                                {formatPrice(
+                                  Math.max(0, selectedSessionType.priceINR - Math.round(appliedCoupon.discountPaise / 100)),
+                                  Math.max(0, (selectedSessionType.priceUSD || 0) - Math.round((appliedCoupon.discountPaise / 100) / 83)),
+                                  isIndia
+                                )}
+                              </span>
+                            </div>
+                          )}
                         </div>
                       </div>
 
@@ -1546,10 +1691,26 @@ const BookingFlow = ({ session, isOpen, onClose }: BookingFlowProps) => {
                               {selectedDate && formatDate(selectedDate)} at {selectedSlot}
                             </span>
                           </div>
+                          {paymentResult.discountPaise != null && paymentResult.discountPaise > 0 && (
+                            <>
+                              <div className="flex items-center justify-between">
+                                <span className="text-gray-600">Session total</span>
+                                <span className="text-gray-700">{formatPrice(selectedSessionType?.priceINR || 0, selectedSessionType?.priceUSD || 0, isIndia)}</span>
+                              </div>
+                              <div className="flex items-center justify-between">
+                                <span className="text-gray-600">Discount applied</span>
+                                <span className="font-medium text-green-600">−₹{Math.round(paymentResult.discountPaise / 100)}</span>
+                              </div>
+                            </>
+                          )}
                           <div className="flex items-center justify-between">
                             <span className="text-gray-600">{selectedSessionType?.isFree ? 'Price' : 'Amount Paid'}</span>
                             <span className={`font-semibold ${selectedSessionType?.isFree ? 'text-green-600' : 'text-lavender-600'}`}>
-                              {selectedSessionType?.isFree ? 'Free' : formatPrice(selectedSessionType?.priceINR || 0, selectedSessionType?.priceUSD || 0, isIndia)}
+                              {selectedSessionType?.isFree
+                                ? 'Free'
+                                : paymentResult.amountPaise != null
+                                  ? formatPrice(Math.round(paymentResult.amountPaise / 100), Math.round((paymentResult.amountPaise / 100) / 83), isIndia)
+                                  : formatPrice(selectedSessionType?.priceINR || 0, selectedSessionType?.priceUSD || 0, isIndia)}
                             </span>
                           </div>
                         </div>
@@ -1558,12 +1719,28 @@ const BookingFlow = ({ session, isOpen, onClose }: BookingFlowProps) => {
                       <div className="flex gap-3">
                         <button
                           onClick={() => {
-                            // Generate Google Calendar URL
-                            if (selectedDate && selectedSessionType) {
-                              const startTime = selectedDate.toISOString().replace(/-|:|\.\d+/g, '');
+                            // Generate Google Calendar URL using session date + time (IST), not system time
+                            if (selectedDate && selectedSlot && selectedSessionType) {
+                              const y = selectedDate.getFullYear();
+                              const m = selectedDate.getMonth() + 1;
+                              const d = selectedDate.getDate();
+                              const slotMatch = selectedSlot.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)?$/i);
+                              let h = slotMatch ? parseInt(slotMatch[1], 10) : 10;
+                              const min = slotMatch ? parseInt(slotMatch[2], 10) : 0;
+                              const ampm = (slotMatch?.[3] || '').toUpperCase();
+                              if (ampm === 'PM' && h !== 12) h += 12;
+                              if (ampm === 'AM' && h === 12) h = 0;
+                              // Session is in Asia/Kolkata (IST = UTC+5:30)
+                              const istStr = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}T${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}:00+05:30`;
+                              const sessionStart = new Date(istStr);
+                              const startTime = sessionStart.toISOString().replace(/-|:|\.\d+/g, '');
+                              const durationMatch = (selectedSessionType.duration || '60 min').match(/(\d+)/);
+                              const durationMins = durationMatch ? parseInt(durationMatch[1], 10) : 60;
+                              const sessionEnd = new Date(sessionStart.getTime() + durationMins * 60 * 1000);
+                              const endTime = sessionEnd.toISOString().replace(/-|:|\.\d+/g, '');
                               const title = encodeURIComponent(`Therapy Session - ${selectedSessionType.title}`);
                               const details = encodeURIComponent('Your therapy session with MindfulQALB');
-                              const calendarUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${startTime}/${startTime}&details=${details}`;
+                              const calendarUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${startTime}/${endTime}&details=${details}`;
                               window.open(calendarUrl, '_blank');
                             }
                           }}
@@ -1579,9 +1756,27 @@ const BookingFlow = ({ session, isOpen, onClose }: BookingFlowProps) => {
 
                   {/* Error Message */}
                   {error && currentStep !== 'confirmation' && (
-                    <div className="mt-4 p-3 bg-red-50 border border-red-100 rounded-lg flex items-start gap-2">
-                      <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
-                      <p className="text-sm text-red-700">{error}</p>
+                    <div className="mt-4 p-3 bg-red-50 border border-red-100 rounded-lg flex flex-col gap-2">
+                      <div className="flex items-start gap-2">
+                        <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+                        <p className="text-sm text-red-700 flex-1">{error}</p>
+                      </div>
+                      {currentStep === 'payment' && appliedCoupon && error.toLowerCase().includes('discount could not be applied') && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setAppliedCoupon(null);
+                            setCouponCode('');
+                            setCouponMessage(null);
+                            setError(null);
+                            appliedCouponRef.current = null;
+                            setTimeout(() => handlePayment(), 0);
+                          }}
+                          className="self-start px-4 py-2 text-sm font-medium text-red-700 bg-red-100 hover:bg-red-200 rounded-lg transition-colors"
+                        >
+                          Remove coupon and pay full amount
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>
@@ -1693,6 +1888,9 @@ const BookingFlow = ({ session, isOpen, onClose }: BookingFlowProps) => {
                   </div>
                 </div>
               )}
+              </>
+              )}
+              </div>
             </motion.div>
           </motion.div>
         )}

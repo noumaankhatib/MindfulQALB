@@ -16,6 +16,7 @@ import Navigation from '../components/Navigation';
 import Footer from '../components/Footer';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
+import { logError } from '../lib/logger';
 import { formatPrice } from '../hooks/useGeolocation';
 import type { Payment as DbPayment } from '../types/database';
 
@@ -74,7 +75,7 @@ const MyBookingsPage = () => {
         .order('scheduled_time', { ascending: false });
 
       if (err1) {
-        console.error('Error fetching bookings by user_id:', err1);
+        logError('Error fetching bookings by user_id:', err1);
         setBookings([]);
         setLoading(false);
         return;
@@ -122,7 +123,7 @@ const MyBookingsPage = () => {
         setPaymentsByBooking({});
       }
     } catch (err) {
-      console.error(err);
+      logError('My Bookings fetch error', err);
       setBookings([]);
     } finally {
       setLoading(false);

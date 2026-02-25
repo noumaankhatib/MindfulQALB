@@ -40,6 +40,7 @@ export interface Database {
           created_at?: string;
           updated_at?: string;
         };
+        Relationships: [];
       };
       bookings: {
         Row: {
@@ -105,6 +106,7 @@ export interface Database {
           cancelled_at?: string | null;
           cancellation_reason?: string | null;
         };
+        Relationships: [];
       };
       payments: {
         Row: {
@@ -152,6 +154,7 @@ export interface Database {
           refunded_at?: string | null;
           metadata?: Json;
         };
+        Relationships: [];
       };
       consent_records: {
         Row: {
@@ -187,6 +190,7 @@ export interface Database {
           user_agent?: string | null;
           consented_at?: string;
         };
+        Relationships: [];
       };
       audit_logs: {
         Row: {
@@ -228,6 +232,62 @@ export interface Database {
           request_id?: string | null;
           created_at?: string;
         };
+        Relationships: [];
+      };
+      coupons: {
+        Row: {
+          id: string;
+          code: string;
+          discount_type: 'percent' | 'fixed';
+          discount_value: number;
+          min_amount_paise: number;
+          valid_from: string | null;
+          valid_until: string | null;
+          max_uses: number | null;
+          used_count: number;
+          is_active: boolean;
+          description: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          code: string;
+          discount_type: 'percent' | 'fixed';
+          discount_value: number;
+          min_amount_paise?: number;
+          valid_from?: string | null;
+          valid_until?: string | null;
+          max_uses?: number | null;
+          used_count?: number;
+          is_active?: boolean;
+          description?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          code?: string;
+          discount_type?: 'percent' | 'fixed';
+          discount_value?: number;
+          min_amount_paise?: number;
+          valid_from?: string | null;
+          valid_until?: string | null;
+          max_uses?: number | null;
+          used_count?: number;
+          is_active?: boolean;
+          description?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+    };
+    Views: Record<string, never>;
+    Functions: {
+      validate_coupon: {
+        Args: { p_code: string; p_amount_paise: number };
+        Returns: Json;
       };
     };
   };

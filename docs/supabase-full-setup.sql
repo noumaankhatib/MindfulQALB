@@ -138,3 +138,5 @@ drop policy if exists "Users can update own profile" on public.profiles;
 create policy "Users can update own profile" on public.profiles for update using (auth.uid() = id);
 drop policy if exists "Admins can read all profiles" on public.profiles;
 create policy "Admins can read all profiles" on public.profiles for select using (public.is_admin());
+drop policy if exists "Admins can update all profiles" on public.profiles;
+create policy "Admins can update all profiles" on public.profiles for update using (public.is_admin());

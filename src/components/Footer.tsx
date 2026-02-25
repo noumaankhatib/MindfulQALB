@@ -47,7 +47,7 @@ const Footer = () => {
     contact: [
       { href: '#get-help', label: 'Get Help Now' },
       { href: 'mailto:mindfulqalb@gmail.com', label: 'mindfulqalb@gmail.com' },
-      { href: '#', label: 'Crisis Resources' },
+      { href: '#get-help', label: 'Crisis Resources' },
     ],
   }
 
@@ -191,13 +191,20 @@ const Footer = () => {
               <ul className="space-y-3 mb-5">
                 {footerLinks.contact.map((link) => (
                   <li key={link.label}>
-                    {link.href.startsWith('mailto:') || link.href === '#' ? (
+                    {link.href.startsWith('mailto:') ? (
                       <a
                         href={link.href}
                         className="text-gray-600 hover:text-lavender-600 transition-colors duration-300 text-sm link-underline inline-block"
                       >
                         {link.label}
                       </a>
+                    ) : link.href.startsWith('/') ? (
+                      <Link
+                        to={link.href}
+                        className="text-gray-600 hover:text-lavender-600 transition-colors duration-300 text-sm link-underline inline-block"
+                      >
+                        {link.label}
+                      </Link>
                     ) : isHomePage ? (
                       <a
                         href={link.href}

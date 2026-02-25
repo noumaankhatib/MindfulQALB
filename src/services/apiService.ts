@@ -261,3 +261,69 @@ export const healthCheck = async (): Promise<boolean> => {
     return false;
   }
 };
+
+/**
+ * Admin: update a user's profile (and optionally auth email).
+ * Requires Authorization: Bearer <session.access_token> and caller must be admin.
+ */
+export const updateUserAdmin = async (
+  accessToken: string,
+  params: { userId: string; full_name?: string; phone?: string; role?: 'user' | 'admin' | 'therapist'; email?: string }
+): Promise<ApiResponse<{ message?: string }>> => {
+  if (!API_CONFIG.USE_BACKEND_API) {
+    return { success: false, error: 'Backend API not configured' };
+  }
+  try {
+    const response = await fetch(`${API_CONFIG.BACKEND_URL}/admin/update-user`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({
+        userId: params.userId,
+        ...(params.full_name !== undefined && { full_name: params.full_name }),
+        ...(params.phone !== undefined && { phone: params.phone }),
+        ...(params.role !== undefined && { role: params.role }),
+        ...(params.email !== undefined && { email: params.email }),
+      }),
+    });
+    const data = await response.json().catch(() => ({})) as { success?: boolean; message?: string; error?: string };
+    if (!response.ok) {
+      return { success: false, error: data.error || 'Failed to update user' };
+    }
+    return { success: true, data: { message: data.message } };
+  } catch {
+    return { success: false, error: 'Failed to update user' };
+  }
+};
+
+/**
+ * Admin: delete a user and all related data (payments, bookings, consent, profile, auth).
+ * Requires Authorization: Bearer <session.access_token> and caller must be admin.
+ */
+export const deleteUserAdmin = async (
+  accessToken: string,
+  userId: string
+): Promise<ApiResponse<{ message?: string }>> => {
+  if (!API_CONFIG.USE_BACKEND_API) {
+    return { success: false, error: 'Backend API not configured' };
+  }
+  try {
+    const response = await fetch(`${API_CONFIG.BACKEND_URL}/admin/delete-user`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({ userId }),
+    });
+    const data = await response.json().catch(() => ({})) as { success?: boolean; message?: string; error?: string };
+    if (!response.ok) {
+      return { success: false, error: data.error || 'Failed to delete user' };
+    }
+    return { success: true, data: { message: data.message } };
+  } catch {
+    return { success: false, error: 'Failed to delete user' };
+  }
+};

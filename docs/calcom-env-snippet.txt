@@ -1,0 +1,4 @@
+# Paste this line into your .env (replace the existing CALCOM_EVENT_TYPE_IDS line)
+# These IDs match your Cal.com event types (Individual/Couples Therapy - Video/Audio/Chat).
+
+CALCOM_EVENT_TYPE_IDS={"individual-video":"4786608","individual-audio":"4786603","individual-chat":"4786595","couples-video":"4786618","couples-audio":"4786612"}

@@ -17,14 +17,19 @@ import {
   Video,
   Headphones,
   MessageSquare,
-  FileCheck
+  FileCheck,
+  Pencil,
+  Trash2,
+  Tag,
+  Plus,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import Navigation from '../components/Navigation';
 import Footer from '../components/Footer';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
-import { requestRefund } from '../services/apiService';
+import { logError } from '../lib/logger';
+import { requestRefund, updateUserAdmin, deleteUserAdmin } from '../services/apiService';
 import { formatPrice } from '../hooks/useGeolocation';
 import type { Booking as DbBooking, Payment as DbPayment, ConsentRecord as DbConsentRecord, Profile as DbProfile } from '../types/database';
 
@@ -72,24 +77,46 @@ interface ProfileRow {
   created_at: string;
 }
 
+interface CouponRow {
+  id: string;
+  code: string;
+  discount_type: 'percent' | 'fixed';
+  discount_value: number;
+  min_amount_paise: number;
+  valid_from: string | null;
+  valid_until: string | null;
+  max_uses: number | null;
+  used_count: number;
+  is_active: boolean;
+  description: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 interface DashboardStats {
   totalBookings: number;
   confirmedBookings: number;
   pendingBookings: number;
   cancelledBookings: number;
   totalRevenue: number;
+  totalRefunded: number;
   todayBookings: number;
   totalConsents: number;
   totalUsers: number;
 }
 
 const AdminPage = () => {
-  const { user, profile, loading: authLoading } = useAuth();
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'bookings' | 'payments' | 'consent' | 'users'>('dashboard');
+  const { user, profile, session, loading: authLoading } = useAuth();
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'bookings' | 'payments' | 'consent' | 'users' | 'coupons'>('dashboard');
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [consentRecords, setConsentRecords] = useState<ConsentRecordRow[]>([]);
   const [profiles, setProfiles] = useState<ProfileRow[]>([]);
+  const [coupons, setCoupons] = useState<CouponRow[]>([]);
+  const [couponsLoadError, setCouponsLoadError] = useState<string | null>(null);
+  const [couponForm, setCouponForm] = useState<CouponRow | null>(null);
+  const [couponSaving, setCouponSaving] = useState(false);
+  const [couponFormError, setCouponFormError] = useState<string | null>(null);
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -102,6 +129,12 @@ const AdminPage = () => {
   const [paymentsLoadError, setPaymentsLoadError] = useState<string | null>(null);
   const [profilesLoadError, setProfilesLoadError] = useState<string | null>(null);
   const [bookingsLoadError, setBookingsLoadError] = useState<string | null>(null);
+  const [editingUser, setEditingUser] = useState<ProfileRow | null>(null);
+  const [editForm, setEditForm] = useState<{ full_name: string; email: string; phone: string; role: string }>({ full_name: '', email: '', phone: '', role: 'user' });
+  const [editSaving, setEditSaving] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
+  const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -126,11 +159,12 @@ const AdminPage = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [bookingsRes, paymentsRes, consentRes, profilesRes] = await Promise.all([
+      const [bookingsRes, paymentsRes, consentRes, profilesRes, couponsRes] = await Promise.all([
         supabase.from('bookings').select('*').order('created_at', { ascending: false }),
         supabase.from('payments').select('*').order('created_at', { ascending: false }),
         supabase.from('consent_records').select('id, email, consent_version, session_type, acknowledgments, consented_at').order('consented_at', { ascending: false }),
         supabase.from('profiles').select('id, email, full_name, phone, role, created_at').order('created_at', { ascending: false }),
+        supabase.from('coupons').select('*').order('created_at', { ascending: false }),
       ]);
 
       const bookingsData = (bookingsRes.error ? [] : (bookingsRes.data ?? [])) as DbBooking[];
@@ -142,9 +176,11 @@ const AdminPage = () => {
       setConsentLoadError(consentRes.error ? consentRes.error.message : null);
       setPaymentsLoadError(paymentsRes.error ? paymentsRes.error.message : null);
       setProfilesLoadError(profilesRes.error ? profilesRes.error.message : null);
+      setCouponsLoadError(couponsRes.error ? couponsRes.error.message : null);
 
       setBookings(bookingsData as unknown as Booking[]);
       setPayments(paymentsData as unknown as Payment[]);
+      setCoupons((couponsRes.error ? [] : (couponsRes.data ?? [])) as CouponRow[]);
       setConsentRecords(consentData.map(c => {
         const acks = Array.isArray(c.acknowledgments) ? c.acknowledgments : [];
         return {
@@ -170,19 +206,22 @@ const AdminPage = () => {
       const pending = bookingsData.filter(b => b.status === 'pending').length;
       const cancelled = bookingsData.filter(b => b.status === 'cancelled').length;
       const todayCount = bookingsData.filter(b => b.scheduled_date === today).length;
-      const revenue = paymentsData.filter((p: DbPayment) => p.status === 'paid').reduce((sum: number, p: DbPayment) => sum + p.amount_paise, 0) || 0;
+      const paidSum = paymentsData.filter((p: DbPayment) => p.status === 'paid').reduce((sum: number, p: DbPayment) => sum + p.amount_paise, 0) || 0;
+      const refundedSum = paymentsData.filter((p: DbPayment) => p.status === 'refunded').reduce((sum: number, p: DbPayment) => sum + p.amount_paise, 0) || 0;
+      const revenue = paidSum - refundedSum;
       setStats({
         totalBookings: bookingsData.length,
         confirmedBookings: confirmed,
         pendingBookings: pending,
         cancelledBookings: cancelled,
         totalRevenue: revenue,
+        totalRefunded: refundedSum,
         todayBookings: todayCount,
         totalConsents: consentData.length,
         totalUsers: profilesData.length,
       });
     } catch (error) {
-      console.error('Error fetching data:', error);
+      logError('Error fetching data:', error);
     } finally {
       setLoading(false);
     }
@@ -203,8 +242,58 @@ const AdminPage = () => {
         fetchData();
       }
     } catch (error) {
-      console.error('Error updating booking:', error);
+      logError('Error updating booking:', error);
     }
+  };
+
+  const openEditUser = (p: ProfileRow) => {
+    setEditingUser(p);
+    setEditForm({
+      full_name: p.full_name ?? '',
+      email: p.email ?? '',
+      phone: p.phone ?? '',
+      role: p.role ?? 'user',
+    });
+    setEditError(null);
+  };
+
+  const saveEditUser = async () => {
+    if (!editingUser || !session?.access_token) return;
+    setEditSaving(true);
+    setEditError(null);
+    const res = await updateUserAdmin(session.access_token, {
+      userId: editingUser.id,
+      full_name: editForm.full_name || undefined,
+      email: editForm.email?.trim() || undefined,
+      phone: editForm.phone || undefined,
+      role: editForm.role as 'user' | 'admin' | 'therapist',
+    });
+    setEditSaving(false);
+    if (res.success) {
+      setEditingUser(null);
+      fetchData();
+    } else {
+      setEditError(res.error ?? 'Update failed');
+    }
+  };
+
+  const confirmDeleteUser = (p: ProfileRow) => {
+    if (p.id === user?.id) {
+      setDeleteError('You cannot delete your own account.');
+      return;
+    }
+    const bookingCount = bookings.filter((b) => b.user_id === p.id || (p.email && b.customer_email?.toLowerCase() === p.email.toLowerCase())).length;
+    const msg = bookingCount > 0
+      ? `Permanently delete "${p.full_name || p.email || p.id}"? This will remove the user, their ${bookingCount} booking(s), all related payments, consent records, and profile. This cannot be undone.`
+      : `Permanently delete "${p.full_name || p.email || p.id}"? This will remove the user and all related data. This cannot be undone.`;
+    if (!window.confirm(msg)) return;
+    setDeleteError(null);
+    setDeletingUserId(p.id);
+    deleteUserAdmin(session?.access_token ?? '', p.id).then((res) => {
+      setDeletingUserId(null);
+      if (res.success) fetchData();
+      else setDeleteError(res.error ?? 'Delete failed');
+    });
   };
 
   const cancelAndRefund = async (bookingId: string) => {
@@ -234,6 +323,89 @@ const AdminPage = () => {
       if (res.success) fetchData();
     } finally {
       setRefundingPaymentId(null);
+    }
+  };
+
+  const openCouponForm = (coupon?: CouponRow | null) => {
+    setCouponFormError(null);
+    if (coupon) {
+      setCouponForm({
+        ...coupon,
+        valid_from: coupon.valid_from ? coupon.valid_from.slice(0, 16) : '',
+        valid_until: coupon.valid_until ? coupon.valid_until.slice(0, 16) : '',
+      } as CouponRow);
+    } else {
+      setCouponForm({
+        id: '',
+        code: '',
+        discount_type: 'percent',
+        discount_value: 10,
+        min_amount_paise: 0,
+        valid_from: '',
+        valid_until: '',
+        max_uses: null,
+        used_count: 0,
+        is_active: true,
+        description: '',
+        created_at: '',
+        updated_at: '',
+      } as CouponRow);
+    }
+  };
+
+  const closeCouponForm = () => {
+    setCouponForm(null);
+    setCouponFormError(null);
+  };
+
+  const saveCoupon = async () => {
+    if (!couponForm) return;
+    const code = couponForm.code.trim().toUpperCase();
+    if (!code) {
+      setCouponFormError('Code is required');
+      return;
+    }
+    if (couponForm.discount_value <= 0 || (couponForm.discount_type === 'percent' && couponForm.discount_value > 100)) {
+      setCouponFormError('Invalid discount value (1–100 for percent, positive for fixed ₹)');
+      return;
+    }
+    setCouponFormError(null);
+    setCouponSaving(true);
+    try {
+      const base = {
+        code,
+        discount_type: couponForm.discount_type,
+        discount_value: couponForm.discount_value,
+        min_amount_paise: Math.max(0, Math.floor(Number(couponForm.min_amount_paise) || 0)),
+        valid_from: couponForm.valid_from ? new Date(couponForm.valid_from).toISOString() : null,
+        valid_until: couponForm.valid_until ? new Date(couponForm.valid_until).toISOString() : null,
+        max_uses: (couponForm.max_uses != null && String(couponForm.max_uses).trim() !== '') ? Math.max(0, Math.floor(Number(couponForm.max_uses))) : null,
+        is_active: couponForm.is_active,
+        description: couponForm.description?.trim() || null,
+      };
+      if (couponForm.id) {
+        const { error } = await supabase.from('coupons').update({ ...base, updated_at: new Date().toISOString() }).eq('id', couponForm.id);
+        if (error) throw new Error(error.message);
+      } else {
+        const { error } = await supabase.from('coupons').insert(base);
+        if (error) throw new Error(error.message);
+      }
+      closeCouponForm();
+      fetchData();
+    } catch (e) {
+      setCouponFormError(e instanceof Error ? e.message : 'Failed to save coupon');
+    } finally {
+      setCouponSaving(false);
+    }
+  };
+
+  const toggleCouponActive = async (c: CouponRow) => {
+    try {
+      const { error } = await supabase.from('coupons').update({ is_active: !c.is_active, updated_at: new Date().toISOString() }).eq('id', c.id);
+      if (error) throw new Error(error.message);
+      fetchData();
+    } catch (e) {
+      console.error(e);
     }
   };
 
@@ -355,6 +527,7 @@ const AdminPage = () => {
               { id: 'dashboard', label: 'Dashboard', icon: BarChart3 },
               { id: 'bookings', label: 'Bookings', icon: Calendar },
               { id: 'payments', label: 'Payments', icon: CreditCard },
+              { id: 'coupons', label: 'Coupons', icon: Tag },
               { id: 'consent', label: 'Consent', icon: FileCheck },
               { id: 'users', label: 'Users', icon: Users },
             ].map((tab) => (
@@ -387,7 +560,8 @@ const AdminPage = () => {
                   { label: 'Confirmed', value: stats.confirmedBookings, icon: CheckCircle, bg: 'bg-green-100', iconColor: 'text-green-600' },
                   { label: 'Pending', value: stats.pendingBookings, icon: Clock, bg: 'bg-yellow-100', iconColor: 'text-yellow-600' },
                   { label: 'Cancelled', value: stats.cancelledBookings, icon: XCircle, bg: 'bg-red-100', iconColor: 'text-red-600' },
-                  { label: 'Revenue', value: formatPrice(stats.totalRevenue / 100, true), icon: CreditCard, bg: 'bg-lavender-100', iconColor: 'text-lavender-600' },
+                  { label: 'Revenue (net)', value: formatPrice(stats.totalRevenue / 100, true), icon: CreditCard, bg: 'bg-lavender-100', iconColor: 'text-lavender-600' },
+                  { label: 'Refunded', value: formatPrice(stats.totalRefunded / 100, true), icon: XCircle, bg: 'bg-gray-100', iconColor: 'text-gray-600' },
                   { label: 'Today', value: stats.todayBookings, icon: Users, bg: 'bg-lavender-50', iconColor: 'text-lavender-600' },
                   { label: 'Consents', value: stats.totalConsents, icon: FileCheck, bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
                   { label: 'Users', value: stats.totalUsers, icon: Users, bg: 'bg-lavender-50', iconColor: 'text-lavender-600' },
@@ -741,6 +915,90 @@ const AdminPage = () => {
             </motion.div>
           )}
 
+          {/* Coupons Tab */}
+          {activeTab === 'coupons' && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-white rounded-2xl border border-lavender-100 shadow-sm overflow-hidden"
+            >
+              <div className="px-6 py-5 border-b border-lavender-100 flex flex-wrap items-center justify-between gap-4">
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900 font-display">Coupons</h2>
+                  <p className="text-gray-600 mt-0.5">Discount codes for special offers. Customers enter the code at checkout.</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => openCouponForm(null)}
+                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm bg-lavender-600 text-white hover:bg-lavender-700 transition-colors"
+                >
+                  <Plus className="w-4 h-4" />
+                  Add coupon
+                </button>
+              </div>
+              {couponsLoadError && (
+                <div className="mx-6 mt-4 p-4 rounded-xl bg-amber-50 border border-amber-200">
+                  <p className="font-medium text-amber-800">Could not load coupons</p>
+                  <p className="text-sm text-amber-700 mt-1">{couponsLoadError}. Run <code className="bg-amber-100 px-1 rounded">docs/supabase-coupons-migration.sql</code> in Supabase if the table is missing.</p>
+                </div>
+              )}
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Code</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Value</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Min (₹)</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Valid</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Uses</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Active</th>
+                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {coupons.map((c) => (
+                      <tr key={c.id}>
+                        <td className="px-6 py-4 text-sm font-mono font-medium text-gray-900">{c.code}</td>
+                        <td className="px-6 py-4 text-sm text-gray-600">{c.discount_type}</td>
+                        <td className="px-6 py-4 text-sm text-gray-600">
+                          {c.discount_type === 'percent' ? `${c.discount_value}%` : `₹${c.discount_value}`}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-600">{c.min_amount_paise ? `₹${Math.round(c.min_amount_paise / 100)}` : '—'}</td>
+                        <td className="px-6 py-4 text-sm text-gray-600">
+                          {c.valid_from || c.valid_until
+                            ? `${c.valid_from ? new Date(c.valid_from).toLocaleDateString() : '—'} – ${c.valid_until ? new Date(c.valid_until).toLocaleDateString() : '—'}`
+                            : '—'}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-600">{c.used_count}{c.max_uses != null ? ` / ${c.max_uses}` : ''}</td>
+                        <td className="px-6 py-4">
+                          <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${c.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
+                            {c.is_active ? 'Active' : 'Inactive'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          <button type="button" onClick={() => openCouponForm(c)} className="text-lavender-600 hover:text-lavender-800 font-medium text-sm mr-3">Edit</button>
+                          <button type="button" onClick={() => toggleCouponActive(c)} className="text-sm font-medium text-gray-600 hover:text-gray-800">
+                            {c.is_active ? 'Deactivate' : 'Activate'}
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {coupons.length === 0 && !couponsLoadError && (
+                  <div className="p-12 text-center">
+                    <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-lavender-100 flex items-center justify-center">
+                      <Tag className="w-8 h-8 text-lavender-500" />
+                    </div>
+                    <p className="text-gray-600 font-medium">No coupons yet</p>
+                    <p className="text-sm text-gray-500 mt-1">Add a coupon to offer discounts at checkout</p>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          )}
+
           {/* Consent Tab – users who have given consent */}
           {activeTab === 'consent' && (
             <motion.div
@@ -855,6 +1113,7 @@ const AdminPage = () => {
                         <th className="px-6 py-4 text-left text-xs font-semibold text-lavender-700 uppercase tracking-wider">Bookings</th>
                         <th className="px-6 py-4 text-left text-xs font-semibold text-lavender-700 uppercase tracking-wider">Consents</th>
                         <th className="px-6 py-4 text-left text-xs font-semibold text-lavender-700 uppercase tracking-wider">Joined</th>
+                        <th className="px-6 py-4 text-left text-xs font-semibold text-lavender-700 uppercase tracking-wider">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-lavender-100">
@@ -866,6 +1125,7 @@ const AdminPage = () => {
                         const consentCount = consentRecords.filter(
                           (c) => p.email && c.email && c.email.toLowerCase() === p.email.toLowerCase()
                         ).length;
+                        const isSelf = p.id === user?.id;
                         return (
                           <tr key={p.id} className="hover:bg-lavender-50/30 transition-colors">
                             <td className="px-6 py-4">
@@ -884,6 +1144,27 @@ const AdminPage = () => {
                             <td className="px-6 py-4 text-sm text-gray-600">{consentCount}</td>
                             <td className="px-6 py-4 text-sm text-gray-600">
                               {new Date(p.created_at).toLocaleDateString()}
+                            </td>
+                            <td className="px-6 py-4">
+                              <div className="flex items-center gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => openEditUser(p)}
+                                  className="p-2 text-lavender-600 hover:bg-lavender-50 rounded-xl transition-colors"
+                                  title="Edit user"
+                                >
+                                  <Pencil className="w-4 h-4" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => confirmDeleteUser(p)}
+                                  disabled={isSelf || deletingUserId === p.id}
+                                  className="p-2 text-red-600 hover:bg-red-50 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                  title={isSelf ? 'Cannot delete yourself' : 'Delete user and all related data'}
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         );
@@ -905,6 +1186,211 @@ const AdminPage = () => {
           )}
         </div>
       </main>
+
+      {/* Edit User Modal */}
+      {editingUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={() => !editSaving && setEditingUser(null)}>
+          <div className="bg-white rounded-2xl border border-lavender-200 shadow-xl max-w-md w-full p-6" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Edit user</h3>
+            {editError && (
+              <div className="mb-4 p-3 rounded-xl bg-red-50 border border-red-200 text-sm text-red-800">{editError}</div>
+            )}
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                <input
+                  type="text"
+                  value={editForm.full_name}
+                  onChange={(e) => setEditForm((f) => ({ ...f, full_name: e.target.value }))}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:border-lavender-500 focus:ring-0"
+                  placeholder="Full name"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                <input
+                  type="email"
+                  value={editForm.email}
+                  onChange={(e) => setEditForm((f) => ({ ...f, email: e.target.value }))}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:border-lavender-500 focus:ring-0"
+                  placeholder="email@example.com"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                <input
+                  type="text"
+                  value={editForm.phone}
+                  onChange={(e) => setEditForm((f) => ({ ...f, phone: e.target.value }))}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:border-lavender-500 focus:ring-0"
+                  placeholder="Phone"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
+                <select
+                  value={editForm.role}
+                  onChange={(e) => setEditForm((f) => ({ ...f, role: e.target.value }))}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:border-lavender-500 focus:ring-0"
+                >
+                  <option value="user">user</option>
+                  <option value="admin">admin</option>
+                  <option value="therapist">therapist</option>
+                </select>
+              </div>
+            </div>
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => !editSaving && setEditingUser(null)}
+                className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-xl"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={saveEditUser}
+                disabled={editSaving}
+                className="px-4 py-2 bg-lavender-600 text-white rounded-xl hover:bg-lavender-700 disabled:opacity-50"
+              >
+                {editSaving ? 'Saving…' : 'Save'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Coupon create/edit modal */}
+      {couponForm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={closeCouponForm}>
+          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="px-6 py-4 border-b border-gray-200">
+              <h3 className="text-lg font-bold text-gray-900">{couponForm.id ? 'Edit coupon' : 'Add coupon'}</h3>
+            </div>
+            <div className="px-6 py-4 space-y-4">
+              {couponFormError && (
+                <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-sm text-red-800">{couponFormError}</div>
+              )}
+              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-1">Code</label>
+                <input
+                  type="text"
+                  value={couponForm.code}
+                  onChange={(e) => setCouponForm({ ...couponForm, code: e.target.value })}
+                  placeholder="e.g. WELCOME10"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-lavender-500 focus:border-lavender-500 uppercase text-gray-900 placeholder:text-gray-500"
+                  disabled={!!couponForm.id}
+                />
+                {couponForm.id && <p className="text-xs text-gray-700 mt-1">Code cannot be changed after creation.</p>}
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-900 mb-1">Type</label>
+                  <select
+                    value={couponForm.discount_type}
+                    onChange={(e) => setCouponForm({ ...couponForm, discount_type: e.target.value as 'percent' | 'fixed' })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-lavender-500 text-gray-900"
+                  >
+                    <option value="percent">Percent</option>
+                    <option value="fixed">Fixed (₹)</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-900 mb-1">{couponForm.discount_type === 'percent' ? 'Percent (1–100)' : 'Amount (₹)'}</label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={couponForm.discount_type === 'percent' ? 100 : undefined}
+                    value={couponForm.discount_value}
+                    onChange={(e) => setCouponForm({ ...couponForm, discount_value: Number(e.target.value) || 0 })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-lavender-500 text-gray-900"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-1">Min order (₹) – optional</label>
+                <input
+                  type="number"
+                  min={0}
+                  value={couponForm.min_amount_paise ? couponForm.min_amount_paise / 100 : ''}
+                  onChange={(e) => setCouponForm({ ...couponForm, min_amount_paise: Math.max(0, Math.floor(Number(e.target.value) || 0) * 100) })}
+                  placeholder="0"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-lavender-500 text-gray-900 placeholder:text-gray-500"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-900 mb-1">Valid from (optional)</label>
+                  <input
+                    type="datetime-local"
+                    value={typeof couponForm.valid_from === 'string' ? couponForm.valid_from : ''}
+                    onChange={(e) => setCouponForm({ ...couponForm, valid_from: e.target.value || '' })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-lavender-500 text-gray-900"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-900 mb-1">Valid until (optional)</label>
+                  <input
+                    type="datetime-local"
+                    value={typeof couponForm.valid_until === 'string' ? couponForm.valid_until : ''}
+                    onChange={(e) => setCouponForm({ ...couponForm, valid_until: e.target.value || '' })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-lavender-500 text-gray-900"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-1">Max uses (optional, leave empty for unlimited)</label>
+                <input
+                  type="number"
+                  min={0}
+                  value={couponForm.max_uses ?? ''}
+                  onChange={(e) => setCouponForm({ ...couponForm, max_uses: e.target.value === '' ? null : Math.max(0, Math.floor(Number(e.target.value))) })}
+                  placeholder="Unlimited"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-lavender-500 text-gray-900 placeholder:text-gray-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-1">Description (optional)</label>
+                <input
+                  type="text"
+                  value={couponForm.description ?? ''}
+                  onChange={(e) => setCouponForm({ ...couponForm, description: e.target.value })}
+                  placeholder="e.g. Launch offer"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-lavender-500 text-gray-900 placeholder:text-gray-500"
+                />
+              </div>
+              {couponForm.id && (
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="coupon-active"
+                    checked={couponForm.is_active}
+                    onChange={(e) => setCouponForm({ ...couponForm, is_active: e.target.checked })}
+                    className="rounded border-gray-300 text-lavender-600 focus:ring-lavender-500"
+                  />
+                  <label htmlFor="coupon-active" className="text-sm text-gray-900 font-medium">Active</label>
+                </div>
+              )}
+            </div>
+            <div className="px-6 py-4 border-t border-gray-200 flex justify-end gap-3">
+              <button type="button" onClick={closeCouponForm} className="px-4 py-2 text-gray-800 hover:bg-gray-100 rounded-xl font-medium">Cancel</button>
+              <button type="button" onClick={saveCoupon} disabled={couponSaving} className="px-4 py-2 bg-lavender-600 text-white rounded-xl hover:bg-lavender-700 disabled:opacity-50">
+                {couponSaving ? 'Saving…' : 'Save'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {deleteError && (
+        <div className="fixed bottom-4 left-4 right-4 z-50 flex justify-center">
+          <div className="flex items-center gap-3 px-4 py-3 bg-red-50 border border-red-200 rounded-xl shadow-lg text-red-800 max-w-md">
+            <AlertCircle className="w-5 h-5 flex-shrink-0" />
+            <span className="text-sm font-medium">{deleteError}</span>
+            <button type="button" onClick={() => setDeleteError(null)} className="text-red-600 hover:text-red-800 ml-2">Dismiss</button>
+          </div>
+        </div>
+      )}
 
       <Footer />
     </div>

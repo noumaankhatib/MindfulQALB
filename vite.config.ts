@@ -8,12 +8,13 @@ export default defineConfig({
     port: 5173,
     open: true,
     proxy: {
-      // Proxy API requests to local Express server
+      // Proxy API requests to local Express server (POST body is forwarded as-is)
       '/api': {
         target: 'http://localhost:3001',
         changeOrigin: true,
-      }
-    }
-  }
+        secure: false,
+      },
+    },
+  },
 })
 

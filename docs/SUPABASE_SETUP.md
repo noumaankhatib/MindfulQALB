@@ -2,7 +2,7 @@
 
 Without this, **inserts from the API will succeed** (using the service role key), but **the frontend will get no rows** when reading because Row Level Security (RLS) blocks access by default.
 
-**Free tier (Supabase):** The free plan includes 500 MB database, 1 GB file storage, and 50K monthly active users. This setup keeps storage low with minimal indexes and no optional audit tables, so you can run comfortably on the free tier.
+**Free tier (Supabase):** The free plan includes 500 MB database, 1 GB file storage, and 50K monthly active users. This setup keeps storage low with minimal indexes and no optional audit tables, so you can run comfortably on the free tier. For capacity estimates (how many users and bookings fit), how to scan your tables, and suggestions to improve, see **[SUPABASE_FREE_TIER_CAPACITY.md](SUPABASE_FREE_TIER_CAPACITY.md)** and run **[supabase-scan-usage.sql](supabase-scan-usage.sql)** in the SQL Editor.
 
 **Quick option:** Run the full setup in Supabase:
 

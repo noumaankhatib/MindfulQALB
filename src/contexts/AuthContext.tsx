@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, useRef, ReactNode } from 'react';
 import { User, Session, AuthError } from '@supabase/supabase-js';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import { logError } from '../lib/logger';
 import type { Profile } from '../types/database';
 
 interface AuthContextType {
@@ -90,12 +91,12 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
       if (!mountedRef.current) return;
       if (error) {
-        console.error('Error fetching profile:', error);
+        logError('Error fetching profile:', error);
       } else {
         setProfile(data);
       }
     } catch (err) {
-      if (mountedRef.current) console.error('Error fetching profile:', err);
+      if (mountedRef.current) logError('Error fetching profile:', err);
     } finally {
       if (mountedRef.current) setLoading(false);
     }

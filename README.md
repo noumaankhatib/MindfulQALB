@@ -40,18 +40,26 @@ To see bookings in **My Bookings** and **Admin** while testing locally:
 
 1. **Terminal 1 – API:** `npm run dev:api` (runs Express on port 3001)
 2. **Terminal 2 – Frontend:** `npm run dev` (Vite proxies `/api` to 3001)
-3. In **root `.env`** (same folder as `server.js`), set:
+3. Put **all API keys and secrets** in **`backend/.env`** (the root server loads it first):
    - `SUPABASE_URL` = your Supabase project URL
    - `SUPABASE_SERVICE_ROLE_KEY` = Supabase **service role** key (Dashboard → Settings → API)
+   - `CALCOM_API_KEY`, `CALCOM_EVENT_TYPE_IDS` = for Cal.com sync (see `docs/CALCOM_SYNC.md`)
+   - `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET` = for payments
 
-**Required in root `.env` for DB + My Bookings to work:**
+See **`docs/ENV_VARIABLES.md`** for a full list of frontend vs backend environment variables and where to set them.
+
+**Required in `backend/.env` for DB + My Bookings + Cal.com + payments:**
 
 | Variable | Where to get it |
 |----------|------------------|
 | `SUPABASE_URL` | Same as your `VITE_SUPABASE_URL` (or set both). |
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase Dashboard → Project Settings → API → **service_role** (secret, server-only). |
+| `CALCOM_API_KEY`, `CALCOM_EVENT_TYPE_IDS` | Cal.com → Settings → API Keys; see `docs/CALCOM_SYNC.md`. |
+| `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET` | Razorpay Dashboard (for payments). |
 
-Without `SUPABASE_SERVICE_ROLE_KEY`, the local API returns mock booking IDs and does not write to the database. Restart `npm run dev:api` after changing `.env`.
+Without `SUPABASE_SERVICE_ROLE_KEY`, the local API returns mock booking IDs and does not write to the database. Restart `npm run dev:api` after changing `backend/.env`.
+
+**Coupon discounts** are applied by the create-order API. For coupons to work locally, run `npm run dev:api` and set `SUPABASE_*` in `backend/.env` (coupons are validated from the `coupons` table). See `docs/supabase-coupons-migration.sql` to set up the table. If the discount still does not apply, set `VITE_BACKEND_URL=http://localhost:3001/api` in root `.env` and restart `npm run dev`.
 
 **If bookings still don’t show in My Bookings or Admin:** the API inserts with the service role (bypasses RLS), but the app reads with the anon key. You must add **Row Level Security policies** in Supabase so the frontend can read rows. See **`docs/SUPABASE_SETUP.md`** for the exact SQL (create table + RLS policies). After running that SQL, My Bookings and Admin will show data.
 
