@@ -96,15 +96,49 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// Availability
-app.post('/api/availability', (req, res) => {
-  const { date, sessionType } = req.body;
-  
-  if (!date || !sessionType) {
-    return res.status(400).json({ error: 'Date and sessionType required' });
+// Allowed time slots (same for all session types – one therapist, one calendar)
+const ALLOWED_SLOTS = ['9:00 AM', '10:00 AM', '5:00 PM', '6:00 PM', '7:00 PM', '8:00 PM'];
+
+// Single canonical event type for availability – slots are common for all types (individual, couples, family, chat, video, audio)
+const AVAILABILITY_EVENT_SLUG = process.env.CALCOM_AVAILABILITY_SLUG || 'individual-therapy-video';
+
+async function fetchCalComAvailability(date) {
+  const apiKey = process.env.CALCOM_API_KEY?.trim();
+  const username = process.env.CALCOM_USERNAME || 'mindfulqalb';
+  if (!apiKey || apiKey.length < 20) return null;
+  try {
+    const url = `https://api.cal.com/v1/slots?` + new URLSearchParams({
+      eventTypeSlug: AVAILABILITY_EVENT_SLUG,
+      username,
+      startTime: `${date}T00:00:00.000Z`,
+      endTime: `${date}T23:59:59.999Z`,
+    });
+    const response = await fetch(url, {
+      headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+    });
+    if (!response.ok) return null;
+    const data = await response.json();
+    const dateSlots = data.slots?.[date] || [];
+    const normalized = (t) => String(t).replace(/\s+/g, ' ').trim().toLowerCase();
+    const availableTimes = dateSlots.map((slot) => {
+      const d = new Date(slot.time);
+      return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'Asia/Kolkata' });
+    }).map(normalized);
+    return getMockSlots().map((slot) => ({
+      ...slot,
+      available: availableTimes.some((t) => t === normalized(slot.time) || normalized(slot.time).replace(':00', '') === t.replace(':00', '')),
+    }));
+  } catch (e) {
+    return null;
   }
-  
-  // Check if weekend - return empty slots
+}
+
+// Availability – one set of slots for all session types (single therapist calendar)
+app.post('/api/availability', async (req, res) => {
+  const { date } = req.body;
+  if (!date) {
+    return res.status(400).json({ error: 'Date required' });
+  }
   if (isWeekend(date)) {
     return res.json({
       success: true,
@@ -114,11 +148,11 @@ app.post('/api/availability', (req, res) => {
       message: 'No slots available on weekends',
     });
   }
-  
+  const slots = await fetchCalComAvailability(date);
   res.json({
     success: true,
     date,
-    slots: getMockSlots(),
+    slots: slots || getMockSlots(),
   });
 });
 
@@ -535,7 +569,7 @@ app.post('/api/payments/refund', async (req, res) => {
 });
 
 // Helpers for Supabase booking insert (match api/bookings.ts schema)
-const DURATION_BY_FORMAT = { chat: 30, audio: 45, video: 60 };
+const DURATION_BY_RAW_FORMAT = { call: 15, chat: 30, audio: 45, video: 60 };
 const toDbSessionType = (s) => (s === 'couples' || s === 'family' ? s : 'individual');
 const toDbFormat = (f) => (f === 'chat' || f === 'audio' ? f : 'video');
 const sanitize = (str) => (typeof str !== 'string' ? '' : str.replace(/</g, '&lt;').replace(/>/g, '&gt;').trim());
@@ -624,7 +658,7 @@ async function createCalComBooking(sessionType, format, date, time, customer, re
       console.log(`[${requestId}] Cal.com response: status=${response.status} ok=${response.ok} body=${JSON.stringify(json)}`);
     }
     if (!response.ok) {
-      const msg = json.message || json.error || `Cal.com API ${response.status}`;
+      const msg = json.message || (typeof json.error === 'object' && json.error?.message) || (typeof json.error === 'string' ? json.error : null) || `Cal.com API ${response.status}`;
       console.error(`[${requestId}] Cal.com API error: HTTP ${response.status}`, JSON.stringify(json));
       throw new Error(msg);
     }
@@ -652,8 +686,12 @@ app.post('/api/bookings', async (req, res) => {
     return res.status(400).json({ error: 'Missing required fields' });
   }
   const fmt = format || 'video';
-  const session_type = toDbSessionType(String(sessionType).toLowerCase());
-  const session_format = toDbFormat(String(fmt).toLowerCase());
+  const rawSessionType = String(sessionType).toLowerCase();
+  const rawFormat = String(fmt).toLowerCase();
+  const isFreeSession = rawSessionType === 'free';
+  const session_type = toDbSessionType(rawSessionType);
+  const session_format = toDbFormat(rawFormat);
+  const duration_minutes = DURATION_BY_RAW_FORMAT[rawFormat] ?? DURATION_BY_RAW_FORMAT[session_format] ?? 60;
 
   // 1) Create booking on Cal.com so the slot appears in your calendar
   const calResult = await createCalComBooking(sessionType, fmt, date, time, customer, requestId);
@@ -673,7 +711,7 @@ app.post('/api/bookings', async (req, res) => {
         user_id: userId || null,
         session_type,
         session_format,
-        duration_minutes: DURATION_BY_FORMAT[session_format] ?? 60,
+        duration_minutes,
         scheduled_date: date,
         scheduled_time: time,
         timezone: 'Asia/Kolkata',
@@ -683,7 +721,9 @@ app.post('/api/bookings', async (req, res) => {
         customer_name: sanitize(customer.name),
         customer_email: String(customer.email).toLowerCase().trim(),
         customer_phone: customer.phone ? String(customer.phone).trim() : null,
-        notes: customer.notes ? sanitize(customer.notes) : null,
+        notes: isFreeSession
+          ? (customer.notes ? `[FREE_CONSULTATION] ${sanitize(customer.notes)}` : '[FREE_CONSULTATION]')
+          : (customer.notes ? sanitize(customer.notes) : null),
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };

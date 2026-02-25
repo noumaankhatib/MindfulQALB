@@ -121,7 +121,7 @@ const Footer = () => {
                   <Logo size="lg" showText={true} />
                 </Link>
               )}
-              <p className="text-gray-600 leading-relaxed text-sm">
+              <p className="text-gray-600 leading-relaxed text-sm break-words">
                 Evidence-based mental health care for individuals and couples—accessible, human, and private.
               </p>
             </div>
@@ -279,7 +279,7 @@ const Footer = () => {
               </div>
               
               {/* Disclaimer */}
-              <p className="text-gray-400 text-xs max-w-sm">
+              <p className="text-gray-400 text-xs max-w-sm md:max-w-none">
                 This platform is not a crisis service. For emergencies, call 911 or your local crisis line.
               </p>
             </div>

@@ -34,3 +34,9 @@ playwright-report/
 test-results/
 e2e/
 playwright.config.ts
+
+# Browser test screenshots & scripts
+*screenshots*/
+scripts/viewport-screenshots.js
+scripts/section-viewport-test.js
+scripts/verify-320px-fixes.js

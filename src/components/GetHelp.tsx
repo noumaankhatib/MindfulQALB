@@ -151,7 +151,7 @@ const GetHelp = () => {
             </motion.button>
 
             {/* Quick Book Buttons */}
-            <div className="mt-4 grid grid-cols-2 gap-3">
+            <div className="mt-4 grid grid-cols-1 min-[400px]:grid-cols-2 gap-3">
               {sessionCards.map((session) => {
                 const Icon = session.icon
                 return (
@@ -162,19 +162,19 @@ const GetHelp = () => {
                     onClick={() => handleBookSession(session)}
                     className="flex items-center gap-3 p-3 bg-white/80 rounded-xl border border-lavender-100/50 hover:border-lavender-300 hover:shadow-soft transition-all text-left group"
                   >
-                    <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${session.color} flex items-center justify-center shadow-sm`}>
+                    <div className={`w-10 h-10 flex-shrink-0 rounded-lg bg-gradient-to-br ${session.color} flex items-center justify-center shadow-sm`}>
                       <Icon className="w-5 h-5 text-white" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-gray-800 truncate">{session.title}</p>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs text-gray-500">{session.duration}</span>
-                        <span className="text-xs font-semibold text-lavender-600">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="text-xs text-gray-500 whitespace-nowrap">{session.duration}</span>
+                        <span className="text-xs font-semibold text-lavender-600 whitespace-nowrap">
                           {formatPrice(session.priceINR, session.priceUSD, isIndia)}
                         </span>
                       </div>
                     </div>
-                    <Calendar className="w-4 h-4 text-lavender-400 group-hover:text-lavender-600 transition-colors" />
+                    <Calendar className="w-4 h-4 flex-shrink-0 text-lavender-400 group-hover:text-lavender-600 transition-colors" />
                   </motion.button>
                 )
               })}

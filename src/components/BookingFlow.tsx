@@ -29,7 +29,7 @@ import { isSupabaseConfigured } from '../lib/supabase';
 import { processPayment, isPaymentConfigured, isTestMode, validateCoupon } from '../services/paymentService';
 import { AVAILABILITY_CONFIG } from '../config/paymentConfig';
 import { getPricing, isFormatEnabled, getDuration } from '../config/pricingConfig';
-import { fetchCalComAvailability, createCalComBooking, isCalComConfigured, getCalComBookingLink } from '../services/calcomService';
+import { fetchCalComAvailability, createCalComBooking, isCalComConfigured } from '../services/calcomService';
 import { storeConsent, linkPaymentToBooking } from '../services/apiService';
 import ConsentModal from './ConsentModal';
 import { ConsentRecord } from '../data/consentForm';
@@ -132,12 +132,12 @@ const getSessionFormatsForTherapy = (therapyTypeId: string): SessionFormat[] => 
   });
 };
 
-// Free consultation format (fixed) - uses 'video' to match Cal.com event type
+// Free consultation format (fixed) - uses 'call' to distinguish from paid video sessions
 const freeConsultationFormat: SessionFormat = {
-  id: 'video',
+  id: 'call',
   title: 'Introductory Call',
   description: 'Brief phone/video consultation',
-  duration: '15-20 min',
+  duration: '15 min',
   priceINR: 0,
   priceUSD: 0,
   icon: Phone,
@@ -183,7 +183,7 @@ interface CustomerInfo {
 
 const BookingFlow = ({ session, isOpen, onClose }: BookingFlowProps) => {
   const { isIndia } = useGeolocation();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const authRequired = isSupabaseConfigured() && !user;
   
   // Flow state
@@ -252,10 +252,26 @@ const BookingFlow = ({ session, isOpen, onClose }: BookingFlowProps) => {
   const appliedCouponRef = useRef<{ code: string; discountPaise: number } | null>(null);
   appliedCouponRef.current = appliedCoupon;
 
+  // When user is logged in, pre-fill name, email, and phone from profile/auth
+  useEffect(() => {
+    if (!user && !profile) return;
+    const fromProfileOrUser = (profileVal: string | null | undefined, userVal: unknown) =>
+      (typeof profileVal === 'string' && profileVal.trim()) ? profileVal.trim() : (typeof userVal === 'string' && userVal.trim()) ? userVal.trim() : '';
+    const name = fromProfileOrUser(profile?.full_name, user?.user_metadata?.full_name ?? user?.user_metadata?.name);
+    const email = (typeof profile?.email === 'string' && profile.email.trim()) ? profile.email.trim() : (typeof user?.email === 'string' && user.email) ? user.email : '';
+    const phone = (typeof profile?.phone === 'string' && profile.phone.trim()) ? profile.phone.trim() : '';
+    setCustomerInfo((prev) => ({
+      ...prev,
+      name,
+      email,
+      ...(phone && !prev.phone ? { phone } : {}),
+    }));
+  }, [user?.id, user?.email, user?.user_metadata?.full_name, user?.user_metadata?.name, profile?.full_name, profile?.email, profile?.phone]);
+
   // Generate next 14 days for date selection, filtering out weekends
   const availableDates = Array.from({ length: 14 }, (_, i) => {
     const date = new Date();
-    date.setDate(date.getDate() + i + 1);
+    date.setDate(date.getDate() + i);
     return date;
   }).filter(date => AVAILABILITY_CONFIG.isDateAvailable(date)).slice(0, 7);
 
@@ -365,13 +381,14 @@ const BookingFlow = ({ session, isOpen, onClose }: BookingFlowProps) => {
     setIsProcessing(true);
     setError(null);
 
-    const sessionId = selectedTherapyType.isFree ? 'free' : (selectedFormat?.id || 'video');
+    // Use single canonical type so slots are common for all session types (one therapist, one calendar)
+    const canonicalSessionType = 'individual';
 
     try {
       // Check if Cal.com is configured
       if (isCalComConfigured()) {
-        // Fetch real availability from Cal.com
-        const calSlots = await fetchCalComAvailability(selectedDate, sessionId);
+        // Fetch real availability (same slots for chat, video, audio, couples, etc.)
+        const calSlots = await fetchCalComAvailability(selectedDate, canonicalSessionType);
         
         // Also check local bookings as backup
         const localBookedSlots = getLocalBookedSlots(selectedDate);
@@ -379,7 +396,7 @@ const BookingFlow = ({ session, isOpen, onClose }: BookingFlowProps) => {
         const slotsWithAvailability = calSlots.map(slot => ({
           ...slot,
           available: slot.available && !localBookedSlots.includes(slot.time),
-          booked: localBookedSlots.includes(slot.time),
+          booked: !slot.available || localBookedSlots.includes(slot.time),
         }));
         
         setAvailableSlots(slotsWithAvailability);
@@ -430,11 +447,16 @@ const BookingFlow = ({ session, isOpen, onClose }: BookingFlowProps) => {
       errors.email = 'Please enter a valid email address';
     }
 
-    const digits = (customerInfo.phone || '').replace(/\D/g, '');
-    if (!customerInfo.phone?.trim()) {
+    const phoneRaw = (customerInfo.phone || '').trim();
+    const digits = phoneRaw.replace(/\D/g, '');
+    if (!phoneRaw) {
       errors.phone = 'Phone number is required';
     } else if (digits.length < 10) {
-      errors.phone = 'Please enter a valid phone number (at least 10 digits)';
+      errors.phone = 'Phone number must have at least 10 digits';
+    } else if (digits.length > 15) {
+      errors.phone = 'Phone number is too long (max 15 digits)';
+    } else if (!/^\+?[\d\s\-()]{10,20}$/.test(phoneRaw)) {
+      errors.phone = 'Please enter a valid phone number';
     }
 
     setFormErrors(errors);
@@ -456,9 +478,12 @@ const BookingFlow = ({ session, isOpen, onClose }: BookingFlowProps) => {
       else delete errors.email;
     }
     if (field === 'phone') {
-      const digits = value.replace(/\D/g, '');
-      if (!value.trim()) errors.phone = 'Phone number is required';
-      else if (digits.length < 10) errors.phone = 'Please enter a valid phone number (at least 10 digits)';
+      const trimmed = value.trim();
+      const digits = trimmed.replace(/\D/g, '');
+      if (!trimmed) errors.phone = 'Phone number is required';
+      else if (digits.length < 10) errors.phone = 'Phone number must have at least 10 digits';
+      else if (digits.length > 15) errors.phone = 'Phone number is too long (max 15 digits)';
+      else if (!/^\+?[\d\s\-()]{10,20}$/.test(trimmed)) errors.phone = 'Please enter a valid phone number';
       else delete errors.phone;
     }
     setFormErrors(errors);
@@ -472,7 +497,7 @@ const BookingFlow = ({ session, isOpen, onClose }: BookingFlowProps) => {
       // For free consultation, auto-select the free format
       setSelectedFormat(freeConsultationFormat);
       setSelectedSessionType({
-        id: `${therapy.id}-video`,
+        id: `${therapy.id}-call`,
         therapyType: therapy,
         format: freeConsultationFormat,
         title: therapy.title,
@@ -596,11 +621,14 @@ const BookingFlow = ({ session, isOpen, onClose }: BookingFlowProps) => {
     setIsProcessing(true);
 
     try {
+      // Always use the authenticated email when logged in (prevent tampering)
+      const bookingEmail = (user?.email && user.email.trim()) ? user.email.trim() : customerInfo.email;
+
       // Store consent in database (for compliance) before creating the booking
       const sessionTypeForApi = selectedSessionType.id.split('-')[0] || 'individual';
       const consentResult = await storeConsent({
         sessionType: sessionTypeForApi === 'free' ? 'individual' : sessionTypeForApi,
-        email: customerInfo.email,
+        email: bookingEmail,
         consentVersion: consentRecord.consentVersion,
         acknowledgments: consentRecord.acknowledgments,
       });
@@ -617,7 +645,7 @@ const BookingFlow = ({ session, isOpen, onClose }: BookingFlowProps) => {
         selectedSlot,
         {
           name: customerInfo.name,
-          email: customerInfo.email,
+          email: bookingEmail,
           phone: customerInfo.phone,
           notes: customerInfo.notes,
         },
@@ -1128,31 +1156,6 @@ const BookingFlow = ({ session, isOpen, onClose }: BookingFlowProps) => {
                         <h4 className="font-semibold text-gray-800 text-lg">Select Date & Time</h4>
                       </div>
 
-                      {/* Cal.com Integration Status */}
-                      <div className="mb-4 p-3 rounded-xl bg-gradient-to-r from-lavender-50 to-purple-50 border border-lavender-100">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <div className={`w-2.5 h-2.5 rounded-full ${isCalComConfigured() ? 'bg-green-500' : 'bg-amber-500'}`} />
-                            <span className="text-sm text-gray-600">
-                              {isCalComConfigured() 
-                                ? 'Live availability synced' 
-                                : 'Using local availability (connect Cal.com for multi-device sync)'}
-                            </span>
-                          </div>
-                          {selectedSessionType && (
-                            <a
-                              href={getCalComBookingLink(selectedSessionType.id)}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-xs text-lavender-600 hover:text-lavender-700 underline flex items-center gap-1"
-                            >
-                              <Calendar className="w-3 h-3" />
-                              Open Cal.com
-                            </a>
-                          )}
-                        </div>
-                      </div>
-
                       {/* Date Selection */}
                       <div className="mb-6">
                         <p className="text-sm text-gray-600 mb-3">Choose a date:</p>
@@ -1385,7 +1388,7 @@ const BookingFlow = ({ session, isOpen, onClose }: BookingFlowProps) => {
                               if (formErrors.name) setFormErrors((prev) => ({ ...prev, name: '' }));
                             }}
                             onBlur={(e) => validateDetailsField('name', e.target.value)}
-                            className={`w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:ring-lavender-300 focus:border-lavender-400 transition-colors bg-white text-gray-900 placeholder-gray-400 ${
+                            className={`w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:ring-lavender-300 focus:border-lavender-400 transition-colors placeholder-gray-400 bg-white text-gray-900 ${
                               formErrors.name ? 'border-red-300' : 'border-gray-200'
                             }`}
                             placeholder="Jane Doe"
@@ -1397,30 +1400,33 @@ const BookingFlow = ({ session, isOpen, onClose }: BookingFlowProps) => {
                           )}
                         </div>
 
+                        {/* Only show email field for guests; logged-in users already have it from their account */}
+                        {!(user && customerInfo.email.trim()) && (
                         <div>
                           <label htmlFor="booking-email" className="block text-sm font-medium text-gray-700 mb-1">
                             Email Address *
                           </label>
-                          <input
-                            id="booking-email"
-                            type="email"
-                            value={customerInfo.email}
-                            onChange={(e) => {
-                              setCustomerInfo((prev) => ({ ...prev, email: e.target.value }));
-                              if (formErrors.email) setFormErrors((prev) => ({ ...prev, email: '' }));
-                            }}
-                            onBlur={(e) => validateDetailsField('email', e.target.value)}
-                            className={`w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:ring-lavender-300 focus:border-lavender-400 transition-colors bg-white text-gray-900 placeholder-gray-400 ${
-                              formErrors.email ? 'border-red-300' : 'border-gray-200'
-                            }`}
-                            placeholder="jane.doe@example.com"
-                            aria-invalid={formErrors.email ? 'true' : 'false'}
-                            aria-describedby={formErrors.email ? 'email-error' : undefined}
-                          />
-                          {formErrors.email && (
-                            <p id="email-error" className="mt-1 text-xs text-red-500" role="alert">{formErrors.email}</p>
-                          )}
+                              <input
+                                id="booking-email"
+                                type="email"
+                                value={customerInfo.email}
+                                onChange={(e) => {
+                                  setCustomerInfo((prev) => ({ ...prev, email: e.target.value }));
+                                  if (formErrors.email) setFormErrors((prev) => ({ ...prev, email: '' }));
+                                }}
+                                onBlur={(e) => validateDetailsField('email', e.target.value)}
+                                className={`w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:ring-lavender-300 focus:border-lavender-400 transition-colors placeholder-gray-400 bg-white text-gray-900 ${
+                                  formErrors.email ? 'border-red-300' : 'border-gray-200'
+                                }`}
+                                placeholder="jane.doe@example.com"
+                                aria-invalid={formErrors.email ? 'true' : 'false'}
+                                aria-describedby={formErrors.email ? 'email-error' : undefined}
+                              />
+                              {formErrors.email && (
+                                <p id="email-error" className="mt-1 text-xs text-red-500" role="alert">{formErrors.email}</p>
+                              )}
                         </div>
+                        )}
 
                         <div>
                           <label htmlFor="booking-phone" className="block text-sm font-medium text-gray-700 mb-1">
@@ -1429,21 +1435,26 @@ const BookingFlow = ({ session, isOpen, onClose }: BookingFlowProps) => {
                           <input
                             id="booking-phone"
                             type="tel"
+                            inputMode="tel"
                             value={customerInfo.phone}
                             onChange={(e) => {
-                              setCustomerInfo((prev) => ({ ...prev, phone: e.target.value }));
+                              const filtered = e.target.value.replace(/[^\d+\s\-()]/g, '');
+                              setCustomerInfo((prev) => ({ ...prev, phone: filtered }));
                               if (formErrors.phone) setFormErrors((prev) => ({ ...prev, phone: '' }));
                             }}
                             onBlur={(e) => validateDetailsField('phone', e.target.value)}
+                            maxLength={20}
                             className={`w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:ring-lavender-300 focus:border-lavender-400 transition-colors bg-white text-gray-900 placeholder-gray-400 ${
                               formErrors.phone ? 'border-red-300' : 'border-gray-200'
                             }`}
                             placeholder="+91 9876543210"
                             aria-invalid={formErrors.phone ? 'true' : 'false'}
-                            aria-describedby={formErrors.phone ? 'phone-error' : undefined}
+                            aria-describedby={formErrors.phone ? 'phone-error' : 'phone-hint'}
                           />
-                          {formErrors.phone && (
+                          {formErrors.phone ? (
                             <p id="phone-error" className="mt-1 text-xs text-red-500" role="alert">{formErrors.phone}</p>
+                          ) : (
+                            <p id="phone-hint" className="mt-1 text-xs text-gray-400">Include country code for international numbers</p>
                           )}
                         </div>
 

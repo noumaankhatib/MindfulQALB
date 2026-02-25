@@ -91,7 +91,7 @@ const SupportGroups = () => {
                   ease: [0.25, 0.1, 0.25, 1],
                 }}
                 whileHover={{ y: -6, scale: 1.01 }}
-                className={`group bg-gradient-to-br ${colors.gradient} rounded-3xl p-8 border border-white/60 shadow-soft hover:shadow-card-hover transition-all duration-500 ease-gentle`}
+                className={`group bg-gradient-to-br ${colors.gradient} rounded-3xl p-5 sm:p-8 border border-white/60 shadow-soft hover:shadow-card-hover transition-all duration-500 ease-gentle`}
               >
                 <motion.div 
                   whileHover={{ scale: 1.1, rotate: 5 }}

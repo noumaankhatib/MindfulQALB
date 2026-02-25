@@ -135,6 +135,24 @@ const AdminPage = () => {
   const [editError, setEditError] = useState<string | null>(null);
   const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [editingBooking, setEditingBooking] = useState<Booking | null>(null);
+  const [bookingForm, setBookingForm] = useState<Partial<Booking>>({});
+  const [editingPayment, setEditingPayment] = useState<Payment | null>(null);
+  const [paymentFormStatus, setPaymentFormStatus] = useState<string>('pending');
+  const [editingConsent, setEditingConsent] = useState<ConsentRecordRow | null>(null);
+  const [consentForm, setConsentForm] = useState<{ email: string; session_type: string; consent_version: string }>({ email: '', session_type: 'individual', consent_version: '' });
+  const [savingEntity, setSavingEntity] = useState<string | null>(null);
+  const [deletingBookingId, setDeletingBookingId] = useState<string | null>(null);
+  const [deletingPaymentId, setDeletingPaymentId] = useState<string | null>(null);
+  const [deletingConsentId, setDeletingConsentId] = useState<string | null>(null);
+  const [entityError, setEntityError] = useState<string | null>(null);
+  const [deletingCouponId, setDeletingCouponId] = useState<string | null>(null);
+  const [selectedBookingIds, setSelectedBookingIds] = useState<Set<string>>(new Set());
+  const [selectedPaymentIds, setSelectedPaymentIds] = useState<Set<string>>(new Set());
+  const [selectedCouponIds, setSelectedCouponIds] = useState<Set<string>>(new Set());
+  const [selectedConsentIds, setSelectedConsentIds] = useState<Set<string>>(new Set());
+  const [selectedUserIds, setSelectedUserIds] = useState<Set<string>>(new Set());
+  const [bulkDeleting, setBulkDeleting] = useState<'bookings' | 'payments' | 'coupons' | 'consent' | 'users' | null>(null);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -326,6 +344,227 @@ const AdminPage = () => {
     }
   };
 
+  const openEditBooking = (b: Booking) => {
+    setEditingBooking(b);
+    setBookingForm({
+      customer_name: b.customer_name,
+      customer_email: b.customer_email,
+      customer_phone: b.customer_phone ?? '',
+      session_type: b.session_type,
+      session_format: b.session_format,
+      scheduled_date: b.scheduled_date,
+      scheduled_time: b.scheduled_time,
+      status: b.status,
+      notes: b.notes ?? '',
+    });
+    setEntityError(null);
+  };
+
+  const saveBookingEdit = async () => {
+    if (!editingBooking) return;
+    setSavingEntity('booking');
+    setEntityError(null);
+    const { error } = await supabase.from('bookings').update({
+      customer_name: bookingForm.customer_name,
+      customer_email: bookingForm.customer_email,
+      customer_phone: bookingForm.customer_phone || null,
+      session_type: bookingForm.session_type,
+      session_format: bookingForm.session_format,
+      scheduled_date: bookingForm.scheduled_date,
+      scheduled_time: bookingForm.scheduled_time,
+      status: bookingForm.status as Booking['status'],
+      notes: bookingForm.notes || null,
+      updated_at: new Date().toISOString(),
+    }).eq('id', editingBooking.id);
+    setSavingEntity(null);
+    if (error) {
+      setEntityError(error.message);
+    } else {
+      setEditingBooking(null);
+      fetchData();
+    }
+  };
+
+  const deleteBooking = async (id: string) => {
+    if (!window.confirm('Permanently delete this booking? Linked payments will be unlinked. This cannot be undone.')) return;
+    setDeletingBookingId(id);
+    setEntityError(null);
+    const { error } = await supabase.from('bookings').delete().eq('id', id);
+    setDeletingBookingId(null);
+    if (error) {
+      setEntityError(error.message);
+      alert(`Delete failed: ${error.message}\n\nIf you see "row-level security" or "policy", run the admin RLS policies in Supabase (docs/supabase-admin-edit-delete-policies.sql or docs/supabase-full-setup.sql) and ensure your profile has role = 'admin'.`);
+    } else fetchData();
+  };
+
+  const openEditPayment = (p: Payment) => {
+    setEditingPayment(p);
+    setPaymentFormStatus(p.status);
+    setEntityError(null);
+  };
+
+  const savePaymentEdit = async () => {
+    if (!editingPayment) return;
+    setSavingEntity('payment');
+    setEntityError(null);
+    const { error } = await supabase.from('payments').update({
+      status: paymentFormStatus as Payment['status'],
+      updated_at: new Date().toISOString(),
+    }).eq('id', editingPayment.id);
+    setSavingEntity(null);
+    if (error) {
+      setEntityError(error.message);
+    } else {
+      setEditingPayment(null);
+      fetchData();
+    }
+  };
+
+  const deletePayment = async (id: string) => {
+    if (!window.confirm('Permanently delete this payment record? This does not process a refund. Cannot be undone.')) return;
+    setDeletingPaymentId(id);
+    setEntityError(null);
+    const { error } = await supabase.from('payments').delete().eq('id', id);
+    setDeletingPaymentId(null);
+    if (error) {
+      setEntityError(error.message);
+      alert(`Delete failed: ${error.message}\n\nIf you see "row-level security" or "policy", run the admin RLS policies in Supabase (docs/supabase-admin-edit-delete-policies.sql or docs/supabase-full-setup.sql) and ensure your profile has role = 'admin'.`);
+    } else fetchData();
+  };
+
+  const openEditConsent = (c: ConsentRecordRow) => {
+    setEditingConsent(c);
+    setConsentForm({
+      email: c.email,
+      session_type: c.session_type,
+      consent_version: c.consent_version,
+    });
+    setEntityError(null);
+  };
+
+  const saveConsentEdit = async () => {
+    if (!editingConsent) return;
+    setSavingEntity('consent');
+    setEntityError(null);
+    const { error } = await supabase.from('consent_records').update({
+      email: consentForm.email,
+      session_type: consentForm.session_type,
+      consent_version: consentForm.consent_version,
+    }).eq('id', editingConsent.id);
+    setSavingEntity(null);
+    if (error) {
+      setEntityError(error.message);
+    } else {
+      setEditingConsent(null);
+      fetchData();
+    }
+  };
+
+  const deleteConsent = async (id: string) => {
+    if (!window.confirm('Permanently delete this consent record? Cannot be undone.')) return;
+    setDeletingConsentId(id);
+    setEntityError(null);
+    const { error } = await supabase.from('consent_records').delete().eq('id', id);
+    setDeletingConsentId(null);
+    if (error) {
+      setEntityError(error.message);
+      alert(`Delete failed: ${error.message}\n\nIf you see "row-level security" or "policy", run the admin RLS policies in Supabase (docs/supabase-admin-edit-delete-policies.sql or docs/supabase-full-setup.sql) and ensure your profile has role = 'admin'.`);
+    } else fetchData();
+  };
+
+  const deleteCoupon = async (id: string) => {
+    if (!window.confirm('Permanently delete this coupon? It cannot be used again. Cannot be undone.')) return;
+    setDeletingCouponId(id);
+    setEntityError(null);
+    const { error } = await supabase.from('coupons').delete().eq('id', id);
+    setDeletingCouponId(null);
+    if (error) {
+      setEntityError(error.message);
+      alert(`Delete failed: ${error.message}`);
+    } else fetchData();
+  };
+
+  const deleteSelectedBookings = async () => {
+    const ids = Array.from(selectedBookingIds);
+    if (ids.length === 0) return;
+    if (!window.confirm(`Permanently delete ${ids.length} booking(s)? Linked payments will be unlinked. This cannot be undone.`)) return;
+    setBulkDeleting('bookings');
+    setEntityError(null);
+    const { error } = await supabase.from('bookings').delete().in('id', ids);
+    setBulkDeleting(null);
+    setSelectedBookingIds(new Set());
+    if (error) {
+      setEntityError(error.message);
+      alert(`Delete failed: ${error.message}`);
+    } else fetchData();
+  };
+
+  const deleteSelectedPayments = async () => {
+    const ids = Array.from(selectedPaymentIds);
+    if (ids.length === 0) return;
+    if (!window.confirm(`Permanently delete ${ids.length} payment(s)? This does not process refunds. Cannot be undone.`)) return;
+    setBulkDeleting('payments');
+    setEntityError(null);
+    const { error } = await supabase.from('payments').delete().in('id', ids);
+    setBulkDeleting(null);
+    setSelectedPaymentIds(new Set());
+    if (error) {
+      setEntityError(error.message);
+      alert(`Delete failed: ${error.message}`);
+    } else fetchData();
+  };
+
+  const deleteSelectedCoupons = async () => {
+    const ids = Array.from(selectedCouponIds);
+    if (ids.length === 0) return;
+    if (!window.confirm(`Permanently delete ${ids.length} coupon(s)? Cannot be undone.`)) return;
+    setBulkDeleting('coupons');
+    setEntityError(null);
+    const { error } = await supabase.from('coupons').delete().in('id', ids);
+    setBulkDeleting(null);
+    setSelectedCouponIds(new Set());
+    if (error) {
+      setEntityError(error.message);
+      alert(`Delete failed: ${error.message}`);
+    } else fetchData();
+  };
+
+  const deleteSelectedConsent = async () => {
+    const ids = Array.from(selectedConsentIds);
+    if (ids.length === 0) return;
+    if (!window.confirm(`Permanently delete ${ids.length} consent record(s)? Cannot be undone.`)) return;
+    setBulkDeleting('consent');
+    setEntityError(null);
+    const { error } = await supabase.from('consent_records').delete().in('id', ids);
+    setBulkDeleting(null);
+    setSelectedConsentIds(new Set());
+    if (error) {
+      setEntityError(error.message);
+      alert(`Delete failed: ${error.message}`);
+    } else fetchData();
+  };
+
+  const deleteSelectedUsers = async () => {
+    const ids = Array.from(selectedUserIds).filter((id) => id !== user?.id);
+    if (ids.length === 0) {
+      if (selectedUserIds.has(user?.id ?? '')) setDeleteError('You cannot delete your own account.');
+      return;
+    }
+    if (!window.confirm(`Permanently delete ${ids.length} user(s) and their related data? This cannot be undone.`)) return;
+    setBulkDeleting('users');
+    setDeleteError(null);
+    const token = session?.access_token ?? '';
+    let lastError: string | null = null;
+    for (const id of ids) {
+      const res = await deleteUserAdmin(token, id);
+      if (!res.success) lastError = res.error ?? 'Delete failed';
+    }
+    setBulkDeleting(null);
+    setSelectedUserIds(new Set());
+    if (lastError) setDeleteError(lastError);
+    fetchData();
+  };
+
   const openCouponForm = (coupon?: CouponRow | null) => {
     setCouponFormError(null);
     if (coupon) {
@@ -427,6 +666,7 @@ const AdminPage = () => {
       case 'video': return <Video className="w-4 h-4" />;
       case 'audio': return <Headphones className="w-4 h-4" />;
       case 'chat': return <MessageSquare className="w-4 h-4" />;
+      case 'call': return <Phone className="w-4 h-4" />;
       default: return <Video className="w-4 h-4" />;
     }
   };
@@ -606,7 +846,9 @@ const AdminPage = () => {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-lavender-100">
-                      {bookings.slice(0, 5).map((booking) => (
+                      {bookings.slice(0, 5).map((booking) => {
+                        const isFreeBooking = booking.notes?.includes('[FREE_CONSULTATION]') || false;
+                        return (
                         <tr key={booking.id} className="hover:bg-lavender-50/30 transition-colors">
                           <td className="px-6 py-4">
                             <p className="font-medium text-gray-900">{booking.customer_name}</p>
@@ -614,12 +856,12 @@ const AdminPage = () => {
                           </td>
                           <td className="px-6 py-4">
                             <div className="flex items-center gap-2 text-gray-700">
-                              {getFormatIcon(booking.session_format)}
-                              <span className="text-sm capitalize">{booking.session_type}</span>
+                              {isFreeBooking ? <Phone className="w-4 h-4" /> : getFormatIcon(booking.session_format)}
+                              <span className="text-sm capitalize">{isFreeBooking ? 'Free Consultation' : booking.session_type}</span>
                             </div>
                           </td>
                           <td className="px-6 py-4 text-sm text-gray-600">
-                            {new Date(booking.scheduled_date).toLocaleDateString()} at {booking.scheduled_time}
+                            {new Date(booking.scheduled_date + 'T00:00:00').toLocaleDateString()} at {booking.scheduled_time}
                           </td>
                           <td className="px-6 py-4">
                             <span className={`inline-flex px-3 py-1 rounded-full text-xs font-medium ${getStatusBadge(booking.status)}`}>
@@ -627,7 +869,8 @@ const AdminPage = () => {
                             </span>
                           </td>
                         </tr>
-                      ))}
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
@@ -661,6 +904,17 @@ const AdminPage = () => {
                     <p className="text-sm text-red-700 mt-1">{cancelError}</p>
                   </div>
                   <button type="button" onClick={() => setCancelError(null)} className="text-red-600 hover:text-red-800">Dismiss</button>
+                </div>
+              )}
+
+              {entityError && (
+                <div className="mb-4 p-4 rounded-xl bg-red-50 border border-red-200 flex items-start gap-3">
+                  <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="font-medium text-red-800">Error</p>
+                    <p className="text-sm text-red-700 mt-1">{entityError}</p>
+                  </div>
+                  <button type="button" onClick={() => setEntityError(null)} className="text-red-600 hover:text-red-800">Dismiss</button>
                 </div>
               )}
 
@@ -701,10 +955,36 @@ const AdminPage = () => {
 
               {/* Bookings Table - card style like Book a Session */}
               <div className="bg-white rounded-2xl border border-lavender-100 shadow-gentle overflow-hidden">
+                {selectedBookingIds.size > 0 && (
+                  <div className="px-6 py-3 bg-lavender-50 border-b border-lavender-200 flex items-center justify-between gap-4">
+                    <span className="text-sm font-medium text-lavender-800">{selectedBookingIds.size} selected</span>
+                    <button
+                      type="button"
+                      onClick={deleteSelectedBookings}
+                      disabled={bulkDeleting === 'bookings'}
+                      className="inline-flex items-center gap-2 px-4 py-2 rounded-xl font-medium text-sm bg-red-600 text-white hover:bg-red-700 disabled:opacity-50"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      {bulkDeleting === 'bookings' ? 'Deleting…' : `Delete selected (${selectedBookingIds.size})`}
+                    </button>
+                  </div>
+                )}
                 <div className="overflow-x-auto">
                   <table className="w-full">
                     <thead>
                       <tr className="bg-gradient-to-r from-lavender-50 to-lavender-50/50 border-b border-lavender-200">
+                        <th className="px-4 py-4 w-12 text-left">
+                          <input
+                            type="checkbox"
+                            checked={filteredBookings.length > 0 && filteredBookings.every((b) => selectedBookingIds.has(b.id))}
+                            onChange={(e) => {
+                              if (e.target.checked) setSelectedBookingIds((s) => new Set([...s, ...filteredBookings.map((b) => b.id)]));
+                              else setSelectedBookingIds((s) => { const n = new Set(s); filteredBookings.forEach((b) => n.delete(b.id)); return n; });
+                            }}
+                            className="rounded border-gray-300 text-lavender-600 focus:ring-lavender-500"
+                            aria-label="Select all bookings"
+                          />
+                        </th>
                         <th className="px-6 py-4 text-left text-xs font-semibold text-lavender-700 uppercase tracking-wider">Customer</th>
                         <th className="px-6 py-4 text-left text-xs font-semibold text-lavender-700 uppercase tracking-wider">Contact</th>
                         <th className="px-6 py-4 text-left text-xs font-semibold text-lavender-700 uppercase tracking-wider">Session</th>
@@ -714,8 +994,19 @@ const AdminPage = () => {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-lavender-100">
-                      {filteredBookings.map((booking) => (
+                      {filteredBookings.map((booking) => {
+                        const isFreeBooking = booking.notes?.includes('[FREE_CONSULTATION]') || false;
+                        return (
                         <tr key={booking.id} className="hover:bg-lavender-50/30 transition-colors">
+                          <td className="px-4 py-4 w-12">
+                            <input
+                              type="checkbox"
+                              checked={selectedBookingIds.has(booking.id)}
+                              onChange={() => setSelectedBookingIds((s) => { const n = new Set(s); if (n.has(booking.id)) n.delete(booking.id); else n.add(booking.id); return n; })}
+                              className="rounded border-gray-300 text-lavender-600 focus:ring-lavender-500"
+                              aria-label={`Select ${booking.customer_name}`}
+                            />
+                          </td>
                           <td className="px-6 py-4">
                             <p className="font-semibold text-gray-900">{booking.customer_name}</p>
                           </td>
@@ -735,13 +1026,13 @@ const AdminPage = () => {
                           </td>
                           <td className="px-6 py-4">
                             <div className="flex items-center gap-2 text-gray-700">
-                              <span className="text-lavender-500">{getFormatIcon(booking.session_format)}</span>
-                              <span className="text-sm capitalize">{booking.session_type}</span>
-                              <span className="text-gray-400 text-xs">({booking.session_format})</span>
+                              <span className="text-lavender-500">{isFreeBooking ? <Phone className="w-4 h-4" /> : getFormatIcon(booking.session_format)}</span>
+                              <span className="text-sm capitalize">{isFreeBooking ? 'Free Consultation' : booking.session_type}</span>
+                              <span className="text-gray-400 text-xs">({isFreeBooking ? 'call' : booking.session_format})</span>
                             </div>
                           </td>
                           <td className="px-6 py-4">
-                            <p className="font-medium text-gray-900">{new Date(booking.scheduled_date).toLocaleDateString()}</p>
+                            <p className="font-medium text-gray-900">{new Date(booking.scheduled_date + 'T00:00:00').toLocaleDateString()}</p>
                             <p className="text-sm text-gray-500">{booking.scheduled_time}</p>
                           </td>
                           <td className="px-6 py-4">
@@ -789,10 +1080,26 @@ const AdminPage = () => {
                                   </button>
                                 </>
                               )}
+                              <button
+                                onClick={() => openEditBooking(booking)}
+                                className="p-2 text-lavender-600 hover:bg-lavender-50 rounded-xl transition-colors"
+                                title="Edit booking"
+                              >
+                                <Pencil className="w-5 h-5" />
+                              </button>
+                              <button
+                                onClick={() => deleteBooking(booking.id)}
+                                disabled={deletingBookingId === booking.id}
+                                className="p-2 text-red-600 hover:bg-red-50 rounded-xl transition-colors disabled:opacity-50"
+                                title="Delete booking"
+                              >
+                                <Trash2 className="w-5 h-5" />
+                              </button>
                             </div>
                           </td>
                         </tr>
-                      ))}
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
@@ -840,11 +1147,48 @@ const AdminPage = () => {
                 </div>
               )}
 
+              {entityError && (
+                <div className="mb-4 p-4 rounded-xl bg-red-50 border border-red-200 flex items-start gap-3">
+                  <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="font-medium text-red-800">Error</p>
+                    <p className="text-sm text-red-700 mt-1">{entityError}</p>
+                  </div>
+                  <button type="button" onClick={() => setEntityError(null)} className="text-red-600 hover:text-red-800">Dismiss</button>
+                </div>
+              )}
+
               <div className="bg-white rounded-2xl border border-lavender-100 shadow-gentle overflow-hidden">
+                {selectedPaymentIds.size > 0 && (
+                  <div className="px-6 py-3 bg-lavender-50 border-b border-lavender-200 flex items-center justify-between gap-4">
+                    <span className="text-sm font-medium text-lavender-800">{selectedPaymentIds.size} selected</span>
+                    <button
+                      type="button"
+                      onClick={deleteSelectedPayments}
+                      disabled={bulkDeleting === 'payments'}
+                      className="inline-flex items-center gap-2 px-4 py-2 rounded-xl font-medium text-sm bg-red-600 text-white hover:bg-red-700 disabled:opacity-50"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      {bulkDeleting === 'payments' ? 'Deleting…' : `Delete selected (${selectedPaymentIds.size})`}
+                    </button>
+                  </div>
+                )}
                 <div className="overflow-x-auto">
                   <table className="w-full">
                     <thead>
                       <tr className="bg-gradient-to-r from-lavender-50 to-lavender-50/50 border-b border-lavender-200">
+                        <th className="px-4 py-4 w-12 text-left">
+                          <input
+                            type="checkbox"
+                            checked={payments.length > 0 && payments.every((p) => selectedPaymentIds.has(p.id))}
+                            onChange={(e) => {
+                              if (e.target.checked) setSelectedPaymentIds((s) => new Set([...s, ...payments.map((p) => p.id)]));
+                              else setSelectedPaymentIds(new Set());
+                            }}
+                            className="rounded border-gray-300 text-lavender-600 focus:ring-lavender-500"
+                            aria-label="Select all payments"
+                          />
+                        </th>
                         <th className="px-6 py-4 text-left text-xs font-semibold text-lavender-700 uppercase tracking-wider">Customer</th>
                         <th className="px-6 py-4 text-left text-xs font-semibold text-lavender-700 uppercase tracking-wider">Order ID</th>
                         <th className="px-6 py-4 text-left text-xs font-semibold text-lavender-700 uppercase tracking-wider">Payment ID</th>
@@ -861,6 +1205,15 @@ const AdminPage = () => {
                         const customerEmail = linkedBooking?.customer_email ?? '';
                         return (
                         <tr key={payment.id} className="hover:bg-lavender-50/30 transition-colors">
+                          <td className="px-4 py-4 w-12">
+                            <input
+                              type="checkbox"
+                              checked={selectedPaymentIds.has(payment.id)}
+                              onChange={() => setSelectedPaymentIds((s) => { const n = new Set(s); if (n.has(payment.id)) n.delete(payment.id); else n.add(payment.id); return n; })}
+                              className="rounded border-gray-300 text-lavender-600 focus:ring-lavender-500"
+                              aria-label={`Select payment ${payment.razorpay_order_id}`}
+                            />
+                          </td>
                           <td className="px-6 py-4">
                             <div>
                               <p className="font-medium text-gray-900">{customerName}</p>
@@ -885,16 +1238,35 @@ const AdminPage = () => {
                             {new Date(payment.created_at).toLocaleString()}
                           </td>
                           <td className="px-6 py-4">
-                            {payment.status === 'paid' && payment.razorpay_payment_id && (
+                            <div className="flex items-center gap-2">
+                              {payment.status === 'paid' && payment.razorpay_payment_id && (
+                                <button
+                                  type="button"
+                                  onClick={() => refundPayment(payment.razorpay_payment_id!)}
+                                  disabled={refundingPaymentId === payment.razorpay_payment_id}
+                                  className="text-sm text-red-600 hover:text-red-800 font-medium disabled:opacity-50"
+                                >
+                                  Refund
+                                </button>
+                              )}
                               <button
                                 type="button"
-                                onClick={() => refundPayment(payment.razorpay_payment_id!)}
-                                disabled={refundingPaymentId === payment.razorpay_payment_id}
-                                className="text-sm text-red-600 hover:text-red-800 font-medium disabled:opacity-50"
+                                onClick={() => openEditPayment(payment)}
+                                className="p-2 text-lavender-600 hover:bg-lavender-50 rounded-xl transition-colors"
+                                title="Edit payment"
                               >
-                                Refund
+                                <Pencil className="w-5 h-5" />
                               </button>
-                            )}
+                              <button
+                                type="button"
+                                onClick={() => deletePayment(payment.id)}
+                                disabled={deletingPaymentId === payment.id}
+                                className="p-2 text-red-600 hover:bg-red-50 rounded-xl transition-colors disabled:opacity-50"
+                                title="Delete payment"
+                              >
+                                <Trash2 className="w-5 h-5" />
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       );
@@ -942,10 +1314,46 @@ const AdminPage = () => {
                   <p className="text-sm text-amber-700 mt-1">{couponsLoadError}. Run <code className="bg-amber-100 px-1 rounded">docs/supabase-coupons-migration.sql</code> in Supabase if the table is missing.</p>
                 </div>
               )}
+              {entityError && (
+                <div className="mx-6 mt-4 p-4 rounded-xl bg-red-50 border border-red-200 flex items-start gap-3">
+                  <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="font-medium text-red-800">Error</p>
+                    <p className="text-sm text-red-700 mt-1">{entityError}</p>
+                  </div>
+                  <button type="button" onClick={() => setEntityError(null)} className="text-red-600 hover:text-red-800">Dismiss</button>
+                </div>
+              )}
               <div className="overflow-x-auto">
+                {selectedCouponIds.size > 0 && (
+                  <div className="mx-6 mt-4 py-3 flex items-center justify-between gap-4">
+                    <span className="text-sm font-medium text-lavender-800">{selectedCouponIds.size} selected</span>
+                    <button
+                      type="button"
+                      onClick={deleteSelectedCoupons}
+                      disabled={bulkDeleting === 'coupons'}
+                      className="inline-flex items-center gap-2 px-4 py-2 rounded-xl font-medium text-sm bg-red-600 text-white hover:bg-red-700 disabled:opacity-50"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      {bulkDeleting === 'coupons' ? 'Deleting…' : `Delete selected (${selectedCouponIds.size})`}
+                    </button>
+                  </div>
+                )}
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
                     <tr>
+                      <th className="px-4 py-3 w-12 text-left">
+                        <input
+                          type="checkbox"
+                          checked={coupons.length > 0 && coupons.every((c) => selectedCouponIds.has(c.id))}
+                          onChange={(e) => {
+                            if (e.target.checked) setSelectedCouponIds((s) => new Set([...s, ...coupons.map((c) => c.id)]));
+                            else setSelectedCouponIds(new Set());
+                          }}
+                          className="rounded border-gray-300 text-lavender-600 focus:ring-lavender-500"
+                          aria-label="Select all coupons"
+                        />
+                      </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Code</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Value</th>
@@ -959,6 +1367,15 @@ const AdminPage = () => {
                   <tbody className="bg-white divide-y divide-gray-200">
                     {coupons.map((c) => (
                       <tr key={c.id}>
+                        <td className="px-4 py-4 w-12">
+                          <input
+                            type="checkbox"
+                            checked={selectedCouponIds.has(c.id)}
+                            onChange={() => setSelectedCouponIds((s) => { const n = new Set(s); if (n.has(c.id)) n.delete(c.id); else n.add(c.id); return n; })}
+                            className="rounded border-gray-300 text-lavender-600 focus:ring-lavender-500"
+                            aria-label={`Select ${c.code}`}
+                          />
+                        </td>
                         <td className="px-6 py-4 text-sm font-mono font-medium text-gray-900">{c.code}</td>
                         <td className="px-6 py-4 text-sm text-gray-600">{c.discount_type}</td>
                         <td className="px-6 py-4 text-sm text-gray-600">
@@ -977,10 +1394,23 @@ const AdminPage = () => {
                           </span>
                         </td>
                         <td className="px-6 py-4 text-right">
-                          <button type="button" onClick={() => openCouponForm(c)} className="text-lavender-600 hover:text-lavender-800 font-medium text-sm mr-3">Edit</button>
-                          <button type="button" onClick={() => toggleCouponActive(c)} className="text-sm font-medium text-gray-600 hover:text-gray-800">
-                            {c.is_active ? 'Deactivate' : 'Activate'}
-                          </button>
+                          <div className="flex items-center justify-end gap-2">
+                            <button type="button" onClick={() => openCouponForm(c)} className="p-2 text-lavender-600 hover:bg-lavender-50 rounded-xl transition-colors" title="Edit">
+                              <Pencil className="w-4 h-4" />
+                            </button>
+                            <button type="button" onClick={() => toggleCouponActive(c)} className="text-sm font-medium text-gray-600 hover:text-gray-800">
+                              {c.is_active ? 'Deactivate' : 'Activate'}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => deleteCoupon(c.id)}
+                              disabled={deletingCouponId === c.id}
+                              className="p-2 text-red-600 hover:bg-red-50 rounded-xl transition-colors disabled:opacity-50"
+                              title="Delete coupon"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -1026,21 +1456,68 @@ const AdminPage = () => {
                 </div>
               )}
 
+              {entityError && (
+                <div className="mb-4 p-4 rounded-xl bg-red-50 border border-red-200 flex items-start gap-3">
+                  <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="font-medium text-red-800">Error</p>
+                    <p className="text-sm text-red-700 mt-1">{entityError}</p>
+                  </div>
+                  <button type="button" onClick={() => setEntityError(null)} className="text-red-600 hover:text-red-800">Dismiss</button>
+                </div>
+              )}
+
               <div className="bg-white rounded-2xl border border-lavender-100 shadow-gentle overflow-hidden">
+                {selectedConsentIds.size > 0 && (
+                  <div className="px-6 py-3 bg-lavender-50 border-b border-lavender-200 flex items-center justify-between gap-4">
+                    <span className="text-sm font-medium text-lavender-800">{selectedConsentIds.size} selected</span>
+                    <button
+                      type="button"
+                      onClick={deleteSelectedConsent}
+                      disabled={bulkDeleting === 'consent'}
+                      className="inline-flex items-center gap-2 px-4 py-2 rounded-xl font-medium text-sm bg-red-600 text-white hover:bg-red-700 disabled:opacity-50"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      {bulkDeleting === 'consent' ? 'Deleting…' : `Delete selected (${selectedConsentIds.size})`}
+                    </button>
+                  </div>
+                )}
                 <div className="overflow-x-auto">
                   <table className="w-full">
                     <thead>
                       <tr className="bg-gradient-to-r from-emerald-50 to-lavender-50 border-b border-lavender-200">
+                        <th className="px-4 py-4 w-12 text-left">
+                          <input
+                            type="checkbox"
+                            checked={consentRecords.length > 0 && consentRecords.every((r) => selectedConsentIds.has(r.id))}
+                            onChange={(e) => {
+                              if (e.target.checked) setSelectedConsentIds((s) => new Set([...s, ...consentRecords.map((r) => r.id)]));
+                              else setSelectedConsentIds(new Set());
+                            }}
+                            className="rounded border-gray-300 text-lavender-600 focus:ring-lavender-500"
+                            aria-label="Select all consent records"
+                          />
+                        </th>
                         <th className="px-6 py-4 text-left text-xs font-semibold text-lavender-700 uppercase tracking-wider">Email</th>
                         <th className="px-6 py-4 text-left text-xs font-semibold text-lavender-700 uppercase tracking-wider">Session type</th>
                         <th className="px-6 py-4 text-left text-xs font-semibold text-lavender-700 uppercase tracking-wider">Version</th>
                         <th className="px-6 py-4 text-left text-xs font-semibold text-lavender-700 uppercase tracking-wider">Acknowledgments</th>
                         <th className="px-6 py-4 text-left text-xs font-semibold text-lavender-700 uppercase tracking-wider">Consented at</th>
+                        <th className="px-6 py-4 text-left text-xs font-semibold text-lavender-700 uppercase tracking-wider">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-lavender-100">
                       {consentRecords.map((record) => (
                         <tr key={record.id} className="hover:bg-lavender-50/30 transition-colors">
+                          <td className="px-4 py-4 w-12">
+                            <input
+                              type="checkbox"
+                              checked={selectedConsentIds.has(record.id)}
+                              onChange={() => setSelectedConsentIds((s) => { const n = new Set(s); if (n.has(record.id)) n.delete(record.id); else n.add(record.id); return n; })}
+                              className="rounded border-gray-300 text-lavender-600 focus:ring-lavender-500"
+                              aria-label={`Select ${record.email}`}
+                            />
+                          </td>
                           <td className="px-6 py-4">
                             <p className="text-sm font-medium text-gray-900">{record.email}</p>
                           </td>
@@ -1055,6 +1532,27 @@ const AdminPage = () => {
                           </td>
                           <td className="px-6 py-4 text-sm text-gray-600">
                             {new Date(record.consented_at).toLocaleString()}
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() => openEditConsent(record)}
+                                className="p-2 text-lavender-600 hover:bg-lavender-50 rounded-xl transition-colors"
+                                title="Edit consent"
+                              >
+                                <Pencil className="w-5 h-5" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => deleteConsent(record.id)}
+                                disabled={deletingConsentId === record.id}
+                                className="p-2 text-red-600 hover:bg-red-50 rounded-xl transition-colors disabled:opacity-50"
+                                title="Delete consent"
+                              >
+                                <Trash2 className="w-5 h-5" />
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       ))}
@@ -1102,10 +1600,37 @@ const AdminPage = () => {
               )}
 
               <div className="bg-white rounded-2xl border border-lavender-100 shadow-gentle overflow-hidden">
+                {selectedUserIds.size > 0 && (
+                  <div className="px-6 py-3 bg-lavender-50 border-b border-lavender-200 flex items-center justify-between gap-4">
+                    <span className="text-sm font-medium text-lavender-800">{selectedUserIds.size} selected</span>
+                    <button
+                      type="button"
+                      onClick={deleteSelectedUsers}
+                      disabled={bulkDeleting === 'users'}
+                      className="inline-flex items-center gap-2 px-4 py-2 rounded-xl font-medium text-sm bg-red-600 text-white hover:bg-red-700 disabled:opacity-50"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      {bulkDeleting === 'users' ? 'Deleting…' : `Delete selected (${selectedUserIds.size})`}
+                    </button>
+                  </div>
+                )}
                 <div className="overflow-x-auto">
                   <table className="w-full">
                     <thead>
                       <tr className="bg-gradient-to-r from-lavender-50 to-lavender-50/50 border-b border-lavender-200">
+                        <th className="px-4 py-4 w-12 text-left">
+                          <input
+                            type="checkbox"
+                            checked={profiles.length > 0 && profiles.filter((p) => p.id !== user?.id).every((p) => selectedUserIds.has(p.id))}
+                            onChange={(e) => {
+                              const ids = profiles.filter((p) => p.id !== user?.id).map((p) => p.id);
+                              if (e.target.checked) setSelectedUserIds((s) => new Set([...s, ...ids]));
+                              else setSelectedUserIds((s) => { const n = new Set(s); ids.forEach((id) => n.delete(id)); return n; });
+                            }}
+                            className="rounded border-gray-300 text-lavender-600 focus:ring-lavender-500"
+                            aria-label="Select all users"
+                          />
+                        </th>
                         <th className="px-6 py-4 text-left text-xs font-semibold text-lavender-700 uppercase tracking-wider">Email</th>
                         <th className="px-6 py-4 text-left text-xs font-semibold text-lavender-700 uppercase tracking-wider">Name</th>
                         <th className="px-6 py-4 text-left text-xs font-semibold text-lavender-700 uppercase tracking-wider">Phone</th>
@@ -1128,6 +1653,16 @@ const AdminPage = () => {
                         const isSelf = p.id === user?.id;
                         return (
                           <tr key={p.id} className="hover:bg-lavender-50/30 transition-colors">
+                            <td className="px-4 py-4 w-12">
+                              <input
+                                type="checkbox"
+                                checked={selectedUserIds.has(p.id)}
+                                onChange={() => setSelectedUserIds((s) => { const n = new Set(s); if (n.has(p.id)) n.delete(p.id); else n.add(p.id); return n; })}
+                                disabled={isSelf}
+                                className="rounded border-gray-300 text-lavender-600 focus:ring-lavender-500 disabled:opacity-50"
+                                aria-label={isSelf ? 'Cannot select yourself' : `Select ${p.email ?? p.id}`}
+                              />
+                            </td>
                             <td className="px-6 py-4">
                               <p className="text-sm font-medium text-gray-900">{p.email ?? '–'}</p>
                             </td>
@@ -1255,6 +1790,208 @@ const AdminPage = () => {
               >
                 {editSaving ? 'Saving…' : 'Save'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Booking Modal */}
+      {editingBooking && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={() => !savingEntity && setEditingBooking(null)}>
+          <div className="bg-white rounded-2xl border border-lavender-200 shadow-xl max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Edit booking</h3>
+            {entityError && (
+              <div className="mb-4 p-3 rounded-xl bg-red-50 border border-red-200 text-sm text-red-800">{entityError}</div>
+            )}
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Customer name</label>
+                <input
+                  type="text"
+                  value={bookingForm.customer_name ?? ''}
+                  onChange={(e) => setBookingForm((f) => ({ ...f, customer_name: e.target.value }))}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:border-lavender-500 focus:ring-0"
+                  placeholder="Name"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                <input
+                  type="email"
+                  value={bookingForm.customer_email ?? ''}
+                  onChange={(e) => setBookingForm((f) => ({ ...f, customer_email: e.target.value }))}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:border-lavender-500 focus:ring-0"
+                  placeholder="email@example.com"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                <input
+                  type="text"
+                  value={bookingForm.customer_phone ?? ''}
+                  onChange={(e) => setBookingForm((f) => ({ ...f, customer_phone: e.target.value }))}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:border-lavender-500 focus:ring-0"
+                  placeholder="Phone"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Session type</label>
+                  <select
+                    value={bookingForm.session_type ?? 'individual'}
+                    onChange={(e) => setBookingForm((f) => ({ ...f, session_type: e.target.value }))}
+                    className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:border-lavender-500 focus:ring-0"
+                  >
+                    <option value="individual">Individual</option>
+                    <option value="couples">Couples</option>
+                    <option value="family">Family</option>
+                    <option value="free">Free Consultation</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Format</label>
+                  <select
+                    value={bookingForm.session_format ?? 'video'}
+                    onChange={(e) => setBookingForm((f) => ({ ...f, session_format: e.target.value }))}
+                    className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:border-lavender-500 focus:ring-0"
+                  >
+                    <option value="video">Video</option>
+                    <option value="audio">Audio</option>
+                    <option value="chat">Chat</option>
+                    <option value="call">Call</option>
+                  </select>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
+                  <input
+                    type="date"
+                    value={bookingForm.scheduled_date ?? ''}
+                    onChange={(e) => setBookingForm((f) => ({ ...f, scheduled_date: e.target.value }))}
+                    className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:border-lavender-500 focus:ring-0"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Time</label>
+                  <input
+                    type="text"
+                    value={bookingForm.scheduled_time ?? ''}
+                    onChange={(e) => setBookingForm((f) => ({ ...f, scheduled_time: e.target.value }))}
+                    className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:border-lavender-500 focus:ring-0"
+                    placeholder="e.g. 10:00"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                <select
+                  value={bookingForm.status ?? 'pending'}
+                  onChange={(e) => setBookingForm((f) => ({ ...f, status: e.target.value }))}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:border-lavender-500 focus:ring-0"
+                >
+                  <option value="pending">Pending</option>
+                  <option value="confirmed">Confirmed</option>
+                  <option value="completed">Completed</option>
+                  <option value="cancelled">Cancelled</option>
+                  <option value="no_show">No show</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+                <textarea
+                  value={bookingForm.notes ?? ''}
+                  onChange={(e) => setBookingForm((f) => ({ ...f, notes: e.target.value }))}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:border-lavender-500 focus:ring-0"
+                  rows={2}
+                  placeholder="Notes"
+                />
+              </div>
+            </div>
+            <div className="mt-6 flex justify-end gap-3">
+              <button type="button" onClick={() => !savingEntity && setEditingBooking(null)} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-xl">Cancel</button>
+              <button type="button" onClick={saveBookingEdit} disabled={savingEntity === 'booking'} className="px-4 py-2 bg-lavender-600 text-white rounded-xl hover:bg-lavender-700 disabled:opacity-50">{savingEntity === 'booking' ? 'Saving…' : 'Save'}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Payment Modal */}
+      {editingPayment && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={() => !savingEntity && setEditingPayment(null)}>
+          <div className="bg-white rounded-2xl border border-lavender-200 shadow-xl max-w-sm w-full p-6" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Edit payment</h3>
+            {entityError && (
+              <div className="mb-4 p-3 rounded-xl bg-red-50 border border-red-200 text-sm text-red-800">{entityError}</div>
+            )}
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                <select
+                  value={paymentFormStatus}
+                  onChange={(e) => setPaymentFormStatus(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:border-lavender-500 focus:ring-0"
+                >
+                  <option value="pending">Pending</option>
+                  <option value="paid">Paid</option>
+                  <option value="failed">Failed</option>
+                  <option value="refunded">Refunded</option>
+                </select>
+              </div>
+            </div>
+            <div className="mt-6 flex justify-end gap-3">
+              <button type="button" onClick={() => !savingEntity && setEditingPayment(null)} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-xl">Cancel</button>
+              <button type="button" onClick={savePaymentEdit} disabled={savingEntity === 'payment'} className="px-4 py-2 bg-lavender-600 text-white rounded-xl hover:bg-lavender-700 disabled:opacity-50">{savingEntity === 'payment' ? 'Saving…' : 'Save'}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Consent Modal */}
+      {editingConsent && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={() => !savingEntity && setEditingConsent(null)}>
+          <div className="bg-white rounded-2xl border border-lavender-200 shadow-xl max-w-md w-full p-6" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Edit consent record</h3>
+            {entityError && (
+              <div className="mb-4 p-3 rounded-xl bg-red-50 border border-red-200 text-sm text-red-800">{entityError}</div>
+            )}
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                <input
+                  type="email"
+                  value={consentForm.email}
+                  onChange={(e) => setConsentForm((f) => ({ ...f, email: e.target.value }))}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:border-lavender-500 focus:ring-0"
+                  placeholder="email@example.com"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Session type</label>
+                <select
+                  value={consentForm.session_type}
+                  onChange={(e) => setConsentForm((f) => ({ ...f, session_type: e.target.value }))}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:border-lavender-500 focus:ring-0"
+                >
+                  <option value="individual">Individual</option>
+                  <option value="couples">Couples</option>
+                  <option value="family">Family</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Consent version</label>
+                <input
+                  type="text"
+                  value={consentForm.consent_version}
+                  onChange={(e) => setConsentForm((f) => ({ ...f, consent_version: e.target.value }))}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:border-lavender-500 focus:ring-0"
+                  placeholder="e.g. 1.0"
+                />
+              </div>
+            </div>
+            <div className="mt-6 flex justify-end gap-3">
+              <button type="button" onClick={() => !savingEntity && setEditingConsent(null)} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-xl">Cancel</button>
+              <button type="button" onClick={saveConsentEdit} disabled={savingEntity === 'consent'} className="px-4 py-2 bg-lavender-600 text-white rounded-xl hover:bg-lavender-700 disabled:opacity-50">{savingEntity === 'consent' ? 'Saving…' : 'Save'}</button>
             </div>
           </div>
         </div>

@@ -129,7 +129,7 @@ const HomePage = () => {
         <QuickAccess />
         <MentalHealth />
         <CouplesRelationships />
-        <TherapySupport />
+        {/* <TherapySupport /> */}
         <FamilyCounseling />
         <HolisticWellness />
         <SelfHelpTools />

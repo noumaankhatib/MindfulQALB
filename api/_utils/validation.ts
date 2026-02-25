@@ -4,7 +4,7 @@
 
 // Allowed values
 export const ALLOWED_SESSION_TYPES = ['individual', 'couples', 'family', 'free'] as const;
-export const ALLOWED_FORMATS = ['chat', 'audio', 'video'] as const;
+export const ALLOWED_FORMATS = ['chat', 'audio', 'video', 'call'] as const;
 
 // Regex patterns
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;

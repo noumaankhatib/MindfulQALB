@@ -122,14 +122,24 @@ drop policy if exists "Admins can read all bookings" on public.bookings;
 create policy "Admins can read all bookings" on public.bookings for select using (public.is_admin());
 drop policy if exists "Admins can update bookings" on public.bookings;
 create policy "Admins can update bookings" on public.bookings for update using (public.is_admin());
+drop policy if exists "Admins can delete bookings" on public.bookings;
+create policy "Admins can delete bookings" on public.bookings for delete using (public.is_admin());
 
 alter table public.consent_records enable row level security;
 drop policy if exists "Admins can read consent records" on public.consent_records;
 create policy "Admins can read consent records" on public.consent_records for select using (public.is_admin());
+drop policy if exists "Admins can update consent records" on public.consent_records;
+create policy "Admins can update consent records" on public.consent_records for update using (public.is_admin());
+drop policy if exists "Admins can delete consent records" on public.consent_records;
+create policy "Admins can delete consent records" on public.consent_records for delete using (public.is_admin());
 
 alter table public.payments enable row level security;
 drop policy if exists "Admins can read payments" on public.payments;
 create policy "Admins can read payments" on public.payments for select using (public.is_admin());
+drop policy if exists "Admins can update payments" on public.payments;
+create policy "Admins can update payments" on public.payments for update using (public.is_admin());
+drop policy if exists "Admins can delete payments" on public.payments;
+create policy "Admins can delete payments" on public.payments for delete using (public.is_admin());
 
 alter table public.profiles enable row level security;
 drop policy if exists "Users can read own profile" on public.profiles;

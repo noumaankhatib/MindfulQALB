@@ -40,7 +40,8 @@ export const CALCOM_CONFIG = {
   
   // Duration in minutes for each session type
   DURATIONS: {
-    'free': 20,
+    'free': 15,
+    'call': 15,
     'chat': 45,
     'audio': 50,
     'video': 60,
@@ -138,9 +139,9 @@ export const createCalComBooking = async (
     const sessionType = parts[0] || 'individual';
     const format = parts[1] || 'video';
 
-    // Format date as string
+    // Format date as local YYYY-MM-DD (avoid UTC shift from toISOString)
     const dateStr = date instanceof Date
-      ? date.toISOString().split('T')[0]
+      ? `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
       : date;
 
     const body: Record<string, unknown> = {

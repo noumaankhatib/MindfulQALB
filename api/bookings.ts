@@ -45,8 +45,9 @@ const parseEventTypeIds = (): Record<string, string> => {
   }
 };
 
-// Duration in minutes by format (matches frontend config)
-const DURATION_BY_FORMAT: Record<string, number> = {
+// Duration in minutes by raw format (matches frontend config)
+const DURATION_BY_RAW_FORMAT: Record<string, number> = {
+  call: 15,
   chat: 30,
   audio: 45,
   video: 60,
@@ -162,10 +163,17 @@ const insertBookingToSupabase = async (params: {
     requestId,
   } = params;
 
+  const rawFormat = format.toLowerCase();
+  const isFreeSession = sessionType.toLowerCase() === 'free';
   const session_type = toDbSessionType(sessionType);
   const session_format = toDbFormat(format);
-  const duration_minutes = DURATION_BY_FORMAT[format] ?? 60;
+  const duration_minutes = DURATION_BY_RAW_FORMAT[rawFormat] ?? DURATION_BY_RAW_FORMAT[session_format] ?? 60;
   const now = new Date().toISOString();
+
+  const notesRaw = customer.notes ? sanitizeString(customer.notes) : null;
+  const notes = isFreeSession
+    ? (notesRaw ? `[FREE_CONSULTATION] ${notesRaw}` : '[FREE_CONSULTATION]')
+    : notesRaw;
 
   const row = {
     user_id: userId ?? null,
@@ -181,7 +189,7 @@ const insertBookingToSupabase = async (params: {
     customer_name: sanitizeString(customer.name),
     customer_email: customer.email.toLowerCase().trim(),
     customer_phone: customer.phone?.trim() || null,
-    notes: customer.notes ? sanitizeString(customer.notes) : null,
+    notes,
     created_at: now,
     updated_at: now,
   };

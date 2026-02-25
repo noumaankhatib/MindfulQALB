@@ -94,13 +94,13 @@ export const THERAPY_PRICING: TherapyPricingConfig = {
     },
   },
 
-  // Free Consultation - Fixed format (introductory video call)
+  // Free Consultation - Fixed format (introductory call, 15 min)
   free: {
-    video: { 
+    call: { 
       priceINR: 0, 
       priceUSD: 0, 
       enabled: true,
-      duration: '15-20 min',
+      duration: '15 min',
     },
   },
 };

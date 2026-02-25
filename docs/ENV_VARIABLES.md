@@ -54,6 +54,7 @@ Used by the local API server (`npm run dev:api`), Vercel serverless functions (`
 | `CALCOM_API_KEY` | server.js, api/* | Cal.com API key (Cal.com → Settings → Developer → API Keys). For calendar sync. |
 | `CALCOM_EVENT_TYPE_IDS` | server.js, api/* | JSON map of session keys to Cal.com event type IDs, e.g. `{"individual-video":"123","individual-chat":"124"}`. See `docs/CALCOM_SYNC.md`. |
 | `CALCOM_USERNAME` | api/availability.ts | Cal.com username (e.g. `mindfulqalb`). Optional for v2 bookings; used for availability. |
+| `CALCOM_AVAILABILITY_SLUG` | server.js, api/availability.ts | Optional. Event type slug used to fetch available slots (one calendar for all session types). Default: `individual-therapy-video`. |
 | `RAZORPAY_KEY_ID` | server.js, api/payments/* | Razorpay API Key ID (Dashboard → Settings → API Keys). |
 | `RAZORPAY_KEY_SECRET` | server.js, api/payments/* | Razorpay API Key Secret. Never expose in frontend. |
 

@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { handleCorsPrelight, validateMethod } from './_utils/cors.js';
-import { validateSessionType, validateDate } from './_utils/validation.js';
+import { validateDate } from './_utils/validation.js';
 import { rateLimiters } from './_utils/rateLimit.js';
 
 interface TimeSlot {
@@ -44,8 +44,11 @@ const filterAllowedSlots = (slots: TimeSlot[]): TimeSlot[] => {
   });
 };
 
-// Fetch from Cal.com using Authorization header (not URL params)
-const fetchCalComAvailability = async (date: string, sessionType: string): Promise<TimeSlot[]> => {
+// Fetch from Cal.com using Authorization header (not URL params).
+// Use a single canonical event type so slots are common for all session types (one therapist, one calendar).
+const CANONICAL_AVAILABILITY_SLUG = 'individual-therapy-video';
+
+const fetchCalComAvailability = async (date: string, _sessionType?: string): Promise<TimeSlot[]> => {
   const apiKey = process.env.CALCOM_API_KEY;
   const username = process.env.CALCOM_USERNAME || 'mindfulqalb';
   
@@ -54,7 +57,7 @@ const fetchCalComAvailability = async (date: string, sessionType: string): Promi
   }
 
   try {
-    const eventTypeSlug = getEventTypeSlug(sessionType);
+    const eventTypeSlug = process.env.CALCOM_AVAILABILITY_SLUG || CANONICAL_AVAILABILITY_SLUG;
     const url = `https://api.cal.com/v1/slots?` + new URLSearchParams({
       eventTypeSlug,
       username,
@@ -115,16 +118,6 @@ const fetchCalComAvailability = async (date: string, sessionType: string): Promi
   }
 };
 
-const getEventTypeSlug = (sessionType: string): string => {
-  const slugMap: Record<string, string> = {
-    individual: 'individual-therapy',
-    couples: 'couples-therapy',
-    family: 'family-therapy',
-    free: 'free-consultation',
-  };
-  return slugMap[sessionType] || 'individual-therapy';
-};
-
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Handle CORS
   const corsResult = handleCorsPrelight(req, res);
@@ -137,18 +130,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (!validateMethod(req, res, ['POST'])) return;
 
   try {
-    const { date, sessionType: rawSessionType } = req.body;
-    // Frontend may send combined id (e.g. "individual-audio"); use first segment for validation
-    const sessionType =
-      typeof rawSessionType === 'string' && rawSessionType.includes('-')
-        ? rawSessionType.split('-')[0]
-        : rawSessionType ?? 'individual';
-
-    const sessionTypeResult = validateSessionType(sessionType);
-    if (!sessionTypeResult.valid) {
-      return res.status(400).json({ error: sessionTypeResult.error, requestId });
-    }
-
+    const { date } = req.body;
+    // sessionType is accepted but ignored – one set of slots for all types
     const dateResult = validateDate(date);
     if (!dateResult.valid) {
       return res.status(400).json({ error: dateResult.error, requestId });
@@ -166,7 +149,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
-    const slots = await fetchCalComAvailability(date, sessionType);
+    const slots = await fetchCalComAvailability(date);
     
     res.json({
       success: true,

@@ -15,7 +15,7 @@ const PRICING: Record<string, Record<string, number>> = {
   individual: { chat: 499, audio: 899, video: 1299 },
   couples: { audio: 1499, video: 1999 },
   family: { audio: 1799, video: 2499 },
-  free: { chat: 0, audio: 0, video: 0 },
+  free: { call: 0, chat: 0, audio: 0, video: 0 },
 };
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {

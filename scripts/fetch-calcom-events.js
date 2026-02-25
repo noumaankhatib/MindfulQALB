@@ -65,7 +65,7 @@ async function fetchEventTypes() {
     console.log('💡 Suggested mapping format for your sessions:');
     console.log('   Copy the IDs above and map them like this:\n');
     console.log('   {');
-    console.log('     "free-video": "EVENT_ID_HERE",');
+    console.log('     "free-call": "EVENT_ID_HERE",');
     console.log('     "individual-chat": "EVENT_ID_HERE",');
     console.log('     "individual-audio": "EVENT_ID_HERE",');
     console.log('     "individual-video": "EVENT_ID_HERE",');

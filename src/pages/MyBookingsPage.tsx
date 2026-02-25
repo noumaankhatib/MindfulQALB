@@ -7,6 +7,7 @@ import {
   Video,
   Headphones,
   MessageSquare,
+  Phone,
   CreditCard,
   ChevronRight,
   CalendarPlus,
@@ -30,6 +31,7 @@ interface BookingRow {
   status: string;
   customer_name: string;
   customer_email: string;
+  notes: string | null;
   created_at: string;
 }
 
@@ -69,7 +71,7 @@ const MyBookingsPage = () => {
       // Fetch by user_id (primary) or by customer_email (fallback if user_id wasn't stored)
       const { data: byUserId, error: err1 } = await supabase
         .from('bookings')
-        .select('id, session_type, session_format, duration_minutes, scheduled_date, scheduled_time, status, customer_name, customer_email, created_at')
+        .select('id, session_type, session_format, duration_minutes, scheduled_date, scheduled_time, status, customer_name, customer_email, notes, created_at')
         .eq('user_id', user.id)
         .order('scheduled_date', { ascending: false })
         .order('scheduled_time', { ascending: false });
@@ -87,7 +89,7 @@ const MyBookingsPage = () => {
       if (user.email) {
         const { data: byEmail } = await supabase
           .from('bookings')
-          .select('id, session_type, session_format, duration_minutes, scheduled_date, scheduled_time, status, customer_name, customer_email, created_at')
+          .select('id, session_type, session_format, duration_minutes, scheduled_date, scheduled_time, status, customer_name, customer_email, notes, created_at')
           .ilike('customer_email', user.email)
           .order('scheduled_date', { ascending: false })
           .order('scheduled_time', { ascending: false });
@@ -138,6 +140,8 @@ const MyBookingsPage = () => {
         return <Headphones className="w-5 h-5 text-lavender-500" />;
       case 'chat':
         return <MessageSquare className="w-5 h-5 text-lavender-500" />;
+      case 'call':
+        return <Phone className="w-5 h-5 text-lavender-500" />;
       default:
         return <Video className="w-5 h-5 text-lavender-500" />;
     }
@@ -224,6 +228,7 @@ const MyBookingsPage = () => {
             <div className="space-y-4">
               {bookings.map((booking) => {
                 const payment = paymentsByBooking[booking.id];
+                const isFree = booking.notes?.includes('[FREE_CONSULTATION]') || false;
                 return (
                   <motion.div
                     key={booking.id}
@@ -235,14 +240,14 @@ const MyBookingsPage = () => {
                       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                         <div className="flex items-start gap-4">
                           <div className="p-2.5 rounded-xl bg-lavender-50 text-lavender-600 flex-shrink-0">
-                            {getFormatIcon(booking.session_format)}
+                            {isFree ? <Phone className="w-5 h-5 text-lavender-500" /> : getFormatIcon(booking.session_format)}
                           </div>
                           <div>
                             <p className="font-semibold text-gray-900 capitalize">
-                              {booking.session_type} · {booking.session_format}
+                              {isFree ? 'Free Consultation · Call' : `${booking.session_type} · ${booking.session_format}`}
                             </p>
                             <p className="text-sm text-gray-500 mt-0.5">
-                              {new Date(booking.scheduled_date).toLocaleDateString(undefined, {
+                              {new Date(booking.scheduled_date + 'T00:00:00').toLocaleDateString(undefined, {
                                 weekday: 'short',
                                 year: 'numeric',
                                 month: 'short',
