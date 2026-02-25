@@ -368,11 +368,11 @@ const AdminPage = () => {
       customer_name: bookingForm.customer_name,
       customer_email: bookingForm.customer_email,
       customer_phone: bookingForm.customer_phone || null,
-      session_type: bookingForm.session_type,
-      session_format: bookingForm.session_format,
+      session_type: bookingForm.session_type as DbBooking['session_type'],
+      session_format: bookingForm.session_format as DbBooking['session_format'],
       scheduled_date: bookingForm.scheduled_date,
       scheduled_time: bookingForm.scheduled_time,
-      status: bookingForm.status as Booking['status'],
+      status: bookingForm.status as DbBooking['status'],
       notes: bookingForm.notes || null,
       updated_at: new Date().toISOString(),
     }).eq('id', editingBooking.id);
@@ -408,7 +408,7 @@ const AdminPage = () => {
     setSavingEntity('payment');
     setEntityError(null);
     const { error } = await supabase.from('payments').update({
-      status: paymentFormStatus as Payment['status'],
+      status: paymentFormStatus as DbPayment['status'],
       updated_at: new Date().toISOString(),
     }).eq('id', editingPayment.id);
     setSavingEntity(null);
