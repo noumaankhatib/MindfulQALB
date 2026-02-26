@@ -761,28 +761,30 @@ const AdminPage = () => {
           </div>
 
           {/* Tabs */}
-          <div className="flex gap-1 mb-8 p-1 bg-white/80 rounded-2xl border border-lavender-100 shadow-sm w-fit">
+          <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 mb-8">
+            <div className="flex gap-1 p-1 bg-white/80 rounded-2xl border border-lavender-100 shadow-sm w-fit min-w-0">
               {[
-              { id: 'dashboard', label: 'Dashboard', icon: BarChart3 },
-              { id: 'bookings', label: 'Bookings', icon: Calendar },
-              { id: 'payments', label: 'Payments', icon: CreditCard },
-              { id: 'coupons', label: 'Coupons', icon: Tag },
-              { id: 'consent', label: 'Consent', icon: FileCheck },
-              { id: 'users', label: 'Users', icon: Users },
-            ].map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id as typeof activeTab)}
-                className={`flex items-center gap-2 px-5 py-3 rounded-xl font-medium text-sm transition-all ${
-                  activeTab === tab.id
-                    ? 'bg-gradient-to-r from-lavender-600 to-purple-600 text-white shadow-lg shadow-lavender-500/25'
-                    : 'text-gray-600 hover:bg-lavender-50 hover:text-lavender-700'
-                }`}
-              >
-                <tab.icon className="w-4 h-4" />
-                {tab.label}
-              </button>
-            ))}
+                { id: 'dashboard', label: 'Dashboard', icon: BarChart3 },
+                { id: 'bookings', label: 'Bookings', icon: Calendar },
+                { id: 'payments', label: 'Payments', icon: CreditCard },
+                { id: 'coupons', label: 'Coupons', icon: Tag },
+                { id: 'consent', label: 'Consent', icon: FileCheck },
+                { id: 'users', label: 'Users', icon: Users },
+              ].map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id as typeof activeTab)}
+                  className={`flex items-center gap-2 px-4 py-2.5 sm:px-5 sm:py-3 rounded-xl font-medium text-sm whitespace-nowrap transition-all ${
+                    activeTab === tab.id
+                      ? 'bg-gradient-to-r from-lavender-600 to-purple-600 text-white shadow-lg shadow-lavender-500/25'
+                      : 'text-gray-600 hover:bg-lavender-50 hover:text-lavender-700'
+                  }`}
+                >
+                  <tab.icon className="w-4 h-4" />
+                  {tab.label}
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* Dashboard Tab */}
