@@ -4,12 +4,12 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 const ALLOWED_ORIGINS = [
   'https://mindfulqalb.com',
   'https://www.mindfulqalb.com',
-  'https://mindful-qalb.vercel.app',
+  'https://mindfulqalb.vercel.app',
   'https://mindfulqalb.vercel.app',
   // Staging URLs
   'https://mindfulqalb-staging.vercel.app',
-  'https://mindful-qalb-git-staging-noumaankhatibs-projects.vercel.app',
-  'https://mindful-qalb-7av274gjg-noumaankhatibs-projects.vercel.app',
+  'https://mindfulqalb-git-staging-noumaankhatibs-projects.vercel.app',
+  'https://mindfulqalb-7av274gjg-noumaankhatibs-projects.vercel.app',
   // Local development
   'http://localhost:5173',
   'http://localhost:3000',
@@ -26,12 +26,12 @@ if (VERCEL_URL && !ALLOWED_ORIGINS.includes(VERCEL_URL)) {
 const isVercelPreviewUrl = (origin: string): boolean => {
   if (!origin) return false;
   
-  // Match patterns like: mindful-qalb-*.vercel.app or mindfulqalb-*.vercel.app
+  // Match patterns like: mindfulqalb-*.vercel.app or mindfulqalb-*.vercel.app
   // More restrictive: only allow alphanumeric and single hyphens, no consecutive hyphens
-  const vercelPreviewPattern = /^https:\/\/(mindful-qalb|mindfulqalb)(-[a-z0-9]+)*\.vercel\.app$/i;
+  const vercelPreviewPattern = /^https:\/\/(mindfulqalb|mindfulqalb)(-[a-z0-9]+)*\.vercel\.app$/i;
   
   // More restrictive: require project name prefix to prevent attacker-controlled subdomains
-  const projectPreviewPattern = /^https:\/\/mindful-qalb(-[a-z0-9]+)*-noumaankhatibs-projects\.vercel\.app$/i;
+  const projectPreviewPattern = /^https:\/\/mindfulqalb(-[a-z0-9]+)*-noumaankhatibs-projects\.vercel\.app$/i;
   
   return vercelPreviewPattern.test(origin) || projectPreviewPattern.test(origin);
 };

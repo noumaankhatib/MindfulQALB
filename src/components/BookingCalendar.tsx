@@ -3,7 +3,7 @@ import { motion } from 'framer-motion'
 import { Calendar, Clock, Shield, CheckCircle, ExternalLink, MessageCircle, Video, Phone } from 'lucide-react'
 
 // Cal.com username - update this with your actual Cal.com username once set up
-const CAL_USERNAME = 'mindful-qalb'
+const CAL_USERNAME = 'mindfulqalb'
 
 // Event type slugs - update these after creating event types in Cal.com
 const EVENT_TYPES = {

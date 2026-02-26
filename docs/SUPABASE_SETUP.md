@@ -226,14 +226,14 @@ Restart the API after changing env vars.
 
 ### Google login redirects to Vercel when running locally
 
-- **Cause:** Supabase only redirects OAuth (e.g. Google) to URLs that are in **Redirect URLs**. If your local URL (e.g. `http://localhost:5178`) is not listed, Supabase falls back to **Site URL** (often set to production, e.g. `https://mindful-qalb.vercel.app`).
+- **Cause:** Supabase only redirects OAuth (e.g. Google) to URLs that are in **Redirect URLs**. If your local URL (e.g. `http://localhost:5178`) is not listed, Supabase falls back to **Site URL** (often set to production, e.g. `https://mindfulqalb.vercel.app`).
 - **Fix:** In Supabase Dashboard go to **Authentication → URL Configuration**:
   1. Under **Redirect URLs**, add your local URLs (one per line), for example:
      - `http://localhost:5173/`
      - `http://localhost:5174/`
      - `http://localhost:5178/`
      - `http://127.0.0.1:5173/`
-  2. Keep your production URL in the list too (e.g. `https://mindful-qalb.vercel.app/`).
+  2. Keep your production URL in the list too (e.g. `https://mindfulqalb.vercel.app/`).
   3. **Site URL** can stay as your production URL; the **Redirect URLs** list is what allows localhost.
 - After saving, try Google sign-in again on `http://localhost:5178` (or whatever port Vite is using). The app already sends `redirectTo: window.location.origin`, so once localhost is allowed, Supabase will redirect back to localhost.
 
