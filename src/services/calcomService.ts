@@ -16,7 +16,7 @@ import { logWarn, logError } from '../lib/logger';
 // Cal.com configuration (public info only - no secrets)
 export const CALCOM_CONFIG = {
   // Your Cal.com username (public)
-  USERNAME: 'mindful-qalb',
+  USERNAME: 'mindfulqalb',
   
   // Event type slugs for Cal.com
   EVENT_TYPES: {

@@ -83,13 +83,17 @@ const createCalComBooking = async (
   const combinedKey = `${sessionType}-${format}`;
 
   if (!apiKey || apiKey.length < 20) {
+    console.error(`[${requestId}] CALCOM_API_KEY missing or too short (length: ${apiKey?.length ?? 0})`);
     return { success: false, error: 'Cal.com API key not set. Add CALCOM_API_KEY in environment.' };
   }
 
   const eventTypeId = eventTypeIds[combinedKey] ?? eventTypeIds[sessionType];
   if (!eventTypeId) {
+    console.error(`[${requestId}] No event type ID for "${combinedKey}". Available keys: ${Object.keys(eventTypeIds).join(', ') || '(none – CALCOM_EVENT_TYPE_IDS is empty)'}`);
     return { success: false, error: `Cal.com event type missing for "${combinedKey}". Set CALCOM_EVENT_TYPE_IDS (e.g. {"individual-video":"123"}).` };
   }
+
+  console.log(`[${requestId}] Creating Cal.com booking: eventTypeId=${eventTypeId}, key=${combinedKey}, date=${date}, time=${time}`);
 
   try {
     const startTime = parseTimeToUTCISO(date, time);
@@ -283,14 +287,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     if (!result.success) {
-      console.error(`[${requestId}] Cal.com booking failed (booking saved to DB):`, result.error);
-      // Still return 200 if we saved to Supabase so user sees confirmation and booking in admin
+      console.error(`[${requestId}] Cal.com booking FAILED: ${result.error}. DB row: ${dbRow ? dbRow.id : 'none'}`);
       if (dbRow) {
         return res.json({
           success: true,
           bookingId: dbRow.id,
           databaseId: dbRow.id,
-          message: 'Booking saved. Calendar sync may follow.',
+          calcomSynced: false,
+          message: 'Booking saved. Calendar sync failed – please verify on Cal.com dashboard.',
+          calcomError: result.error,
           requestId,
         });
       }
@@ -301,10 +306,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
+    console.log(`[${requestId}] Booking created: calcom=${bookingId}, db=${dbRow?.id ?? 'none'}`);
     res.json({
       success: true,
       bookingId,
       databaseId: dbRow?.id ?? undefined,
+      calcomSynced: true,
       message: 'Booking created successfully',
       requestId,
     });

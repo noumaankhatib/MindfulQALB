@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Heart, Clock, CheckCircle, ArrowRight, Star, Quote, FileText, CreditCard, Sparkles, ChevronDown, IndianRupee } from 'lucide-react'
-import profileImage from '../assets/images/profile_final.jpg'
+import profileImage from '../assets/images/profile_final_optimized.jpg'
 
 const AboutTherapist = () => {
   const [showMoreDetails, setShowMoreDetails] = useState(false)

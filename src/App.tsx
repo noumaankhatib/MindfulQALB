@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, lazy, Suspense } from 'react'
 import { createBrowserRouter, RouterProvider, Navigate, useLocation } from 'react-router-dom'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { AppErrorBoundary, NotFoundPage } from './components/AppErrorBoundary'
@@ -24,12 +24,22 @@ import AboutEthics from './components/AboutEthics'
 import Footer from './components/Footer'
 import FAQ from './components/FAQ'
 import Chatbot from './components/Chatbot'
-import PrivacyPolicyPage from './pages/PrivacyPolicyPage'
-import TermsOfServicePage from './pages/TermsOfServicePage'
-import MyBookingsPage from './pages/MyBookingsPage'
-import ProfilePage from './pages/ProfilePage'
-import AdminPage from './pages/AdminPage'
-import ContactPage from './pages/ContactPage'
+
+const PrivacyPolicyPage = lazy(() => import('./pages/PrivacyPolicyPage'))
+const TermsOfServicePage = lazy(() => import('./pages/TermsOfServicePage'))
+const MyBookingsPage = lazy(() => import('./pages/MyBookingsPage'))
+const ProfilePage = lazy(() => import('./pages/ProfilePage'))
+const AdminPage = lazy(() => import('./pages/AdminPage'))
+const ContactPage = lazy(() => import('./pages/ContactPage'))
+
+const LazyFallback = () => (
+  <div className="min-h-screen flex items-center justify-center bg-gray-50">
+    <div className="animate-pulse flex flex-col items-center gap-3">
+      <div className="w-10 h-10 rounded-full border-2 border-lavender-200 border-t-lavender-600 animate-spin" />
+      <p className="text-sm text-gray-500">Loading...</p>
+    </div>
+  </div>
+)
 
 // Home page component
 const HomePage = () => {
@@ -171,13 +181,13 @@ const router = createBrowserRouter(
       errorElement: <AppErrorBoundary />,
       children: [
         { path: '/', element: <HomePage /> },
-        { path: '/privacy', element: <PrivacyPolicyPage /> },
-        { path: '/terms', element: <TermsOfServicePage /> },
-        { path: '/contact', element: <ContactPage /> },
+        { path: '/privacy', element: <Suspense fallback={<LazyFallback />}><PrivacyPolicyPage /></Suspense> },
+        { path: '/terms', element: <Suspense fallback={<LazyFallback />}><TermsOfServicePage /></Suspense> },
+        { path: '/contact', element: <Suspense fallback={<LazyFallback />}><ContactPage /></Suspense> },
         { path: '/bookings', element: <Navigate to="/#get-help" replace /> },
-        { path: '/my-bookings', element: <MyBookingsPage /> },
-        { path: '/profile', element: <ProfilePage /> },
-        { path: '/admin', element: <AdminRoute><AdminPage /></AdminRoute> },
+        { path: '/my-bookings', element: <Suspense fallback={<LazyFallback />}><MyBookingsPage /></Suspense> },
+        { path: '/profile', element: <Suspense fallback={<LazyFallback />}><ProfilePage /></Suspense> },
+        { path: '/admin', element: <AdminRoute><Suspense fallback={<LazyFallback />}><AdminPage /></Suspense></AdminRoute> },
         { path: '*', element: <NotFoundPage /> },
       ],
     },

@@ -8,6 +8,14 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 if (!supabaseUrl || !supabaseAnonKey) {
   logWarn('Supabase credentials not configured. Auth features will be disabled.');
 }
+
+if (supabaseUrl && !supabaseUrl.includes('placeholder') && typeof document !== 'undefined') {
+  const link = document.createElement('link');
+  link.rel = 'preconnect';
+  link.href = supabaseUrl;
+  link.crossOrigin = 'anonymous';
+  document.head.appendChild(link);
+}
 const isPlaceholder = !supabaseUrl || supabaseUrl.includes('placeholder');
 if (import.meta.env.PROD && isPlaceholder) {
   logErrorCritical('Supabase URL is missing or still a placeholder. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in Vercel Environment Variables and redeploy.');

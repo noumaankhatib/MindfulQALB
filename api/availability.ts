@@ -48,12 +48,13 @@ const filterAllowedSlots = (slots: TimeSlot[]): TimeSlot[] => {
 // Use a single canonical event type so slots are common for all session types (one therapist, one calendar).
 const CANONICAL_AVAILABILITY_SLUG = 'individual-therapy-video';
 
-const fetchCalComAvailability = async (date: string, _sessionType?: string): Promise<TimeSlot[]> => {
+const fetchCalComAvailability = async (date: string, _sessionType?: string, requestId?: string): Promise<{ slots: TimeSlot[]; source: 'calcom' | 'fallback'; error?: string }> => {
   const apiKey = process.env.CALCOM_API_KEY;
   const username = process.env.CALCOM_USERNAME || 'mindfulqalb';
   
   if (!apiKey) {
-    return getMockSlots();
+    console.warn(`[${requestId}] CALCOM_API_KEY not set – returning fallback slots`);
+    return { slots: getMockSlots(), source: 'fallback', error: 'CALCOM_API_KEY not configured' };
   }
 
   try {
@@ -65,6 +66,8 @@ const fetchCalComAvailability = async (date: string, _sessionType?: string): Pro
       endTime: `${date}T23:59:59.999Z`,
     });
 
+    console.log(`[${requestId}] Cal.com availability: username=${username}, slug=${eventTypeSlug}, date=${date}`);
+
     const response = await fetch(url, {
       headers: {
         'Authorization': `Bearer ${apiKey}`,
@@ -73,13 +76,16 @@ const fetchCalComAvailability = async (date: string, _sessionType?: string): Pro
     });
     
     if (!response.ok) {
-      return getMockSlots();
+      const errorBody = await response.text().catch(() => '');
+      console.error(`[${requestId}] Cal.com slots API error ${response.status}: ${errorBody}`);
+      return { slots: getMockSlots(), source: 'fallback', error: `Cal.com API returned ${response.status}` };
     }
 
     const data = await response.json();
     const dateSlots = data.slots?.[date] || [];
     
-    // Map Cal.com slots to our format
+    console.log(`[${requestId}] Cal.com returned ${dateSlots.length} raw slots for ${date}`);
+
     const slots: TimeSlot[] = dateSlots.map((slot: CalComSlot) => {
       const time = new Date(slot.time);
       return {
@@ -93,16 +99,12 @@ const fetchCalComAvailability = async (date: string, _sessionType?: string): Pro
       };
     });
 
-    // Filter to only allowed time slots
     const filteredSlots = filterAllowedSlots(slots);
     
-    // If Cal.com returned slots but none match our allowed times,
-    // return mock slots with all marked as unavailable (booked on Cal.com)
     if (slots.length > 0 && filteredSlots.length === 0) {
-      return getMockSlots().map(slot => ({ ...slot, available: false }));
+      return { slots: getMockSlots().map(slot => ({ ...slot, available: false })), source: 'calcom' };
     }
     
-    // Mark slots that are NOT in Cal.com response as unavailable (booked)
     const calComAvailableTimes = filteredSlots.map(s => s.time.toLowerCase());
     const allSlots = getMockSlots().map(slot => ({
       ...slot,
@@ -112,9 +114,11 @@ const fetchCalComAvailability = async (date: string, _sessionType?: string): Pro
       ),
     }));
 
-    return allSlots;
-  } catch {
-    return getMockSlots();
+    return { slots: allSlots, source: 'calcom' };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Unknown error';
+    console.error(`[${requestId}] Cal.com availability fetch failed:`, msg);
+    return { slots: getMockSlots(), source: 'fallback', error: msg };
   }
 };
 
@@ -149,12 +153,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
-    const slots = await fetchCalComAvailability(date);
+    const result = await fetchCalComAvailability(date, undefined, requestId);
     
     res.json({
       success: true,
       date,
-      slots,
+      slots: result.slots,
+      source: result.source,
+      ...(result.error ? { calcomError: result.error } : {}),
       requestId,
     });
   } catch (error) {

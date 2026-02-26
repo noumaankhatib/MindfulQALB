@@ -53,16 +53,28 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       return;
     }
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!mountedRef.current) return;
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        fetchProfile(session.user.id);
-      } else {
-        setLoading(false);
+    const initSession = async (attempt = 0) => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!mountedRef.current) return;
+        setSession(session);
+        setUser(session?.user ?? null);
+        if (session?.user) {
+          fetchProfile(session.user.id);
+        } else {
+          setLoading(false);
+        }
+      } catch (err) {
+        if (!mountedRef.current) return;
+        if (attempt < 2) {
+          setTimeout(() => initSession(attempt + 1), 1000 * (attempt + 1));
+        } else {
+          logError('Failed to get session after retries:', err);
+          setLoading(false);
+        }
       }
-    });
+    };
+    initSession();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
@@ -81,35 +93,61 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     return () => subscription.unsubscribe();
   }, [isConfigured]);
 
-  const fetchProfile = async (userId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .single();
+  const fetchProfile = async (userId: string, retries = 3) => {
+    for (let attempt = 0; attempt <= retries; attempt++) {
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', userId)
+          .single();
 
-      if (!mountedRef.current) return;
-      if (error) {
-        logError('Error fetching profile:', error);
-      } else {
-        setProfile(data);
+        if (!mountedRef.current) return;
+        if (error) {
+          if (attempt < retries) {
+            await new Promise(r => setTimeout(r, 500 * Math.pow(2, attempt)));
+            continue;
+          }
+          logError('Error fetching profile after retries:', error);
+        } else {
+          setProfile(data);
+        }
+        break;
+      } catch (err) {
+        if (!mountedRef.current) return;
+        if (attempt < retries) {
+          await new Promise(r => setTimeout(r, 500 * Math.pow(2, attempt)));
+          continue;
+        }
+        logError('Error fetching profile:', err);
+        break;
       }
-    } catch (err) {
-      if (mountedRef.current) logError('Error fetching profile:', err);
-    } finally {
-      if (mountedRef.current) setLoading(false);
     }
+    if (mountedRef.current) setLoading(false);
   };
 
   const signInWithGoogle = async () => {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: `${window.location.origin}/`,
-      },
-    });
-    return { error };
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 15000);
+
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/`,
+        },
+      });
+
+      clearTimeout(timeout);
+      return { error };
+    } catch (err) {
+      const isNetworkError = err instanceof Error &&
+        (err.name === 'AbortError' || err.message.includes('fetch') || err.message.includes('network') || err.message.includes('Failed'));
+      const message = isNetworkError
+        ? 'Connection timed out. Please check your internet connection and try again.'
+        : (err instanceof Error ? err.message : 'Sign in failed');
+      return { error: { message, name: 'AuthApiError', status: 0 } as AuthError };
+    }
   };
 
   const signInWithEmail = async (email: string, password: string) => {

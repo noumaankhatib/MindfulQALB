@@ -45,9 +45,14 @@ export const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
   const handleGoogleSignIn = async () => {
     setLoading(true);
     setError(null);
-    const { error } = await signInWithGoogle();
-    if (error) {
-      setError(error.message);
+    try {
+      const { error } = await signInWithGoogle();
+      if (error) {
+        setError(error.message);
+        setLoading(false);
+      }
+    } catch {
+      setError('Unable to connect. Please check your internet and try again.');
       setLoading(false);
     }
   };

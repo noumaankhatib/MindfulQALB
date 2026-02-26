@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion'
 import { ArrowRight, Shield, Heart, Users, Sparkles } from 'lucide-react'
-import heroMainImage from '../assets/images/hero_main.jpeg'
+import heroMainImage from '../assets/images/hero_main_optimized.jpeg'
 
 // Therapy-themed wellness images from Unsplash (royalty-free)
 const heroImages = {
