@@ -99,8 +99,10 @@ app.get('/api/health', (req, res) => {
 // Allowed time slots (same for all session types – one therapist, one calendar)
 const ALLOWED_SLOTS = ['9:00 AM', '10:00 AM', '5:00 PM', '6:00 PM', '7:00 PM', '8:00 PM'];
 
-// Single canonical event type for availability – slots are common for all types (individual, couples, family, chat, video, audio)
-const AVAILABILITY_EVENT_SLUG = process.env.CALCOM_AVAILABILITY_SLUG || 'individual-therapy-video';
+// Use the shortest event type for availability so we get granular :00 marks matching ALLOWED_SLOTS
+const AVAILABILITY_EVENT_SLUG = process.env.CALCOM_AVAILABILITY_SLUG || 'free-consultation';
+
+const normalize = (t) => String(t).replace(/\s+/g, ' ').trim().toLowerCase();
 
 async function fetchCalComAvailability(date) {
   const apiKey = process.env.CALCOM_API_KEY?.trim();
@@ -118,14 +120,14 @@ async function fetchCalComAvailability(date) {
     if (!response.ok) return null;
     const data = await response.json();
     const dateSlots = data.slots?.[date] || [];
-    const normalized = (t) => String(t).replace(/\s+/g, ' ').trim().toLowerCase();
-    const availableTimes = dateSlots.map((slot) => {
-      const d = new Date(slot.time);
-      return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'Asia/Kolkata' });
-    }).map(normalized);
-    return getMockSlots().map((slot) => ({
-      ...slot,
-      available: availableTimes.some((t) => t === normalized(slot.time) || normalized(slot.time).replace(':00', '') === t.replace(':00', '')),
+    const calcomTimes = new Set(
+      dateSlots.map((slot) =>
+        normalize(new Date(slot.time).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'Asia/Kolkata' }))
+      )
+    );
+    return ALLOWED_SLOTS.map((time) => ({
+      time,
+      available: calcomTimes.has(normalize(time)),
     }));
   } catch (e) {
     return null;

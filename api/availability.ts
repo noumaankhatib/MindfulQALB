@@ -19,18 +19,18 @@ const isWeekend = (dateString: string): boolean => {
   return day === 0 || day === 6;
 };
 
-// Fallback slots when Cal.com API is unavailable
-const getFallbackSlots = (): TimeSlot[] => [
-  { time: '9:00 AM', available: true },
-  { time: '10:00 AM', available: true },
-  { time: '5:00 PM', available: true },
-  { time: '6:00 PM', available: true },
-  { time: '7:00 PM', available: true },
-  { time: '8:00 PM', available: true },
-];
+// Only these time slots are offered to users (therapist's preferred hours)
+const ALLOWED_SLOTS = ['9:00 AM', '10:00 AM', '5:00 PM', '6:00 PM', '7:00 PM', '8:00 PM'];
 
-// Use a single canonical event type so slots are common for all session types (one therapist, one calendar).
-const CANONICAL_AVAILABILITY_SLUG = 'individual-therapy-video';
+const getAllowedSlots = (allAvailable: boolean): TimeSlot[] =>
+  ALLOWED_SLOTS.map(time => ({ time, available: allAvailable }));
+
+// Use the shortest event type for availability checking so we get the most granular
+// slot start times. This ensures :00 marks appear (e.g. 9:00 AM, 5:00 PM) which
+// align with ALLOWED_SLOTS. Longer events may only show :30 marks due to IST offset.
+const CANONICAL_AVAILABILITY_SLUG = 'free-consultation';
+
+const normalize = (t: string) => t.replace(/\s+/g, ' ').trim().toLowerCase();
 
 const fetchCalComAvailability = async (date: string, _sessionType?: string, requestId?: string): Promise<{ slots: TimeSlot[]; source: 'calcom' | 'fallback'; error?: string }> => {
   const apiKey = process.env.CALCOM_API_KEY?.trim();
@@ -38,7 +38,7 @@ const fetchCalComAvailability = async (date: string, _sessionType?: string, requ
   
   if (!apiKey) {
     console.warn(`[${requestId}] CALCOM_API_KEY not set – returning fallback slots`);
-    return { slots: getFallbackSlots(), source: 'fallback', error: 'CALCOM_API_KEY not configured' };
+    return { slots: getAllowedSlots(true), source: 'fallback', error: 'CALCOM_API_KEY not configured' };
   }
 
   try {
@@ -61,7 +61,7 @@ const fetchCalComAvailability = async (date: string, _sessionType?: string, requ
     if (!response.ok) {
       const errorBody = await response.text().catch(() => '');
       console.error(`[${requestId}] Cal.com slots API error ${response.status}: ${errorBody}`);
-      return { slots: getFallbackSlots(), source: 'fallback', error: `Cal.com API returned ${response.status}` };
+      return { slots: getAllowedSlots(true), source: 'fallback', error: `Cal.com API returned ${response.status}` };
     }
 
     const data = await response.json();
@@ -69,24 +69,31 @@ const fetchCalComAvailability = async (date: string, _sessionType?: string, requ
     
     console.log(`[${requestId}] Cal.com returned ${dateSlots.length} raw slots for ${date}`);
 
-    const slots: TimeSlot[] = dateSlots.map((slot: CalComSlot) => {
-      const time = new Date(slot.time);
-      return {
-        time: time.toLocaleTimeString('en-US', {
+    // Convert Cal.com UTC times to IST display strings
+    const calcomTimes = new Set(
+      dateSlots.map((slot: CalComSlot) =>
+        normalize(new Date(slot.time).toLocaleTimeString('en-US', {
           hour: 'numeric',
           minute: '2-digit',
           hour12: true,
           timeZone: 'Asia/Kolkata',
-        }),
-        available: true,
-      };
-    });
+        }))
+      )
+    );
+
+    // Filter ALLOWED_SLOTS: mark available only when Cal.com has a matching slot
+    const slots: TimeSlot[] = ALLOWED_SLOTS.map(time => ({
+      time,
+      available: calcomTimes.has(normalize(time)),
+    }));
+
+    console.log(`[${requestId}] Filtered slots: ${slots.filter(s => s.available).map(s => s.time).join(', ') || 'none'}`);
 
     return { slots, source: 'calcom' };
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Unknown error';
     console.error(`[${requestId}] Cal.com availability fetch failed:`, msg);
-    return { slots: getFallbackSlots(), source: 'fallback', error: msg };
+    return { slots: getAllowedSlots(true), source: 'fallback', error: msg };
   }
 };
 
