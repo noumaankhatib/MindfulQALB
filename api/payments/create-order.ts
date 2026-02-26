@@ -44,6 +44,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const sessionType = body.sessionType;
     const format = body.format;
     const couponCode = body.couponCode ?? body.coupon_code ?? '';
+    const customerName = typeof body.customerName === 'string' ? body.customerName.trim() : '';
+    const customerEmail = typeof body.customerEmail === 'string' ? body.customerEmail.trim().toLowerCase() : '';
+    const customerPhone = typeof body.customerPhone === 'string' ? body.customerPhone.trim() : '';
 
     const sessionTypeResult = validateSessionType(sessionType);
     if (!sessionTypeResult.valid) {
@@ -148,12 +151,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const supabase = getSupabaseServer();
     if (supabase) {
+      const meta: Record<string, unknown> = {};
+      if (couponMeta) {
+        meta.coupon_id = couponMeta.coupon_id;
+        meta.coupon_code = couponMeta.coupon_code;
+        meta.discount_paise = couponMeta.discount_paise;
+      }
+      if (customerName) meta.customer_name = customerName;
+      if (customerEmail) meta.customer_email = customerEmail;
+      if (customerPhone) meta.customer_phone = customerPhone;
+
       const { error: insertErr } = await supabase.from('payments').insert({
         razorpay_order_id: order.id,
         amount_paise: amountPaise,
         currency: 'INR',
         status: 'pending',
-        metadata: couponMeta ? { coupon_id: couponMeta.coupon_id, coupon_code: couponMeta.coupon_code, discount_paise: couponMeta.discount_paise } : {},
+        metadata: meta,
       });
       if (insertErr) console.error(`[${requestId}] Payment row insert failed:`, insertErr.message);
     }

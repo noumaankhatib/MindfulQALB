@@ -71,7 +71,7 @@ export const setCorsHeaders = (req: VercelRequest, res: VercelResponse): string 
   const allowedOrigin = isAllowed ? origin : ALLOWED_ORIGINS[0];
   
   res.setHeader('Access-Control-Allow-Origin', allowedOrigin);
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Request-ID');
   res.setHeader('Access-Control-Allow-Credentials', 'true');
   

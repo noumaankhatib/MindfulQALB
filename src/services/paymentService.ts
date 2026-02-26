@@ -116,7 +116,10 @@ export const processRazorpayPayment = async (
   const format = session.id?.split('-')[1] || 'video';
   const rawCoupon = options?.couponCode?.trim() || '';
   const couponCodeToSend = rawCoupon ? rawCoupon.toUpperCase() : undefined;
-  const body: { sessionType: string; format: string; couponCode?: string; coupon_code?: string } = { sessionType, format };
+  const body: Record<string, unknown> = { sessionType, format };
+  if (customerInfo.name) body.customerName = customerInfo.name;
+  if (customerInfo.email) body.customerEmail = customerInfo.email;
+  if (customerInfo.phone) body.customerPhone = customerInfo.phone;
   if (couponCodeToSend) {
     body.couponCode = couponCodeToSend;
     body.coupon_code = couponCodeToSend;

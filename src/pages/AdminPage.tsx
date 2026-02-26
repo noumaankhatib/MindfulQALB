@@ -409,7 +409,6 @@ const AdminPage = () => {
     setEntityError(null);
     const { error } = await supabase.from('payments').update({
       status: paymentFormStatus as DbPayment['status'],
-      updated_at: new Date().toISOString(),
     }).eq('id', editingPayment.id);
     setSavingEntity(null);
     if (error) {
@@ -1201,8 +1200,9 @@ const AdminPage = () => {
                     <tbody className="divide-y divide-lavender-100">
                       {payments.map((payment) => {
                         const linkedBooking = payment.booking_id ? bookings.find((b) => b.id === payment.booking_id) : null;
-                        const customerName = linkedBooking?.customer_name ?? '–';
-                        const customerEmail = linkedBooking?.customer_email ?? '';
+                        const meta = (payment as unknown as Record<string, unknown>).metadata as Record<string, unknown> | undefined;
+                        const customerName = linkedBooking?.customer_name ?? (typeof meta?.customer_name === 'string' ? meta.customer_name : '–');
+                        const customerEmail = linkedBooking?.customer_email ?? (typeof meta?.customer_email === 'string' ? meta.customer_email : '');
                         return (
                         <tr key={payment.id} className="hover:bg-lavender-50/30 transition-colors">
                           <td className="px-4 py-4 w-12">

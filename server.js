@@ -242,6 +242,9 @@ app.post('/api/payments/create-order', async (req, res) => {
   const format = body.format;
   const couponCode = body.couponCode ?? body.coupon_code ?? '';
   const code = typeof couponCode === 'string' ? couponCode.trim().toUpperCase() : '';
+  const customerName = typeof body.customerName === 'string' ? body.customerName.trim() : '';
+  const customerEmail = typeof body.customerEmail === 'string' ? body.customerEmail.trim().toLowerCase() : '';
+  const customerPhone = typeof body.customerPhone === 'string' ? body.customerPhone.trim() : '';
 
   const setCouponHeaders = (received, applied) => {
     res.setHeader('X-Coupon-Received', received ? 'true' : 'false');
@@ -356,12 +359,22 @@ app.post('/api/payments/create-order', async (req, res) => {
 
     const supabase = getSupabase();
     if (supabase) {
+      const meta = {};
+      if (couponMeta) {
+        meta.coupon_id = couponMeta.coupon_id;
+        meta.coupon_code = couponMeta.coupon_code;
+        meta.discount_paise = couponMeta.discount_paise;
+      }
+      if (customerName) meta.customer_name = customerName;
+      if (customerEmail) meta.customer_email = customerEmail;
+      if (customerPhone) meta.customer_phone = customerPhone;
+
       const { error: insertErr } = await supabase.from('payments').insert({
         razorpay_order_id: order.id,
         amount_paise: amountPaise,
         currency: 'INR',
         status: 'pending',
-        metadata: couponMeta ? { coupon_id: couponMeta.coupon_id, coupon_code: couponMeta.coupon_code, discount_paise: couponMeta.discount_paise } : {},
+        metadata: meta,
       });
       if (insertErr) console.error('Payment row insert failed:', insertErr.message);
     }
