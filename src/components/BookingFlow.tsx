@@ -25,7 +25,7 @@ import {
 import { SessionRecommendation } from '../data/chatbotFlow';
 import { useGeolocation, formatPrice } from '../hooks/useGeolocation';
 import { useAuth } from '../contexts/AuthContext';
-import { isSupabaseConfigured } from '../lib/supabase';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { processPayment, isPaymentConfigured, isTestMode, validateCoupon } from '../services/paymentService';
 import { AVAILABILITY_CONFIG } from '../config/paymentConfig';
 import { getPricing, isFormatEnabled, getDuration } from '../config/pricingConfig';
@@ -352,6 +352,26 @@ const BookingFlow = ({ session, isOpen, onClose }: BookingFlowProps) => {
     }
   }, [selectedDate]);
 
+  const parseSlotTo24h = (timeStr: string): number => {
+    const match = timeStr.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+    if (!match) return -1;
+    let hours = parseInt(match[1], 10);
+    const minutes = parseInt(match[2], 10);
+    const period = match[3].toUpperCase();
+    if (period === 'AM' && hours === 12) hours = 0;
+    else if (period === 'PM' && hours !== 12) hours += 12;
+    return hours * 60 + minutes;
+  };
+
+  const isSlotInPast = (slotTime: string, date: Date): boolean => {
+    const now = new Date();
+    if (date.toDateString() !== now.toDateString()) return false;
+    const slotMinutes = parseSlotTo24h(slotTime);
+    if (slotMinutes < 0) return false;
+    const nowMinutes = now.getHours() * 60 + now.getMinutes();
+    return slotMinutes <= nowMinutes;
+  };
+
   // Get booked slots from sessionStorage (for local fallback)
   const getLocalBookedSlots = (date: Date): string[] => {
     try {
@@ -370,6 +390,24 @@ const BookingFlow = ({ session, isOpen, onClose }: BookingFlowProps) => {
     }
   };
 
+  const getSupabaseBookedSlots = async (date: Date): Promise<string[]> => {
+    if (!isSupabaseConfigured()) return [];
+    try {
+      const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+      const { data, error } = await supabase
+        .from('bookings')
+        .select('scheduled_time')
+        .eq('scheduled_date', dateStr)
+        .in('status', ['confirmed', 'pending']);
+      if (error || !data) return [];
+      return data
+        .map((b: { scheduled_time: string | null }) => b.scheduled_time)
+        .filter(Boolean) as string[];
+    } catch {
+      return [];
+    }
+  };
+
   const loadAvailableSlots = async () => {
     if (!selectedDate || !selectedTherapyType) return;
     
@@ -380,43 +418,27 @@ const BookingFlow = ({ session, isOpen, onClose }: BookingFlowProps) => {
     const canonicalSessionType = 'individual';
 
     try {
-      // Check if Cal.com is configured
+      const localBookedSlots = getLocalBookedSlots(selectedDate);
+      const supabaseBookedSlots = await getSupabaseBookedSlots(selectedDate);
+      const allBookedSlots = [...new Set([...localBookedSlots, ...supabaseBookedSlots])];
+
+      const applyFilters = (slots: { time: string; available: boolean }[]) =>
+        slots
+          .filter(slot => !isSlotInPast(slot.time, selectedDate))
+          .map(slot => ({
+            ...slot,
+            available: slot.available && !allBookedSlots.includes(slot.time),
+            booked: !slot.available || allBookedSlots.includes(slot.time),
+          }));
+
       if (isCalComConfigured()) {
-        // Fetch real availability (same slots for chat, video, audio, couples, etc.)
         const calSlots = await fetchCalComAvailability(selectedDate, canonicalSessionType);
-        
-        // Also check local bookings as backup
-        const localBookedSlots = getLocalBookedSlots(selectedDate);
-        
-        const slotsWithAvailability = calSlots.map(slot => ({
-          ...slot,
-          available: slot.available && !localBookedSlots.includes(slot.time),
-          booked: !slot.available || localBookedSlots.includes(slot.time),
-        }));
-        
-        setAvailableSlots(slotsWithAvailability);
+        setAvailableSlots(applyFilters(calSlots));
       } else if (AVAILABILITY_CONFIG.USE_MOCK_AVAILABILITY) {
-        // Use mock slots when Cal.com is not configured
         await new Promise((resolve) => setTimeout(resolve, 500));
-        
-        const localBookedSlots = getLocalBookedSlots(selectedDate);
-        
-        const slotsWithAvailability = AVAILABILITY_CONFIG.MOCK_SLOTS.map(slot => ({
-          ...slot,
-          available: slot.available && !localBookedSlots.includes(slot.time),
-          booked: localBookedSlots.includes(slot.time),
-        }));
-        
-        setAvailableSlots(slotsWithAvailability);
+        setAvailableSlots(applyFilters(AVAILABILITY_CONFIG.MOCK_SLOTS));
       } else {
-        // Fallback to mock slots
-        const localBookedSlots = getLocalBookedSlots(selectedDate);
-        const slotsWithAvailability = AVAILABILITY_CONFIG.MOCK_SLOTS.map(slot => ({
-          ...slot,
-          available: slot.available && !localBookedSlots.includes(slot.time),
-          booked: localBookedSlots.includes(slot.time),
-        }));
-        setAvailableSlots(slotsWithAvailability);
+        setAvailableSlots(applyFilters(AVAILABILITY_CONFIG.MOCK_SLOTS));
       }
     } catch {
       setError('Failed to load available slots. Please try again.');
@@ -1205,6 +1227,12 @@ const BookingFlow = ({ session, isOpen, onClose }: BookingFlowProps) => {
                             <div className="flex items-center justify-center py-8">
                               <Loader2 className="w-6 h-6 text-lavender-500 animate-spin" />
                               <span className="ml-2 text-gray-600">Loading slots...</span>
+                            </div>
+                          ) : availableSlots.length === 0 ? (
+                            <div className="text-center py-8 text-gray-500">
+                              <Clock className="w-8 h-8 mx-auto mb-2 text-gray-400" />
+                              <p className="text-sm font-medium">No available slots for this date</p>
+                              <p className="text-xs mt-1">Please select another day</p>
                             </div>
                           ) : (
                             <div className="grid grid-cols-3 gap-2">
