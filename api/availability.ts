@@ -53,7 +53,10 @@ const fetchCalComAvailability = async (date: string, _sessionType?: string, requ
 
     console.log(`[${requestId}] Cal.com availability: username=${username}, slug=${eventTypeSlug}, date=${date}`);
 
-    const response = await fetch(url);
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 8000);
+    const response = await fetch(url, { signal: controller.signal });
+    clearTimeout(timeout);
     
     if (!response.ok) {
       const errorBody = await response.text().catch(() => '');
@@ -120,6 +123,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const result = await fetchCalComAvailability(date, undefined, requestId);
     
+    res.setHeader('Cache-Control', 's-maxage=60, stale-while-revalidate=120');
     res.json({
       success: true,
       date,

@@ -263,12 +263,20 @@ const BookingFlow = ({ session, isOpen, onClose }: BookingFlowProps) => {
     return { name, email, phone, notes: '' };
   };
 
-  // Generate next 14 days for date selection, filtering out weekends
+  // Generate next 14 days for date selection, filtering out weekends and today after 6 PM IST
   const availableDates = Array.from({ length: 14 }, (_, i) => {
     const date = new Date();
     date.setDate(date.getDate() + i);
     return date;
-  }).filter(date => AVAILABILITY_CONFIG.isDateAvailable(date)).slice(0, 7);
+  }).filter(date => {
+    if (!AVAILABILITY_CONFIG.isDateAvailable(date)) return false;
+    const now = new Date();
+    if (date.toDateString() === now.toDateString()) {
+      const istHour = new Date().toLocaleString('en-US', { hour: 'numeric', hour12: false, timeZone: 'Asia/Kolkata' });
+      if (parseInt(istHour) >= 18) return false;
+    }
+    return true;
+  }).slice(0, 7);
 
   // Define steps based on whether session is free
   const getSteps = () => {
