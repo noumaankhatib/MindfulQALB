@@ -67,9 +67,7 @@ const toDbFormat = (format: string): 'chat' | 'audio' | 'video' => {
   return 'video';
 };
 
-const CALCOM_V2_VERSION = '2024-08-13';
-
-// Create Cal.com booking via v2 API (v1 deprecated). Session type + format → event type key e.g. "individual-video"
+// Create Cal.com booking via v1 API. Session type + format → event type key e.g. "individual-video"
 const createCalComBooking = async (
   sessionType: string,
   format: string,
@@ -97,42 +95,42 @@ const createCalComBooking = async (
 
   try {
     const startTime = parseTimeToUTCISO(date, time);
-    const url = 'https://api.cal.com/v2/bookings';
+    const durationMinutes = DURATION_BY_RAW_FORMAT[format.toLowerCase()] ?? 60;
+    const endTime = new Date(new Date(startTime).getTime() + durationMinutes * 60 * 1000).toISOString();
+
+    const url = `https://api.cal.com/v1/bookings?apiKey=${encodeURIComponent(apiKey)}`;
 
     const response = await fetch(url, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-        'cal-api-version': CALCOM_V2_VERSION,
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         eventTypeId: parseInt(eventTypeId, 10),
         start: startTime,
-        attendee: {
+        end: endTime,
+        responses: {
           name: sanitizeString(customer.name),
           email: customer.email.toLowerCase().trim(),
-          timeZone: 'Asia/Kolkata',
-          language: 'en',
-          ...(customer.phone ? { phoneNumber: customer.phone } : {}),
+          phone: customer.phone || undefined,
+          notes: customer.notes ? sanitizeString(customer.notes) : undefined,
         },
+        timeZone: 'Asia/Kolkata',
+        language: 'en',
         metadata: { requestId },
       }),
     });
 
-    const json = await response.json().catch(() => ({})) as { status?: string; data?: { uid?: string; id?: number }; message?: string };
+    const json = await response.json().catch(() => ({})) as Record<string, unknown>;
+    console.log(`[${requestId}] Cal.com v1 booking response ${response.status}:`, JSON.stringify(json).substring(0, 500));
+
     if (!response.ok) {
-      const msg = json.message ?? (typeof json === 'object' && json !== null && 'error' in json ? String((json as { error?: string }).error) : null) ?? `Cal.com API ${response.status}`;
+      const msg = (json.message as string) ?? (json.error as string) ?? `Cal.com API ${response.status}`;
       throw new Error(msg);
     }
-    if (json.status === 'error') {
-      throw new Error(json.message || 'Cal.com returned error');
-    }
 
-    const data = json.data;
-    const uid = (data?.uid ?? data?.id != null ? String(data.id) : null) ?? `CAL-${Date.now()}`;
-    return { success: true, bookingId: uid, calComUid: data?.uid ?? (data?.id != null ? String(data.id) : null) ?? undefined };
+    const uid = (json.uid as string) ?? (json.id != null ? String(json.id) : null) ?? `CAL-${Date.now()}`;
+    return { success: true, bookingId: uid, calComUid: (json.uid as string) ?? undefined };
   } catch (error) {
+    console.error(`[${requestId}] Cal.com booking error:`, error instanceof Error ? error.message : error);
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Booking failed',

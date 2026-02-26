@@ -108,14 +108,13 @@ async function fetchCalComAvailability(date) {
   if (!apiKey || apiKey.length < 20) return null;
   try {
     const url = `https://api.cal.com/v1/slots?` + new URLSearchParams({
+      apiKey,
       eventTypeSlug: AVAILABILITY_EVENT_SLUG,
-      username,
+      usernameList: username,
       startTime: `${date}T00:00:00.000Z`,
       endTime: `${date}T23:59:59.999Z`,
     });
-    const response = await fetch(url, {
-      headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-    });
+    const response = await fetch(url);
     if (!response.ok) return null;
     const data = await response.json();
     const dateSlots = data.slots?.[date] || [];

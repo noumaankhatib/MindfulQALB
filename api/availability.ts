@@ -44,12 +44,11 @@ const filterAllowedSlots = (slots: TimeSlot[]): TimeSlot[] => {
   });
 };
 
-// Fetch from Cal.com using Authorization header (not URL params).
 // Use a single canonical event type so slots are common for all session types (one therapist, one calendar).
 const CANONICAL_AVAILABILITY_SLUG = 'individual-therapy-video';
 
 const fetchCalComAvailability = async (date: string, _sessionType?: string, requestId?: string): Promise<{ slots: TimeSlot[]; source: 'calcom' | 'fallback'; error?: string }> => {
-  const apiKey = process.env.CALCOM_API_KEY;
+  const apiKey = process.env.CALCOM_API_KEY?.trim();
   const username = process.env.CALCOM_USERNAME || 'mindfulqalb';
   
   if (!apiKey) {
@@ -60,20 +59,16 @@ const fetchCalComAvailability = async (date: string, _sessionType?: string, requ
   try {
     const eventTypeSlug = process.env.CALCOM_AVAILABILITY_SLUG || CANONICAL_AVAILABILITY_SLUG;
     const url = `https://api.cal.com/v1/slots?` + new URLSearchParams({
+      apiKey,
       eventTypeSlug,
-      username,
+      usernameList: username,
       startTime: `${date}T00:00:00.000Z`,
       endTime: `${date}T23:59:59.999Z`,
     });
 
     console.log(`[${requestId}] Cal.com availability: username=${username}, slug=${eventTypeSlug}, date=${date}`);
 
-    const response = await fetch(url, {
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-    });
+    const response = await fetch(url);
     
     if (!response.ok) {
       const errorBody = await response.text().catch(() => '');
