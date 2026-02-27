@@ -7,11 +7,16 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 // Route Supabase traffic through our own domain to bypass ISP-level DNS
 // blocks on *.supabase.co (ongoing incident in India since Feb 2026).
-// Production: Vercel rewrites /sb/* → PROJECT.supabase.co/*
-// Development: Vite proxy /sb/* → PROJECT.supabase.co/*
+// Local: Vite proxy /sb → Supabase. Production: Vercel serverless proxy /sb → Supabase.
+// Set VITE_SUPABASE_USE_DIRECT=true in .env to bypass the proxy locally (browser hits Supabase directly).
+const useDirect = import.meta.env.VITE_SUPABASE_USE_DIRECT === 'true';
 const supabaseUrl = (rawSupabaseUrl && !rawSupabaseUrl.includes('placeholder'))
-  ? `${window.location.origin}/sb`
+  ? (import.meta.env.DEV && useDirect ? rawSupabaseUrl.replace(/\/$/, '') : `${window.location.origin}/sb`)
   : rawSupabaseUrl;
+
+if (import.meta.env.DEV && typeof window !== 'undefined') {
+  console.log('[Auth]', useDirect ? 'Using direct Supabase URL (VITE_SUPABASE_USE_DIRECT=true)' : 'Using /sb proxy. If you see ETIMEDOUT or 502, add VITE_SUPABASE_USE_DIRECT=true to .env and restart.');
+}
 
 if (!rawSupabaseUrl || !supabaseAnonKey) {
   logWarn('Supabase credentials not configured. Auth features will be disabled.');
@@ -51,6 +56,7 @@ export const isSupabaseConfigured = (): boolean => {
 // Suppress unhandled promise rejections from Supabase's internal auto-refresh
 // mechanism. These are transient network errors on flaky connections (mobile)
 // that the library retries automatically — the console noise is harmless.
+// When the stored refresh token is invalid (expired/revoked), clear session so the user can sign in again.
 if (typeof window !== 'undefined') {
   window.addEventListener('unhandledrejection', (event) => {
     const msg = String(event.reason?.message || event.reason || '');
@@ -59,6 +65,10 @@ if (typeof window !== 'undefined') {
       String(event.reason?.stack || '').includes('refreshAccessToken')
     ) {
       event.preventDefault();
+    }
+    if (/Refresh Token Not Found|Invalid Refresh Token/i.test(msg)) {
+      event.preventDefault();
+      supabase.auth.signOut().catch(() => {});
     }
   });
 }

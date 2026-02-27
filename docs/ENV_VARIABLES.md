@@ -4,6 +4,19 @@ Where to set each variable: **root `.env`** (frontend, Vite) or **`backend/.env`
 
 ---
 
+## Supabase env (the four you need)
+
+| Variable | Where | Used by |
+|----------|--------|---------|
+| **VITE_SUPABASE_URL** | Root `.env` + Vercel | Frontend (auth, Supabase client). Same value as `SUPABASE_URL`. |
+| **VITE_SUPABASE_ANON_KEY** | Root `.env` + Vercel | Frontend (auth). Same value as anon key in Dashboard. |
+| **SUPABASE_URL** | `backend/.env` + Vercel | Backend API (`api/*`, server.js) and **/sb proxy** (Vercel). Same value as `VITE_SUPABASE_URL`. |
+| **SUPABASE_SERVICE_ROLE_KEY** | `backend/.env` + Vercel | Backend API only (bookings, admin). **Never** in frontend. |
+
+**Vercel:** Set all four in Project → Settings → Environment Variables. The **/sb** auth proxy uses `SUPABASE_URL` and, if present, `SUPABASE_ANON_KEY` or `VITE_SUPABASE_ANON_KEY` (same value as anon key).
+
+---
+
 ## Why two Supabase URL vars? Why anon key vs service_role key?
 
 **URL: `VITE_SUPABASE_URL` vs `SUPABASE_URL`**  
@@ -32,11 +45,13 @@ Used by the Vite app. Only variables prefixed with `VITE_` are exposed to the br
 |----------|----------|-------------|
 | `VITE_SUPABASE_URL` | Yes | Supabase project URL. **Same value** as backend `SUPABASE_URL` (same URL in two places). |
 | `VITE_SUPABASE_ANON_KEY` | Yes | Supabase **anon/public** key. **Different key** from service_role — safe to expose in the frontend. |
+| `VITE_GOOGLE_CLIENT_ID` | Yes (for Google sign-in) | Google OAuth **Client ID** (Web client) from Cloud Console → Credentials. Safe to expose. **Do not** add the client *secret* — it is not used in this flow and must never be in the frontend. |
 | `VITE_BACKEND_URL` | No | API base URL. Default: `/api` (Vite proxy to local server). Set to `http://localhost:3001/api` for direct API in dev. |
 | `VITE_USE_BACKEND_API` | No | Set to `false` to disable backend API usage. Default: `true`. |
 | `VITE_SKIP_AUTH_FOR_TESTING` | No | Set to `true` in dev only to bypass sign-in for booking flow E2E testing. **Never** use in production. |
+| `VITE_SUPABASE_USE_DIRECT` | No | Set to `true` in dev only to bypass the `/sb` proxy and talk to Supabase directly. Use if you get 502 locally; see docs/LOCAL_SETUP.md. |
 
-**File:** Project root `.env` (same folder as `package.json` and `vite.config.ts`).
+**File:** Project root `.env` (same folder as `package.json` and `vite.config.ts`). **Not** in `backend/.env` — the frontend (Vite) only reads the root `.env` for `VITE_*` variables.
 
 **Note:** Do **not** put secrets (service role key, Razorpay secret, Cal.com API key) in frontend env. They must stay in `backend/.env`.
 
@@ -80,9 +95,10 @@ Used by the local API server (`npm run dev:api`), Vercel serverless functions (`
 
 ## Quick reference
 
-| Purpose | Frontend (root `.env`) | Backend (`backend/.env`) |
-|--------|------------------------|---------------------------|
-| Supabase | `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` | `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` |
+| Purpose | Frontend (root `.env`) | Backend / Vercel |
+|--------|------------------------|-------------------|
+| Supabase | `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` | `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` (+ optional `SUPABASE_ANON_KEY` for /sb proxy) |
+| Google sign-in | `VITE_GOOGLE_CLIENT_ID` (Client ID only) | — (do **not** put client secret in frontend) |
 | Cal.com | — | `CALCOM_API_KEY`, `CALCOM_USERNAME`, `CALCOM_EVENT_TYPE_IDS` |
 | Razorpay | — | `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET` |
 | API URL | `VITE_BACKEND_URL` (optional) | — |
@@ -92,12 +108,16 @@ Used by the local API server (`npm run dev:api`), Vercel serverless functions (`
 
 ## Example files
 
+**Supabase (same project):** `VITE_SUPABASE_URL` = `SUPABASE_URL` (same URL). `VITE_SUPABASE_ANON_KEY` = anon key (public). `SUPABASE_SERVICE_ROLE_KEY` = service_role key (secret, backend only).
+
 **Root `.env` (frontend only):**
 ```env
 # Same URL as SUPABASE_URL in backend/.env
 VITE_SUPABASE_URL=https://xxxx.supabase.co
 # Anon key (public) — different from service_role in backend/.env
 VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+# Google sign-in (Client ID only — do NOT add client secret here)
+VITE_GOOGLE_CLIENT_ID=xxxx.apps.googleusercontent.com
 # Optional: VITE_BACKEND_URL=http://localhost:3001/api
 ```
 

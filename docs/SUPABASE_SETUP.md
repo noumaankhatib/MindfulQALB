@@ -7,7 +7,7 @@ Without this, **inserts from the API will succeed** (using the service role key)
 **Quick option:** Run the full setup in Supabase:
 
 1. **Dashboard:** [Supabase Dashboard](https://supabase.com/dashboard) → your project → **SQL Editor** → **New query** → paste **[supabase-full-setup.sql](supabase-full-setup.sql)** → **Run**.
-2. **Or with Supabase MCP:** If Supabase MCP is connected (e.g. in Cursor), you can run the contents of `docs/supabase-full-setup.sql` via the MCP **execute_sql** tool against your project.
+2. **With Supabase MCP (recommended when connected):** With [Supabase MCP](https://supabase.com/mcp) connected in Cursor (see [MCP_SUPABASE.md](MCP_SUPABASE.md)), run the contents of `docs/supabase-full-setup.sql` via the MCP **execute_sql** tool. You can also use **get_project_url** and **get_publishable_keys** for env vars.
 3. Then do Section 3 (set admin role) and Section 4 (env vars).
 
 The blocks below are the same SQL, split by section for reference.

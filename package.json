@@ -12,6 +12,8 @@
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "check:env": "node scripts/check-env.js",
     "test:calcom": "node scripts/test-calcom-booking.js",
+    "test:sb-proxy": "node scripts/test-sb-proxy.js",
+    "validate:env": "node scripts/validate-env.js",
     "test:e2e": "playwright test e2e/booking-flow.spec.ts"
   },
   "dependencies": {

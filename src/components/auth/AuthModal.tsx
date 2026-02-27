@@ -48,7 +48,7 @@ export const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
     try {
       const { error } = await signInWithGoogle();
       if (error) {
-        setError(error.message);
+        setError(displayError(typeof error.message === 'string' ? error.message : String(error.message)));
       } else {
         onSuccess?.();
         onClose();
@@ -70,7 +70,7 @@ export const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
       if (mode === 'magic-link') {
         const { error } = await signInWithMagicLink(email);
         if (error) {
-          setError(error.message);
+          setError(displayError(typeof error.message === 'string' ? error.message : String(error.message)));
         } else {
           setSuccess('Check your email for the magic link!');
         }
@@ -82,14 +82,14 @@ export const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
         }
         const { error } = await signUpWithEmail(email, password, fullName);
         if (error) {
-          setError(error.message);
+          setError(displayError(typeof error.message === 'string' ? error.message : String(error.message)));
         } else {
           setSuccess('Check your email to confirm your account!');
         }
       } else {
         const { error } = await signInWithEmail(email, password);
         if (error) {
-          setError(error.message);
+          setError(displayError(typeof error.message === 'string' ? error.message : String(error.message)));
         } else {
           onSuccess?.();
           onClose();
@@ -113,6 +113,17 @@ export const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
   const switchMode = (newMode: AuthMode) => {
     resetForm();
     setMode(newMode);
+  };
+
+  const displayError = (msg: string | undefined | null) => {
+    const s = typeof msg === 'string' ? msg : '';
+    if (!s || s === '{}' || s === '[object Object]' || /^\s*\{\s*\}\s*$/.test(s)) {
+      return 'Server error — please try again in a moment.';
+    }
+    if (/json|failed to fetch|500|502|internal server error|bad gateway/i.test(s)) {
+      return 'Server error — please try again in a moment.';
+    }
+    return s;
   };
 
   if (!isOpen) return null;
