@@ -46,3 +46,18 @@ export const supabase = createClient<Database>(
 export const isSupabaseConfigured = (): boolean => {
   return Boolean(supabaseUrl && supabaseAnonKey);
 };
+
+// Suppress unhandled promise rejections from Supabase's internal auto-refresh
+// mechanism. These are transient network errors on flaky connections (mobile)
+// that the library retries automatically — the console noise is harmless.
+if (typeof window !== 'undefined') {
+  window.addEventListener('unhandledrejection', (event) => {
+    const msg = String(event.reason?.message || event.reason || '');
+    if (
+      msg.includes('Failed to fetch') &&
+      String(event.reason?.stack || '').includes('refreshAccessToken')
+    ) {
+      event.preventDefault();
+    }
+  });
+}
