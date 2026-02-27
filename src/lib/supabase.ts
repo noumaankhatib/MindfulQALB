@@ -5,10 +5,11 @@ import { logWarn, logErrorCritical } from './logger';
 const rawSupabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-// In production, route Supabase traffic through our own domain to bypass
-// ISP-level DNS blocks on *.supabase.co (ongoing incident in India).
-// Vercel rewrites /sb/* → PROJECT.supabase.co/* server-side.
-const supabaseUrl = (import.meta.env.PROD && rawSupabaseUrl && !rawSupabaseUrl.includes('placeholder'))
+// Route Supabase traffic through our own domain to bypass ISP-level DNS
+// blocks on *.supabase.co (ongoing incident in India since Feb 2026).
+// Production: Vercel rewrites /sb/* → PROJECT.supabase.co/*
+// Development: Vite proxy /sb/* → PROJECT.supabase.co/*
+const supabaseUrl = (rawSupabaseUrl && !rawSupabaseUrl.includes('placeholder'))
   ? `${window.location.origin}/sb`
   : rawSupabaseUrl;
 
