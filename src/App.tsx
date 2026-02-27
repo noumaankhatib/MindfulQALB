@@ -188,6 +188,7 @@ const router = createBrowserRouter(
         { path: '/my-bookings', element: <Suspense fallback={<LazyFallback />}><MyBookingsPage /></Suspense> },
         { path: '/profile', element: <Suspense fallback={<LazyFallback />}><ProfilePage /></Suspense> },
         { path: '/admin', element: <AdminRoute><Suspense fallback={<LazyFallback />}><AdminPage /></Suspense></AdminRoute> },
+        { path: '/auth/google/callback', element: <div style={{display:'flex',alignItems:'center',justifyContent:'center',height:'100vh',color:'#6b7280'}}>Signing in…</div> },
         { path: '*', element: <NotFoundPage /> },
       ],
     },

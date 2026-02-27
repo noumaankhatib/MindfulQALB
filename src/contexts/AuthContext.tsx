@@ -131,28 +131,104 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     if (mountedRef.current) setLoading(false);
   };
 
-  const signInWithGoogle = async () => {
-    try {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 15000);
+  const signInWithGoogle = (): Promise<{ error: AuthError | null }> => {
+    const GOOGLE_CLIENT_ID = '57725851287-h21ml8nciji9uplg9uorqlmghaqo17c8.apps.googleusercontent.com';
 
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: `${window.location.origin}/`,
+    return new Promise((resolve) => {
+      const google = (window as unknown as { google?: { accounts?: { id: {
+        initialize: (config: Record<string, unknown>) => void;
+        prompt: (cb?: (notification: { isNotDisplayed: () => boolean; getNotDisplayedReason: () => string }) => void) => void;
+      } } } }).google;
+
+      if (!google?.accounts?.id) {
+        resolve({ error: { message: 'Google sign-in is loading, please try again in a moment.', name: 'AuthApiError', status: 0 } as AuthError });
+        return;
+      }
+
+      google.accounts.id.initialize({
+        client_id: GOOGLE_CLIENT_ID,
+        callback: async (response: { credential?: string }) => {
+          if (!response.credential) {
+            resolve({ error: { message: 'Google sign-in was cancelled.', name: 'AuthApiError', status: 0 } as AuthError });
+            return;
+          }
+          try {
+            const { error } = await supabase.auth.signInWithIdToken({
+              provider: 'google',
+              token: response.credential,
+            });
+            resolve({ error });
+          } catch (err) {
+            const msg = err instanceof Error ? err.message : 'Sign in failed';
+            resolve({ error: { message: msg, name: 'AuthApiError', status: 0 } as AuthError });
+          }
         },
+        auto_select: false,
+        cancel_on_tap_outside: true,
       });
 
-      clearTimeout(timeout);
-      return { error };
-    } catch (err) {
-      const isNetworkError = err instanceof Error &&
-        (err.name === 'AbortError' || err.message.includes('fetch') || err.message.includes('network') || err.message.includes('Failed'));
-      const message = isNetworkError
-        ? 'Connection timed out. Please check your internet connection and try again.'
-        : (err instanceof Error ? err.message : 'Sign in failed');
-      return { error: { message, name: 'AuthApiError', status: 0 } as AuthError };
+      google.accounts.id.prompt((notification) => {
+        if (notification.isNotDisplayed()) {
+          const reason = notification.getNotDisplayedReason();
+          if (reason === 'opt_out_or_no_session') {
+            // No Google session — fall back to popup
+            openGooglePopup(GOOGLE_CLIENT_ID, resolve);
+          } else {
+            resolve({ error: { message: `Google sign-in unavailable (${reason}). Try email sign-in instead.`, name: 'AuthApiError', status: 0 } as AuthError });
+          }
+        }
+      });
+    });
+  };
+
+  const openGooglePopup = (clientId: string, resolve: (v: { error: AuthError | null }) => void) => {
+    const redirectUri = `${window.location.origin}/auth/google/callback`;
+    const params = new URLSearchParams({
+      client_id: clientId,
+      redirect_uri: redirectUri,
+      response_type: 'token id_token',
+      scope: 'openid email profile',
+      nonce: Math.random().toString(36).slice(2),
+    });
+    const width = 500, height = 600;
+    const left = window.screenX + (window.outerWidth - width) / 2;
+    const top = window.screenY + (window.outerHeight - height) / 2;
+    const popup = window.open(
+      `https://accounts.google.com/o/oauth2/v2/auth?${params}`,
+      'google-signin',
+      `width=${width},height=${height},left=${left},top=${top},popup=true`
+    );
+    if (!popup) {
+      resolve({ error: { message: 'Popup blocked. Please allow popups for this site.', name: 'AuthApiError', status: 0 } as AuthError });
+      return;
     }
+    const interval = setInterval(() => {
+      try {
+        if (popup.closed) {
+          clearInterval(interval);
+          resolve({ error: { message: 'Google sign-in was cancelled.', name: 'AuthApiError', status: 0 } as AuthError });
+          return;
+        }
+        const url = popup.location.href;
+        if (url?.startsWith(window.location.origin)) {
+          clearInterval(interval);
+          popup.close();
+          const hash = new URL(url).hash.slice(1);
+          const hashParams = new URLSearchParams(hash);
+          const idToken = hashParams.get('id_token');
+          if (!idToken) {
+            resolve({ error: { message: 'No token received from Google.', name: 'AuthApiError', status: 0 } as AuthError });
+            return;
+          }
+          supabase.auth.signInWithIdToken({ provider: 'google', token: idToken })
+            .then(({ error }) => resolve({ error }))
+            .catch((err) => resolve({ error: { message: err instanceof Error ? err.message : 'Sign in failed', name: 'AuthApiError', status: 0 } as AuthError }));
+        }
+      } catch {
+        // Cross-origin access expected while on Google's domain
+      }
+    }, 200);
+    setTimeout(() => { clearInterval(interval); try { popup.close(); } catch {} }, 120000);
   };
 
   const signInWithEmail = async (email: string, password: string) => {
