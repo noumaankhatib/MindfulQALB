@@ -95,6 +95,8 @@ export const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
           onClose();
         }
       }
+    } catch {
+      setError('Connection unstable — please try again.');
     } finally {
       setLoading(false);
     }

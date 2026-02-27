@@ -231,35 +231,51 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     setTimeout(() => { clearInterval(interval); try { popup.close(); } catch {} }, 120000);
   };
 
+  const withRetry = async (
+    fn: () => Promise<{ error: AuthError | null }>,
+    retries = 1,
+  ): Promise<{ error: AuthError | null }> => {
+    for (let attempt = 0; attempt <= retries; attempt++) {
+      try {
+        const { error } = await fn();
+        if (
+          error &&
+          attempt < retries &&
+          /unexpected end of json|failed to fetch|network|timeout/i.test(error.message)
+        ) {
+          await new Promise(r => setTimeout(r, 800 * (attempt + 1)));
+          continue;
+        }
+        return { error };
+      } catch (err) {
+        if (attempt < retries) {
+          await new Promise(r => setTimeout(r, 800 * (attempt + 1)));
+          continue;
+        }
+        const msg = err instanceof Error ? err.message : 'Request failed';
+        if (/unexpected end of json|failed to fetch/i.test(msg)) {
+          return { error: { message: 'Connection unstable — please try again.', name: 'AuthApiError', status: 0 } as AuthError };
+        }
+        return { error: { message: msg, name: 'AuthApiError', status: 0 } as AuthError };
+      }
+    }
+    return { error: { message: 'Connection unstable — please try again.', name: 'AuthApiError', status: 0 } as AuthError };
+  };
+
   const signInWithEmail = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-    return { error };
+    return withRetry(() => supabase.auth.signInWithPassword({ email, password }));
   };
 
   const signUpWithEmail = async (email: string, password: string, fullName: string) => {
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          full_name: fullName,
-        },
-      },
-    });
-    return { error };
+    return withRetry(() =>
+      supabase.auth.signUp({ email, password, options: { data: { full_name: fullName } } }),
+    );
   };
 
   const signInWithMagicLink = async (email: string) => {
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: {
-        emailRedirectTo: `${window.location.origin}/`,
-      },
-    });
-    return { error };
+    return withRetry(() =>
+      supabase.auth.signInWithOtp({ email, options: { emailRedirectTo: `${window.location.origin}/` } }),
+    );
   };
 
   const signOut = async () => {
