@@ -48,11 +48,16 @@ export const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
     try {
       const { error } = await signInWithGoogle();
       if (error) {
-        setError(error.message);
+        const msg = error.message || '';
+        if (msg.includes('fetch') || msg.includes('timed out') || msg.includes('network') || msg.includes('Failed')) {
+          setError('Google login is currently experiencing connectivity issues. Please use email sign-in below instead.');
+        } else {
+          setError(msg);
+        }
         setLoading(false);
       }
     } catch {
-      setError('Unable to connect. Please check your internet and try again.');
+      setError('Google login is unavailable right now. Please use email sign-in below instead.');
       setLoading(false);
     }
   };

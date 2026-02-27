@@ -5,6 +5,7 @@
   "framework": "vite",
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/$1" },
+    { "source": "/sb/:path*", "destination": "https://tmegikggtccjqskuwpxi.supabase.co/:path*" },
     { "source": "/(.*)", "destination": "/index.html" }
   ],
   "headers": [

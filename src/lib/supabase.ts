@@ -2,21 +2,21 @@ import { createClient } from '@supabase/supabase-js';
 import type { Database } from '../types/database';
 import { logWarn, logErrorCritical } from './logger';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const rawSupabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-if (!supabaseUrl || !supabaseAnonKey) {
+// In production, route Supabase traffic through our own domain to bypass
+// ISP-level DNS blocks on *.supabase.co (ongoing incident in India).
+// Vercel rewrites /sb/* → PROJECT.supabase.co/* server-side.
+const supabaseUrl = (import.meta.env.PROD && rawSupabaseUrl && !rawSupabaseUrl.includes('placeholder'))
+  ? `${window.location.origin}/sb`
+  : rawSupabaseUrl;
+
+if (!rawSupabaseUrl || !supabaseAnonKey) {
   logWarn('Supabase credentials not configured. Auth features will be disabled.');
 }
 
-if (supabaseUrl && !supabaseUrl.includes('placeholder') && typeof document !== 'undefined') {
-  const link = document.createElement('link');
-  link.rel = 'preconnect';
-  link.href = supabaseUrl;
-  link.crossOrigin = 'anonymous';
-  document.head.appendChild(link);
-}
-const isPlaceholder = !supabaseUrl || supabaseUrl.includes('placeholder');
+const isPlaceholder = !rawSupabaseUrl || rawSupabaseUrl.includes('placeholder');
 if (import.meta.env.PROD && isPlaceholder) {
   logErrorCritical('Supabase URL is missing or still a placeholder. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in Vercel Environment Variables and redeploy.');
 }
@@ -44,7 +44,7 @@ export const supabase = createClient<Database>(
 );
 
 export const isSupabaseConfigured = (): boolean => {
-  return Boolean(supabaseUrl && supabaseAnonKey);
+  return Boolean(rawSupabaseUrl && supabaseAnonKey);
 };
 
 // Suppress unhandled promise rejections from Supabase's internal auto-refresh
