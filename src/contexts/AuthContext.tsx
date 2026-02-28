@@ -132,13 +132,29 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   };
 
   const signInWithGoogle = async (): Promise<{ error: AuthError | null }> => {
-    const { error } = await supabase.auth.signInWithOAuth({
+    // Get the OAuth URL but don't navigate yet — we need to replace the
+    // proxy URL (/sb) with the real Supabase URL because OAuth requires
+    // direct browser redirects (Supabase → Google → Supabase callback).
+    const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
         redirectTo: `${window.location.origin}/`,
+        skipBrowserRedirect: true,
       },
     });
-    return { error };
+
+    if (error) return { error };
+
+    if (data?.url) {
+      let oauthUrl = data.url;
+      const realUrl = import.meta.env.VITE_SUPABASE_URL?.replace(/\/$/, '');
+      if (realUrl) {
+        oauthUrl = oauthUrl.replace(`${window.location.origin}/sb`, realUrl);
+      }
+      window.location.href = oauthUrl;
+    }
+
+    return { error: null };
   };
 
   const withRetry = async (
