@@ -74,8 +74,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       headers,
       body,
       signal: controller.signal,
+      redirect: 'manual',
     });
     clearTimeout(timeout);
+
+    // Forward redirects to the browser so OAuth and other redirect flows work correctly.
+    // Without this, fetch follows redirects server-side and cookies/session get lost.
+    if (upstream.status >= 300 && upstream.status < 400) {
+      const location = upstream.headers.get('location');
+      if (location) {
+        res.setHeader('location', location);
+      }
+      return res.status(upstream.status).end();
+    }
 
     const contentType = upstream.headers.get('content-type') || '';
     const responseBody = await upstream.text();
