@@ -16,6 +16,8 @@ const FORWARD_HEADERS = [
   'x-client-info',
   'x-supabase-api-version',
   'accept',
+  'accept-profile',
+  'content-profile',
 ];
 
 function buildSupabaseUrl(path: string, query: Record<string, string | string[] | undefined>): string {
@@ -43,7 +45,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'OPTIONS') {
     res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, apikey, x-client-info, x-supabase-api-version');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, apikey, x-client-info, x-supabase-api-version, accept-profile, content-profile');
     return res.status(200).end();
   }
 
