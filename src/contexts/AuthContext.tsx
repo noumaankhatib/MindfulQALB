@@ -157,10 +157,12 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
         if (data?.url) {
           let oauthUrl = data.url;
-          const realUrl = import.meta.env.VITE_SUPABASE_URL?.replace(/\/$/, '');
-          if (realUrl) {
-            oauthUrl = oauthUrl.replace(`${window.location.origin}/sb`, realUrl);
-          }
+          // Route OAuth through our proxy so Jio/ISP-blocked regions can complete Google sign-in.
+          // Supabase returns https://xxx.supabase.co/... - replace with api.mindfulqalb.com or origin/sb.
+          const proxyUrl = import.meta.env.VITE_SUPABASE_URL?.includes('api.mindfulqalb.com')
+            ? 'https://api.mindfulqalb.com'
+            : `${window.location.origin}/sb`;
+          oauthUrl = oauthUrl.replace(/https:\/\/[^.]+\.supabase\.co/, proxyUrl);
           window.location.href = oauthUrl;
         }
         return { error: null };
