@@ -14,6 +14,7 @@ const FORWARD_HEADERS = [
   'authorization',
   'apikey',
   'x-client-info',
+  'x-supabase-api-version',
   'accept',
 ];
 
@@ -42,12 +43,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'OPTIONS') {
     res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, apikey, x-client-info');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, apikey, x-client-info, x-supabase-api-version');
     return res.status(200).end();
   }
 
   const origin = req.headers.origin;
-  const allowOrigin = origin && /^https:\/\/(mindfulqalb\.com|www\.mindfulqalb\.com)$|^http:\/\/localhost(:\d+)?$/.test(origin) ? origin : 'https://mindfulqalb.com';
+  const allowed =
+    origin &&
+    (/^https:\/\/(mindfulqalb\.com|www\.mindfulqalb\.com)$/.test(origin) ||
+      /^https:\/\/mindful-qalb[\w.-]*\.vercel\.app$/.test(origin) ||
+      /^http:\/\/localhost(:\d+)?$/.test(origin));
+  const allowOrigin = allowed ? origin : 'https://mindfulqalb.com';
   res.setHeader('Access-Control-Allow-Origin', allowOrigin);
 
   const rawPath = req.query.path;
