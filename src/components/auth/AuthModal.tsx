@@ -1,8 +1,21 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Mail, Lock, User, Loader2, AlertCircle, CheckCircle } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+
+declare global {
+  interface Window {
+    google?: {
+      accounts: {
+        id: {
+          initialize: (config: { client_id: string; callback: (r: { credential: string }) => void }) => void;
+          prompt: (momentListener?: (m: { notDisplayedReason: string }) => void) => void;
+        };
+      };
+    };
+  }
+}
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -13,8 +26,9 @@ interface AuthModalProps {
 type AuthMode = 'signin' | 'signup' | 'magic-link';
 
 export const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
-  const { signInWithGoogle, signInWithEmail, signUpWithEmail, signInWithMagicLink } = useAuth();
+  const { signInWithGoogle, signInWithGoogleIdToken, signInWithEmail, signUpWithEmail, signInWithMagicLink } = useAuth();
   const [mode, setMode] = useState<AuthMode>('signin');
+  const gsiInitedRef = useRef(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
@@ -45,18 +59,65 @@ export const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
   const handleGoogleSignIn = async () => {
     setLoading(true);
     setError(null);
+    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+    const stopLoading = () => setLoading(false);
+    const t = setTimeout(stopLoading, 90000);
+
+    const fallbackToOAuth = async () => {
+      clearTimeout(t);
+      try {
+        const { error } = await signInWithGoogle();
+        if (error) {
+          setError(displayError(typeof error.message === 'string' ? error.message : String(error.message)));
+        } else {
+          onSuccess?.();
+          onClose();
+        }
+      } catch {
+        setError('Google sign-in failed. Please try email sign-in instead.');
+      } finally {
+        stopLoading();
+      }
+    };
+
     try {
-      const { error } = await signInWithGoogle();
-      if (error) {
-        setError(displayError(typeof error.message === 'string' ? error.message : String(error.message)));
+      if (clientId && typeof window !== 'undefined' && window.google?.accounts?.id) {
+        if (!gsiInitedRef.current) {
+          window.google.accounts.id.initialize({
+            client_id: clientId,
+            callback: async (response: { credential: string }) => {
+              clearTimeout(t);
+              try {
+                const { error } = await signInWithGoogleIdToken(response.credential);
+                if (error) {
+                  setError(displayError(typeof error.message === 'string' ? error.message : String(error.message)));
+                } else {
+                  onSuccess?.();
+                  onClose();
+                }
+              } catch {
+                setError('Google sign-in failed. Please try email sign-in instead.');
+              } finally {
+                stopLoading();
+              }
+            },
+          });
+          gsiInitedRef.current = true;
+        }
+        window.google.accounts.id.prompt((moment) => {
+          if (moment?.notDisplayedReason) {
+            clearTimeout(t);
+            fallbackToOAuth();
+          }
+        });
       } else {
-        onSuccess?.();
-        onClose();
+        clearTimeout(t);
+        await fallbackToOAuth();
       }
     } catch {
+      clearTimeout(t);
       setError('Google sign-in failed. Please try email sign-in instead.');
-    } finally {
-      setLoading(false);
+      stopLoading();
     }
   };
 

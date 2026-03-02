@@ -11,6 +11,7 @@ interface AuthContextType {
   loading: boolean;
   isConfigured: boolean;
   signInWithGoogle: () => Promise<{ error: AuthError | null }>;
+  signInWithGoogleIdToken: (idToken: string) => Promise<{ error: AuthError | null }>;
   signInWithEmail: (email: string, password: string) => Promise<{ error: AuthError | null }>;
   signUpWithEmail: (email: string, password: string, fullName: string) => Promise<{ error: AuthError | null }>;
   signInWithMagicLink: (email: string) => Promise<{ error: AuthError | null }>;
@@ -184,6 +185,13 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     return { error: result.error };
   };
 
+  /** Sign in with Google via ID token (bypasses supabase.co redirect — works on Jio/blocked networks). */
+  const signInWithGoogleIdToken = async (idToken: string): Promise<{ error: AuthError | null }> => {
+    return withRetry(() =>
+      supabase.auth.signInWithIdToken({ provider: 'google', token: idToken }),
+    );
+  };
+
   const withRetry = async (
     fn: () => Promise<{ error: AuthError | null }>,
     retries = 1,
@@ -278,6 +286,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     loading,
     isConfigured,
     signInWithGoogle,
+    signInWithGoogleIdToken,
     signInWithEmail,
     signUpWithEmail,
     signInWithMagicLink,
