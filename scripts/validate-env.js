@@ -43,9 +43,9 @@ const rootRules = [
   {
     key: 'VITE_SUPABASE_URL',
     required: true,
-    placeholder: /your-project|placeholder\.supabase\.co|^https:\/\/xxxx/i,
-    format: (v) => v.startsWith('https://') && (v.includes('supabase') || v.includes('.co')),
-    formatMsg: 'Should be your Supabase project URL (https://....supabase.co)',
+    placeholder: /your-project|placeholder\.supabase\.co|placeholder\.invalid|^https:\/\/xxxx/i,
+    format: (v) => v.startsWith('https://') && (v.includes('supabase') || v.includes('api.mindfulqalb.com')),
+    formatMsg: 'Should be your Supabase URL (https://....supabase.co or https://api.mindfulqalb.com)',
   },
   {
     key: 'VITE_SUPABASE_ANON_KEY',
@@ -75,8 +75,8 @@ const backendRules = [
   {
     key: 'SUPABASE_URL',
     required: false,
-    format: (v) => !v || /^https:\/\/.+\.supabase\.co\/?$/i.test(v),
-    formatMsg: 'Should be https://your-project.supabase.co',
+    format: (v) => !v || /^https:\/\/.+(\.supabase\.co|api\.mindfulqalb\.com)\/?$/i.test(v),
+    formatMsg: 'Should be https://your-project.supabase.co or https://api.mindfulqalb.com',
   },
   {
     key: 'SUPABASE_SERVICE_ROLE_KEY',

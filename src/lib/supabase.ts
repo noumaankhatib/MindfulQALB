@@ -5,17 +5,18 @@ import { logWarn, logErrorCritical } from './logger';
 const rawSupabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-// Route Supabase traffic through our own domain to bypass ISP-level DNS
-// blocks on *.supabase.co (ongoing incident in India since Feb 2026).
-// Local: Vite proxy /sb → Supabase. Production: Vercel serverless proxy /sb → Supabase.
-// Set VITE_SUPABASE_USE_DIRECT=true in .env to bypass the proxy locally (browser hits Supabase directly).
+// When using custom domain (e.g. https://api.mindfulqalb.com), use it directly.
+// When using *.supabase.co, route through /sb proxy to bypass ISP blocks (e.g. India).
+// Set VITE_SUPABASE_USE_DIRECT=true in .env to bypass the proxy locally.
 const useDirect = import.meta.env.VITE_SUPABASE_USE_DIRECT === 'true';
+const isCustomDomain = rawSupabaseUrl?.includes('api.mindfulqalb.com');
+const useDirectUrl = isCustomDomain || (import.meta.env.DEV && useDirect);
 const supabaseUrl = (rawSupabaseUrl && !rawSupabaseUrl.includes('placeholder'))
-  ? (import.meta.env.DEV && useDirect ? rawSupabaseUrl.replace(/\/$/, '') : `${window.location.origin}/sb`)
+  ? (useDirectUrl ? rawSupabaseUrl.replace(/\/$/, '') : `${typeof window !== 'undefined' ? window.location.origin : ''}/sb`)
   : rawSupabaseUrl;
 
 if (import.meta.env.DEV && typeof window !== 'undefined') {
-  console.log('[Auth]', useDirect ? 'Using direct Supabase URL (VITE_SUPABASE_USE_DIRECT=true)' : 'Using /sb proxy. If you see ETIMEDOUT or 502, add VITE_SUPABASE_USE_DIRECT=true to .env and restart.');
+  console.log('[Auth]', useDirectUrl ? (isCustomDomain ? 'Using custom domain (api.mindfulqalb.com)' : 'Using direct Supabase URL (VITE_SUPABASE_USE_DIRECT=true)') : 'Using /sb proxy. If you see ETIMEDOUT or 502, add VITE_SUPABASE_USE_DIRECT=true to .env and restart.');
 }
 
 if (!rawSupabaseUrl || !supabaseAnonKey) {
@@ -37,7 +38,7 @@ const noOpLock = <R>(_name: string, _acquireTimeout: number, fn: () => Promise<R
 };
 
 export const supabase = createClient<Database>(
-  supabaseUrl || 'https://placeholder.supabase.co',
+  supabaseUrl || 'https://placeholder.invalid',
   supabaseAnonKey || 'placeholder-key',
   {
     auth: {

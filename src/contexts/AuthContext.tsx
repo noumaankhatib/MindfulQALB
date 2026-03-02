@@ -18,6 +18,16 @@ interface AuthContextType {
   updateProfile: (updates: Partial<Profile>) => Promise<{ error: Error | null }>;
 }
 
+const NETWORK_ERROR_MESSAGE = 'Network issue detected. Please check your internet connection.';
+
+function isNetworkError(msg: string): boolean {
+  return /failed to fetch|networkerror|network request failed/i.test(msg);
+}
+
+function isRetryableOrServerError(msg: string): boolean {
+  return /unexpected end of json|failed to fetch|network|timeout|failed to execute|500|502|internal server error|bad gateway/i.test(msg);
+}
+
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const useAuth = () => {
@@ -132,44 +142,61 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   };
 
   const signInWithGoogle = async (): Promise<{ error: AuthError | null }> => {
-    // Get the OAuth URL but don't navigate yet — we need to replace the
-    // proxy URL (/sb) with the real Supabase URL because OAuth requires
-    // direct browser redirects (Supabase → Google → Supabase callback).
-    const { data, error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: `${window.location.origin}/`,
-        skipBrowserRedirect: true,
-      },
-    });
+    const redirectTo = import.meta.env.PROD ? 'https://mindfulqalb.com' : `${window.location.origin}/`;
+    const doSignIn = async (): Promise<{ error: AuthError | null; isNetwork?: boolean }> => {
+      try {
+        const { data, error } = await supabase.auth.signInWithOAuth({
+          provider: 'google',
+          options: {
+            redirectTo,
+            skipBrowserRedirect: true,
+          },
+        });
 
-    if (error) return { error };
+        if (error) return { error };
 
-    if (data?.url) {
-      let oauthUrl = data.url;
-      const realUrl = import.meta.env.VITE_SUPABASE_URL?.replace(/\/$/, '');
-      if (realUrl) {
-        oauthUrl = oauthUrl.replace(`${window.location.origin}/sb`, realUrl);
+        if (data?.url) {
+          let oauthUrl = data.url;
+          const realUrl = import.meta.env.VITE_SUPABASE_URL?.replace(/\/$/, '');
+          if (realUrl) {
+            oauthUrl = oauthUrl.replace(`${window.location.origin}/sb`, realUrl);
+          }
+          window.location.href = oauthUrl;
+        }
+        return { error: null };
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : 'Request failed';
+        const isNetwork = isNetworkError(msg);
+        return {
+          error: { message: isNetwork ? NETWORK_ERROR_MESSAGE : msg, name: 'AuthApiError', status: 0 } as AuthError,
+          isNetwork,
+        };
       }
-      window.location.href = oauthUrl;
-    }
+    };
 
-    return { error: null };
+    let result = await doSignIn();
+    if (result.error && result.isNetwork) {
+      await new Promise(r => setTimeout(r, 2000));
+      result = await doSignIn();
+    }
+    return { error: result.error };
   };
 
   const withRetry = async (
     fn: () => Promise<{ error: AuthError | null }>,
     retries = 1,
   ): Promise<{ error: AuthError | null }> => {
-    const isRetryableOrServerError = (msg: string) =>
-      /unexpected end of json|failed to fetch|network|timeout|failed to execute|500|502|internal server error|bad gateway/i.test(msg);
-
     for (let attempt = 0; attempt <= retries; attempt++) {
       try {
         const { error } = await fn();
         if (error && attempt < retries && isRetryableOrServerError(error.message)) {
-          await new Promise(r => setTimeout(r, 800 * (attempt + 1)));
+          const delayMs = isNetworkError(error.message) ? 2000 : 800 * (attempt + 1);
+          await new Promise(r => setTimeout(r, delayMs));
           continue;
+        }
+        if (error && isNetworkError(error.message)) {
+          logError('[Auth] Network error (user sees friendly message):', error.message);
+          return { error: { message: NETWORK_ERROR_MESSAGE, name: 'AuthApiError', status: 0 } as AuthError };
         }
         if (error && isRetryableOrServerError(error.message)) {
           logError('[Auth] Server error (user sees friendly message):', error.message);
@@ -178,10 +205,16 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         return { error };
       } catch (err) {
         if (attempt < retries) {
-          await new Promise(r => setTimeout(r, 800 * (attempt + 1)));
+          const msg = err instanceof Error ? err.message : 'Request failed';
+          const delayMs = isNetworkError(msg) ? 2000 : 800 * (attempt + 1);
+          await new Promise(r => setTimeout(r, delayMs));
           continue;
         }
         const msg = err instanceof Error ? err.message : 'Request failed';
+        if (isNetworkError(msg)) {
+          logError('[Auth] Network error (user sees friendly message):', err);
+          return { error: { message: NETWORK_ERROR_MESSAGE, name: 'AuthApiError', status: 0 } as AuthError };
+        }
         if (isRetryableOrServerError(msg)) {
           logError('[Auth] Server error (user sees friendly message):', err);
           return { error: { message: 'Server error — please try again in a moment.', name: 'AuthApiError', status: 0 } as AuthError };

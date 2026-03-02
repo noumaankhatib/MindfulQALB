@@ -46,6 +46,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(200).end();
   }
 
+  const origin = req.headers.origin;
+  const allowOrigin = origin && /^https:\/\/(mindfulqalb\.com|www\.mindfulqalb\.com)$|^http:\/\/localhost(:\d+)?$/.test(origin) ? origin : 'https://mindfulqalb.com';
+  res.setHeader('Access-Control-Allow-Origin', allowOrigin);
+
   const rawPath = req.query.path;
   const path = typeof rawPath === 'string' ? decodeURIComponent(rawPath) : (Array.isArray(rawPath) ? rawPath[0] : '') || 'auth/v1/health';
   const url = buildSupabaseUrl(path, req.query as Record<string, string | string[] | undefined>);

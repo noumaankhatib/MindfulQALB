@@ -7,9 +7,9 @@ export default defineConfig(({ mode }) => {
   // Proxy must target the real Supabase host. Ignore if .env has a proxy path (e.g. /sb or localhost).
   const envUrl = (env.VITE_SUPABASE_URL || '').trim()
   const supabaseTarget =
-    envUrl.includes('supabase.co') && envUrl.startsWith('https://')
+    envUrl.startsWith('https://') && envUrl.length > 10
       ? envUrl.replace(/\/$/, '')
-      : 'https://tmegikggtccjqskuwpxi.supabase.co'
+      : 'https://api.mindfulqalb.com'
 
   return {
   plugins: [react()],

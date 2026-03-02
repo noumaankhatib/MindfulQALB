@@ -13,7 +13,7 @@ const root = resolve(__dirname, '..');
 const envPath = resolve(root, '.env');
 
 const required = [
-  { key: 'VITE_SUPABASE_URL', placeholder: /your-project|placeholder\.supabase\.co/i },
+  { key: 'VITE_SUPABASE_URL', placeholder: /your-project|placeholder\.supabase\.co|placeholder\.invalid/i },
   { key: 'VITE_SUPABASE_ANON_KEY', placeholder: /your-anon-key|placeholder-key/i },
 ];
 const optionalServer = ['SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY', 'RAZORPAY_KEY_ID', 'CALCOM_API_KEY'];
