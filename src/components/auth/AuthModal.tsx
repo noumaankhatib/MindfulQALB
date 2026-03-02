@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Mail, Lock, User, Loader2, AlertCircle, CheckCircle } from 'lucide-react';
@@ -11,6 +11,7 @@ declare global {
         id: {
           initialize: (config: { client_id: string; callback: (r: { credential: string }) => void }) => void;
           prompt: (momentListener?: (m: { notDisplayedReason: string }) => void) => void;
+          renderButton: (parent: HTMLElement, config: { theme?: string; size?: string; type?: string }) => void;
         };
       };
     };
@@ -28,7 +29,8 @@ type AuthMode = 'signin' | 'signup' | 'magic-link';
 export const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
   const { signInWithGoogle, signInWithGoogleIdToken, signInWithEmail, signUpWithEmail, signInWithMagicLink } = useAuth();
   const [mode, setMode] = useState<AuthMode>('signin');
-  const gsiInitedRef = useRef(false);
+  const [gsiReady, setGsiReady] = useState(false);
+  const googleButtonRef = useRef<HTMLDivElement>(null);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
@@ -56,17 +58,12 @@ export const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
     return () => document.removeEventListener('keydown', handleEscape);
   }, [isOpen, onClose]);
 
-  const handleGoogleSignIn = async () => {
-    setLoading(true);
-    setError(null);
-    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
-    const stopLoading = () => setLoading(false);
-    const t = setTimeout(stopLoading, 90000);
-
-    const fallbackToOAuth = async () => {
-      clearTimeout(t);
+  const handleCredential = useCallback(
+    async (credential: string) => {
+      setLoading(true);
+      setError(null);
       try {
-        const { error } = await signInWithGoogle();
+        const { error } = await signInWithGoogleIdToken(credential);
         if (error) {
           setError(displayError(typeof error.message === 'string' ? error.message : String(error.message)));
         } else {
@@ -76,50 +73,73 @@ export const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
       } catch {
         setError('Google sign-in failed. Please try email sign-in instead.');
       } finally {
-        stopLoading();
+        setLoading(false);
       }
-    };
+    },
+    [signInWithGoogleIdToken, onSuccess, onClose],
+  );
 
+  const handleFallbackOAuth = async () => {
+    setLoading(true);
+    setError(null);
     try {
-      if (clientId && typeof window !== 'undefined' && window.google?.accounts?.id) {
-        if (!gsiInitedRef.current) {
-          window.google.accounts.id.initialize({
-            client_id: clientId,
-            callback: async (response: { credential: string }) => {
-              clearTimeout(t);
-              try {
-                const { error } = await signInWithGoogleIdToken(response.credential);
-                if (error) {
-                  setError(displayError(typeof error.message === 'string' ? error.message : String(error.message)));
-                } else {
-                  onSuccess?.();
-                  onClose();
-                }
-              } catch {
-                setError('Google sign-in failed. Please try email sign-in instead.');
-              } finally {
-                stopLoading();
-              }
-            },
-          });
-          gsiInitedRef.current = true;
-        }
-        window.google.accounts.id.prompt((moment) => {
-          if (moment?.notDisplayedReason) {
-            clearTimeout(t);
-            fallbackToOAuth();
-          }
-        });
+      const { error } = await signInWithGoogle();
+      if (error) {
+        setError(displayError(typeof error.message === 'string' ? error.message : String(error.message)));
       } else {
-        clearTimeout(t);
-        await fallbackToOAuth();
+        onSuccess?.();
+        onClose();
       }
     } catch {
-      clearTimeout(t);
       setError('Google sign-in failed. Please try email sign-in instead.');
-      stopLoading();
+    } finally {
+      setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (!isOpen || !googleButtonRef.current) return;
+    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+    if (!clientId) {
+      setGsiReady(false);
+      return;
+    }
+    const initGsi = () => {
+      if (window.google?.accounts?.id && googleButtonRef.current) {
+        googleButtonRef.current.innerHTML = '';
+        window.google.accounts.id.initialize({
+          client_id: clientId,
+          callback: (r: { credential: string }) => handleCredential(r.credential),
+        });
+        window.google.accounts.id.renderButton(googleButtonRef.current, {
+          theme: 'outline',
+          size: 'large',
+          type: 'standard',
+        });
+        setGsiReady(true);
+      } else {
+        setGsiReady(false);
+      }
+    };
+    if (window.google?.accounts?.id) {
+      initGsi();
+    } else {
+      const check = setInterval(() => {
+        if (window.google?.accounts?.id) {
+          clearInterval(check);
+          initGsi();
+        }
+      }, 100);
+      const t = setTimeout(() => {
+        clearInterval(check);
+        if (!window.google?.accounts?.id) setGsiReady(false);
+      }, 3000);
+      return () => {
+        clearInterval(check);
+        clearTimeout(t);
+      };
+    }
+  }, [isOpen, handleCredential]);
 
   const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -292,47 +312,50 @@ export const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
               flexGrow: 1,
             }}
           >
-            {/* Google Sign In Button */}
-            <button
-              onClick={handleGoogleSignIn}
-              disabled={loading}
+            {/* Google Sign In - GSI renderButton (works on Jio) or OAuth fallback */}
+            <div
+              ref={googleButtonRef}
               style={{
                 width: '100%',
-                display: 'flex',
-                alignItems: 'center',
+                display: gsiReady ? 'flex' : 'none',
                 justifyContent: 'center',
-                gap: '12px',
-                padding: '14px 16px',
-                backgroundColor: '#ffffff',
-                border: '2px solid #e5e7eb',
-                borderRadius: '12px',
-                fontSize: '15px',
-                fontWeight: 500,
-                color: '#374151',
-                cursor: loading ? 'not-allowed' : 'pointer',
-                opacity: loading ? 0.5 : 1,
-                transition: 'all 0.2s',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+                minHeight: '44px',
               }}
-              onMouseEnter={(e) => {
-                if (!loading) {
-                  e.currentTarget.style.backgroundColor = '#f9fafb';
-                  e.currentTarget.style.borderColor = '#d1d5db';
-                }
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = '#ffffff';
-                e.currentTarget.style.borderColor = '#e5e7eb';
-              }}
-            >
-              <svg style={{ width: '20px', height: '20px' }} viewBox="0 0 24 24">
-                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
-                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
-              </svg>
-              Continue with Google
-            </button>
+            />
+            {!gsiReady && (
+              <button
+                onClick={handleFallbackOAuth}
+                disabled={loading}
+                style={{
+                  width: '100%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '12px',
+                  padding: '14px 16px',
+                  backgroundColor: '#ffffff',
+                  border: '2px solid #e5e7eb',
+                  borderRadius: '12px',
+                  fontSize: '15px',
+                  fontWeight: 500,
+                  color: '#374151',
+                  cursor: loading ? 'not-allowed' : 'pointer',
+                  opacity: loading ? 0.5 : 1,
+                  marginTop: '8px',
+                }}
+              >
+                <svg style={{ width: '20px', height: '20px' }} viewBox="0 0 24 24">
+                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                  <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
+                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+                </svg>
+                Continue with Google
+              </button>
+            )}
+            <p style={{ fontSize: '12px', color: '#9ca3af', marginTop: '8px', textAlign: 'center' }}>
+              On Jio or restricted network? Use email sign-in below for best results.
+            </p>
 
             {/* Divider */}
             <div style={{ position: 'relative', margin: '24px 0' }}>
