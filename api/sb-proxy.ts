@@ -31,6 +31,7 @@ function buildSupabaseUrl(path: string, query: Record<string, string | string[] 
   const base = `${SUPABASE_URL}/${pathPart}`;
   const q = { ...query };
   delete q.path;
+  delete q.host;
   const keys = Object.keys(q).filter((k) => q[k] !== undefined && q[k] !== '');
   if (keys.length === 0) return base;
   const params = new URLSearchParams();
