@@ -46,6 +46,7 @@ interface Booking {
   status: string;
   created_at: string;
   notes: string | null;
+  meeting_url: string | null;
 }
 
 interface Payment {
@@ -267,6 +268,34 @@ const AdminPage = () => {
       }
     } catch (error) {
       logError('Error updating booking:', error);
+    }
+  };
+
+  const [confirmingBookingId, setConfirmingBookingId] = useState<string | null>(null);
+
+  const confirmBookingWithMeet = async (bookingId: string) => {
+    if (!session?.access_token) return;
+    setConfirmingBookingId(bookingId);
+    try {
+      const res = await fetch('/api/bookings', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ bookingId }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        fetchData();
+      } else {
+        setEntityError(data.error || 'Failed to confirm booking');
+      }
+    } catch (error) {
+      logError('Error confirming booking:', error);
+      setEntityError('Failed to confirm booking');
+    } finally {
+      setConfirmingBookingId(null);
     }
   };
 
@@ -1052,11 +1081,16 @@ const AdminPage = () => {
                               {booking.status === 'pending' && (
                                 <>
                                   <button
-                                    onClick={() => updateBookingStatus(booking.id, 'confirmed')}
-                                    className="p-2 text-green-600 hover:bg-green-50 rounded-xl transition-colors"
-                                    title="Confirm"
+                                    onClick={() => confirmBookingWithMeet(booking.id)}
+                                    disabled={confirmingBookingId === booking.id}
+                                    className="p-2 text-green-600 hover:bg-green-50 rounded-xl transition-colors disabled:opacity-50"
+                                    title="Confirm (creates calendar event + Meet link)"
                                   >
-                                    <CheckCircle className="w-5 h-5" />
+                                    {confirmingBookingId === booking.id ? (
+                                      <RefreshCw className="w-5 h-5 animate-spin" />
+                                    ) : (
+                                      <CheckCircle className="w-5 h-5" />
+                                    )}
                                   </button>
                                   <button
                                     onClick={() => cancelAndRefund(booking.id)}
@@ -1070,6 +1104,17 @@ const AdminPage = () => {
                               )}
                               {booking.status === 'confirmed' && (
                                 <>
+                                  {booking.meeting_url && (
+                                    <a
+                                      href={booking.meeting_url}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="p-2 text-blue-600 hover:bg-blue-50 rounded-xl transition-colors"
+                                      title="Join Google Meet"
+                                    >
+                                      <Video className="w-5 h-5" />
+                                    </a>
+                                  )}
                                   <button
                                     onClick={() => updateBookingStatus(booking.id, 'completed')}
                                     className="p-2 text-lavender-600 hover:bg-lavender-50 rounded-xl transition-colors"

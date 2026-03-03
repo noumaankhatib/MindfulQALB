@@ -51,7 +51,7 @@ export const fetchAvailability = async (
       return { success: false, error: 'Failed to fetch availability' };
     }
   } else {
-    // Direct mode - uses existing calcomService (for development only)
+    // Direct mode - uses existing calendarService (for development only)
     // In production, this should be disabled
     return { success: false, error: 'Backend API not configured' };
   }

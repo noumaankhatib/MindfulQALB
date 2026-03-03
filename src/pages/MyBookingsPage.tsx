@@ -11,6 +11,9 @@ import {
   CreditCard,
   ChevronRight,
   CalendarPlus,
+  ExternalLink,
+  Copy,
+  Check,
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import Navigation from '../components/Navigation';
@@ -33,6 +36,7 @@ interface BookingRow {
   customer_email: string;
   notes: string | null;
   created_at: string;
+  meeting_url: string | null;
 }
 
 interface PaymentRow {
@@ -49,6 +53,7 @@ const MyBookingsPage = () => {
   const [bookings, setBookings] = useState<BookingRow[]>([]);
   const [paymentsByBooking, setPaymentsByBooking] = useState<Record<string, PaymentRow>>({});
   const [loading, setLoading] = useState(true);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -71,7 +76,7 @@ const MyBookingsPage = () => {
       // Fetch by user_id (primary) or by customer_email (fallback if user_id wasn't stored)
       const { data: byUserId, error: err1 } = await supabase
         .from('bookings')
-        .select('id, session_type, session_format, duration_minutes, scheduled_date, scheduled_time, status, customer_name, customer_email, notes, created_at')
+        .select('id, session_type, session_format, duration_minutes, scheduled_date, scheduled_time, status, customer_name, customer_email, notes, created_at, meeting_url')
         .eq('user_id', user.id)
         .order('scheduled_date', { ascending: false })
         .order('scheduled_time', { ascending: false });
@@ -89,7 +94,7 @@ const MyBookingsPage = () => {
       if (user.email) {
         const { data: byEmail } = await supabase
           .from('bookings')
-          .select('id, session_type, session_format, duration_minutes, scheduled_date, scheduled_time, status, customer_name, customer_email, notes, created_at')
+          .select('id, session_type, session_format, duration_minutes, scheduled_date, scheduled_time, status, customer_name, customer_email, notes, created_at, meeting_url')
           .ilike('customer_email', user.email)
           .order('scheduled_date', { ascending: false })
           .order('scheduled_time', { ascending: false });
@@ -288,6 +293,40 @@ const MyBookingsPage = () => {
                           )}
                         </div>
                       </div>
+
+                      {/* Join Session button for confirmed video/audio bookings */}
+                      {booking.status === 'confirmed' && booking.meeting_url && (booking.session_format === 'video' || booking.session_format === 'audio') && (
+                        <div className="mt-4 pt-4 border-t border-lavender-100 flex flex-wrap items-center gap-3">
+                          <a
+                            href={booking.meeting_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl font-semibold hover:from-green-600 hover:to-emerald-700 transition-all shadow-md shadow-green-500/20"
+                          >
+                            {booking.session_format === 'video' ? <Video className="w-4 h-4" /> : <Headphones className="w-4 h-4" />}
+                            Join Session
+                            <ExternalLink className="w-3.5 h-3.5 opacity-70" />
+                          </a>
+                          <button
+                            onClick={() => {
+                              navigator.clipboard.writeText(booking.meeting_url!);
+                              setCopiedId(booking.id);
+                              setTimeout(() => setCopiedId(null), 2000);
+                            }}
+                            className="inline-flex items-center gap-1.5 px-3 py-2.5 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-xl text-sm font-medium transition-colors"
+                            title="Copy meeting link"
+                          >
+                            {copiedId === booking.id ? <Check className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4" />}
+                            {copiedId === booking.id ? 'Copied!' : 'Copy Link'}
+                          </button>
+                        </div>
+                      )}
+
+                      {booking.status === 'pending' && (
+                        <div className="mt-4 pt-4 border-t border-lavender-100">
+                          <p className="text-sm text-amber-600 font-medium">Awaiting confirmation from therapist</p>
+                        </div>
+                      )}
                     </div>
                   </motion.div>
                 );

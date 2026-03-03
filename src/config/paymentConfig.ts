@@ -113,15 +113,15 @@ export const AVAILABILITY_CONFIG = {
 // CAL.COM INTEGRATION
 // ============================================================================
 // 
-// Cal.com integration is handled via the backend API for security.
-// Configure the following in backend/.env:
+// Google Calendar integration is handled via the backend API for security.
+// Configure the following in .env / Vercel:
 // 
-// - CALCOM_API_KEY: Your Cal.com API key
-// - CALCOM_USERNAME: Your Cal.com username
-// - CALCOM_EVENT_TYPE_IDS: JSON mapping of session types to event IDs
+// - GOOGLE_CALENDAR_ID: The calendar to check availability and create events
+// - GOOGLE_SERVICE_ACCOUNT_EMAIL: Service account email
+// - GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY: Service account private key
 // 
-// The frontend communicates with Cal.com through the /api/availability and
-// /api/bookings endpoints, keeping API keys secure on the server.
+// The frontend communicates through /api/availability and /api/bookings
+// endpoints, keeping credentials secure on the server.
 // ============================================================================
 
 // ============================================================================

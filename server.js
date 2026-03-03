@@ -50,12 +50,30 @@ if (supabaseUrlOk && supabaseKeyOk) {
   }
 }
 
-const calComApiKey = process.env.CALCOM_API_KEY?.trim();
-const calComEventIds = (() => { try { const r = process.env.CALCOM_EVENT_TYPE_IDS; const p = r ? JSON.parse(r) : {}; return typeof p === 'object' && p !== null ? Object.keys(p).filter(k => p[k] != null && String(p[k]).trim() !== '') : []; } catch { return []; } })();
-if (calComApiKey && calComApiKey.length >= 20) {
-  console.log(`✅ Cal.com configured: ${calComEventIds.length} event type(s) mapped (e.g. ${calComEventIds.slice(0, 3).join(', ')}${calComEventIds.length > 3 ? '...' : ''})`);
+const googleCalId = process.env.GOOGLE_CALENDAR_ID?.trim();
+const googleSaEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL?.trim();
+const googleSaKey = process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY?.trim();
+const isGoogleCalConfigured = !!(googleCalId && googleSaEmail && googleSaKey);
+if (isGoogleCalConfigured) {
+  console.log(`✅ Google Calendar configured: ${googleCalId}`);
 } else {
-  console.log('⚠️  Cal.com not configured - bookings will save to DB but not appear in Cal.com (set CALCOM_API_KEY + CALCOM_EVENT_TYPE_IDS in backend/.env)');
+  console.log('⚠️  Google Calendar not configured - availability uses fallback slots, no Meet links on confirm');
+}
+
+// Lazy-load google-auth-library (not available until npm install)
+let _googleAuth = null;
+async function getGoogleAccessToken() {
+  if (!isGoogleCalConfigured) throw new Error('Google Calendar not configured');
+  if (!_googleAuth) {
+    const { GoogleAuth } = await import('google-auth-library');
+    const key = googleSaKey.replace(/\\n/g, '\n');
+    _googleAuth = new GoogleAuth({ credentials: { client_email: googleSaEmail, private_key: key }, scopes: ['https://www.googleapis.com/auth/calendar'] });
+  }
+  const client = await _googleAuth.getClient();
+  const tokenRes = await client.getAccessToken();
+  const token = typeof tokenRes === 'string' ? tokenRes : tokenRes?.token;
+  if (!token) throw new Error('Failed to obtain Google access token');
+  return token;
 }
 
 // Middleware
@@ -112,62 +130,54 @@ app.get('/api/health', async (req, res) => {
 // Allowed time slots (same for all session types – one therapist, one calendar)
 const ALLOWED_SLOTS = ['9:00 AM', '10:00 AM', '5:00 PM', '6:00 PM', '7:00 PM', '8:00 PM'];
 
-// Use the shortest event type for availability so we get granular :00 marks matching ALLOWED_SLOTS
-const AVAILABILITY_EVENT_SLUG = process.env.CALCOM_AVAILABILITY_SLUG || 'free-consultation';
+function slotToDate(dateStr, timeStr) {
+  const match = timeStr.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
+  if (!match) throw new Error(`Invalid time: ${timeStr}`);
+  let hours = parseInt(match[1], 10);
+  const minutes = parseInt(match[2], 10);
+  const period = match[3].toUpperCase();
+  if (period === 'PM' && hours !== 12) hours += 12;
+  else if (period === 'AM' && hours === 12) hours = 0;
+  const iso = `${dateStr}T${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:00+05:30`;
+  return new Date(iso);
+}
 
-const normalize = (t) => String(t).replace(/\s+/g, ' ').trim().toLowerCase();
-
-async function fetchCalComAvailability(date) {
-  const apiKey = process.env.CALCOM_API_KEY?.trim();
-  const username = process.env.CALCOM_USERNAME || 'mindfulqalb';
-  if (!apiKey || apiKey.length < 20) return null;
+async function fetchGoogleCalendarAvailability(date) {
+  if (!isGoogleCalConfigured) return null;
   try {
-    const url = `https://api.cal.com/v1/slots?` + new URLSearchParams({
-      apiKey,
-      eventTypeSlug: AVAILABILITY_EVENT_SLUG,
-      usernameList: username,
-      startTime: `${date}T00:00:00.000Z`,
-      endTime: `${date}T23:59:59.999Z`,
+    const token = await getGoogleAccessToken();
+    const timeMin = `${date}T00:00:00+05:30`;
+    const timeMax = `${date}T23:59:59+05:30`;
+    const res = await fetch('https://www.googleapis.com/calendar/v3/freeBusy', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ timeMin, timeMax, items: [{ id: googleCalId }] }),
     });
-    const response = await fetch(url);
-    if (!response.ok) return null;
-    const data = await response.json();
-    const dateSlots = data.slots?.[date] || [];
-    const calcomTimes = new Set(
-      dateSlots.map((slot) =>
-        normalize(new Date(slot.time).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'Asia/Kolkata' }))
-      )
-    );
-    return ALLOWED_SLOTS.map((time) => ({
-      time,
-      available: calcomTimes.has(normalize(time)),
-    }));
+    if (!res.ok) { console.error('FreeBusy API error:', res.status); return null; }
+    const data = await res.json();
+    const busyPeriods = data.calendars?.[googleCalId]?.busy ?? [];
+    return ALLOWED_SLOTS.map((time) => {
+      const slotStart = slotToDate(date, time);
+      const slotEnd = new Date(slotStart.getTime() + 60 * 60 * 1000);
+      const isBusy = busyPeriods.some(bp => slotStart < new Date(bp.end) && slotEnd > new Date(bp.start));
+      return { time, available: !isBusy };
+    });
   } catch (e) {
+    console.error('Google Calendar availability error:', e.message);
     return null;
   }
 }
 
-// Availability – one set of slots for all session types (single therapist calendar)
 app.post('/api/availability', async (req, res) => {
   const { date } = req.body;
   if (!date) {
     return res.status(400).json({ error: 'Date required' });
   }
   if (isWeekend(date)) {
-    return res.json({
-      success: true,
-      date,
-      slots: [],
-      isWeekend: true,
-      message: 'No slots available on weekends',
-    });
+    return res.json({ success: true, date, slots: [], isWeekend: true, message: 'No slots available on weekends' });
   }
-  const slots = await fetchCalComAvailability(date);
-  res.json({
-    success: true,
-    date,
-    slots: slots || getMockSlots(),
-  });
+  const slots = await fetchGoogleCalendarAvailability(date);
+  res.json({ success: true, date, slots: slots || getMockSlots() });
 });
 
 // Validate coupon (same contract as Vercel api/coupons/validate)
@@ -608,7 +618,7 @@ function getSupabase() {
   });
 }
 
-// Cal.com v2: parse date+time as Asia/Kolkata and return UTC ISO (start must be UTC)
+// Parse date+time as Asia/Kolkata and return UTC ISO
 function parseTimeToUTCISO(dateString, timeString) {
   const match = String(timeString).match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
   if (!match) throw new Error('Invalid time format');
@@ -622,89 +632,50 @@ function parseTimeToUTCISO(dateString, timeString) {
   return new Date(isoInKolkata).toISOString();
 }
 
-// Cal.com: parse event type IDs from env (e.g. {"individual-video":"123","couples-video":"456"})
-function parseEventTypeIds() {
-  const raw = process.env.CALCOM_EVENT_TYPE_IDS;
-  if (!raw) return {};
+// Create Google Calendar event with optional Meet link
+async function createGoogleCalendarEvent(booking, requestId) {
+  if (!isGoogleCalConfigured) return { eventId: null, meetingUrl: null };
   try {
-    const parsed = JSON.parse(raw);
-    return typeof parsed === 'object' && parsed !== null ? parsed : {};
-  } catch (e) {
-    console.error('Invalid CALCOM_EVENT_TYPE_IDS JSON:', e.message);
-    return {};
-  }
-}
+    const token = await getGoogleAccessToken();
+    const includeMeet = booking.session_format === 'video' || booking.session_format === 'audio';
+    const formatLabel = booking.session_format.charAt(0).toUpperCase() + booking.session_format.slice(1);
+    const typeLabel = booking.session_type.charAt(0).toUpperCase() + booking.session_type.slice(1);
+    const summary = `${typeLabel} Therapy - ${formatLabel} (${booking.customer_name})`;
+    const startISO = parseTimeToUTCISO(booking.scheduled_date, booking.scheduled_time);
+    const endISO = new Date(new Date(startISO).getTime() + (booking.duration_minutes || 60) * 60_000).toISOString();
 
-// Create booking on Cal.com (same logic as api/bookings.ts)
-async function createCalComBooking(sessionType, format, date, time, customer, requestId) {
-  const apiKey = process.env.CALCOM_API_KEY;
-  const eventTypeIds = parseEventTypeIds();
-  const combinedKey = `${String(sessionType).toLowerCase()}-${String(format || 'video').toLowerCase()}`;
-
-  if (!apiKey || apiKey.length < 20) {
-    return { success: false, bookingId: null, calComUid: null, error: 'Cal.com API key not configured (set CALCOM_API_KEY in backend/.env)' };
-  }
-
-  const eventTypeId = eventTypeIds[combinedKey] ?? eventTypeIds[sessionType];
-  const eventTypeIdNum = (eventTypeId != null && String(eventTypeId).trim() !== '')
-    ? String(eventTypeId).trim()
-    : null;
-  if (!eventTypeIdNum) {
-    return { success: false, bookingId: null, calComUid: null, error: `Cal.com event type not configured for "${combinedKey}". Set CALCOM_EVENT_TYPE_IDS in backend/.env (e.g. {"individual-video":"123"}).` };
-  }
-
-  try {
-    const startTime = parseTimeToUTCISO(date, time);
-    const payload = {
-      eventTypeId: parseInt(eventTypeIdNum, 10),
-      start: startTime,
-      attendee: {
-        name: sanitize(customer.name),
-        email: String(customer.email).toLowerCase().trim(),
-        timeZone: 'Asia/Kolkata',
-        language: 'en',
-        ...(customer.phone ? { phoneNumber: customer.phone } : {}),
-      },
-      metadata: { requestId },
+    const body = {
+      summary,
+      description: `Client: ${booking.customer_name}\nEmail: ${booking.customer_email}`,
+      start: { dateTime: startISO, timeZone: 'Asia/Kolkata' },
+      end: { dateTime: endISO, timeZone: 'Asia/Kolkata' },
+      attendees: [{ email: booking.customer_email }],
     };
-    if (process.env.DEBUG_CALCOM === '1' || process.env.DEBUG_CALCOM === 'true') {
-      console.log(`[${requestId}] Cal.com request: combinedKey=${combinedKey} eventTypeId=${eventTypeIdNum} start=${startTime} attendee=${payload.attendee.email}`);
+    if (includeMeet) {
+      body.conferenceData = { createRequest: { requestId: requestId || `mq-${Date.now()}`, conferenceSolutionKey: { type: 'hangoutsMeet' } } };
     }
-    const response = await fetch('https://api.cal.com/v2/bookings', {
+
+    const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(googleCalId)}/events?conferenceDataVersion=1&sendUpdates=all`;
+    const response = await fetch(url, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${apiKey}`,
-        'cal-api-version': '2024-08-13',
-      },
-      body: JSON.stringify(payload),
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
     });
 
-    const json = await response.json().catch(() => ({}));
-    if (process.env.DEBUG_CALCOM === '1' || process.env.DEBUG_CALCOM === 'true') {
-      console.log(`[${requestId}] Cal.com response: status=${response.status} ok=${response.ok} body=${JSON.stringify(json)}`);
-    }
     if (!response.ok) {
-      const msg = json.message || (typeof json.error === 'object' && json.error?.message) || (typeof json.error === 'string' ? json.error : null) || `Cal.com API ${response.status}`;
-      console.error(`[${requestId}] Cal.com API error: HTTP ${response.status}`, JSON.stringify(json));
-      throw new Error(msg);
+      const text = await response.text().catch(() => '');
+      throw new Error(`Calendar API ${response.status}: ${text}`);
     }
-    if (json.status === 'error') {
-      console.error(`[${requestId}] Cal.com returned error:`, JSON.stringify(json));
-      throw new Error(json.message || 'Cal.com returned error');
-    }
-
-    const data = json.data;
-    const uid = data?.uid ?? (data?.id != null ? String(data.id) : null) ?? `CAL-${Date.now()}`;
-    return { success: true, bookingId: uid, calComUid: data?.uid ?? (data?.id != null ? String(data.id) : null) ?? null };
+    const event = await response.json();
+    const meetingUrl = event.hangoutLink || event.conferenceData?.entryPoints?.find(e => e.entryPointType === 'video')?.uri || null;
+    return { eventId: event.id, meetingUrl };
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Booking failed';
-    console.error(`[${requestId}] Cal.com booking error:`, message);
-    return { success: false, bookingId: null, calComUid: null, error: message };
+    console.error(`[${requestId}] Google Calendar event error:`, err.message);
+    return { eventId: null, meetingUrl: null };
   }
 }
 
-// Create booking – create on Cal.com first, then insert into Supabase
+// POST: Create booking (Supabase only, status = pending)
 app.post('/api/bookings', async (req, res) => {
   const { sessionType, format, date, time, customer, user_id: userId } = req.body;
   const requestId = `req_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
@@ -720,17 +691,6 @@ app.post('/api/bookings', async (req, res) => {
   const session_format = toDbFormat(rawFormat);
   const duration_minutes = DURATION_BY_RAW_FORMAT[rawFormat] ?? DURATION_BY_RAW_FORMAT[session_format] ?? 60;
 
-  // 1) Create booking on Cal.com so the slot appears in your calendar
-  const calResult = await createCalComBooking(sessionType, fmt, date, time, customer, requestId);
-  const bookingId = calResult.bookingId || `local_${Date.now()}`;
-  const calComUid = calResult.calComUid ?? null;
-
-  if (!calResult.success) {
-    console.warn(`[${requestId}] Cal.com failed (will still save to DB):`, calResult.error);
-  } else {
-    console.log(`[${requestId}] Cal.com booking created:`, bookingId);
-  }
-
   const supabase = getSupabase();
   if (supabase) {
     try {
@@ -743,8 +703,8 @@ app.post('/api/bookings', async (req, res) => {
         scheduled_time: time,
         timezone: 'Asia/Kolkata',
         status: 'pending',
-        calcom_booking_id: calResult.success ? bookingId : null,
-        calcom_booking_uid: calResult.success ? calComUid : null,
+        calendar_event_id: null,
+        meeting_url: null,
         customer_name: sanitize(customer.name),
         customer_email: String(customer.email).toLowerCase().trim(),
         customer_phone: customer.phone ? String(customer.phone).trim() : null,
@@ -757,35 +717,26 @@ app.post('/api/bookings', async (req, res) => {
       const { data, error } = await supabase.from('bookings').insert(row).select('id').single();
       if (error) {
         console.error('Supabase booking insert failed:', error.code, error.message, JSON.stringify(error.details));
-        return res.status(500).json({
-          success: false,
-          error: 'Failed to save booking. Check server logs and docs/SUPABASE_SETUP.md (table + RLS).',
-        });
+        return res.status(500).json({ success: false, error: 'Failed to save booking.' });
       }
-      console.log('Booking saved to DB:', data.id, 'Cal.com:', calResult.success ? 'yes' : 'no', 'email:', row.customer_email);
+      console.log(`[${requestId}] Booking saved to DB: ${data.id}`);
       return res.json({
         success: true,
         bookingId: data.id,
         databaseId: data.id,
-        calComCreated: calResult.success,
-        message: calResult.success ? 'Booking created successfully' : 'Booking saved; calendar sync failed. You may need to add the slot manually in Cal.com.',
-        savedToDatabase: true,
+        message: 'Booking created successfully',
       });
     } catch (err) {
       console.error('Booking insert error:', err);
-      return res.status(500).json({
-        success: false,
-        error: 'Failed to save booking.',
-      });
+      return res.status(500).json({ success: false, error: 'Failed to save booking.' });
     }
   }
 
-  console.log('Booking mock (no DB) – add SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY to backend/.env to persist');
+  console.log('Booking mock (no DB)');
   res.json({
     success: true,
-    bookingId,
-    calComCreated: calResult.success,
-    message: calResult.success ? 'Booking created (mock DB)' : 'Cal.com created but DB not configured',
+    bookingId: `local_${Date.now()}`,
+    message: 'Booking created (mock – DB not configured)',
     savedToDatabase: false,
   });
 });
@@ -832,6 +783,36 @@ app.post('/api/consent', async (req, res) => {
     consentId: `consent_mock_${Date.now()}`,
     message: 'Consent recorded (mock – set SUPABASE_* in backend/.env to persist)',
   });
+});
+
+// PATCH: Confirm booking (admin only) – creates Calendar event + Meet link
+app.patch('/api/bookings', async (req, res) => {
+  const requestId = `req_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  const adminCtx = await requireAdmin(req, res);
+  if (!adminCtx) return;
+
+  const { bookingId } = req.body;
+  if (!bookingId) return res.status(400).json({ error: 'bookingId is required' });
+
+  const { supabase } = adminCtx;
+  const { data: booking, error: fetchErr } = await supabase.from('bookings').select('*').eq('id', bookingId).single();
+  if (fetchErr || !booking) return res.status(404).json({ success: false, error: 'Booking not found' });
+  if (booking.status !== 'pending') return res.status(400).json({ success: false, error: `Booking is already ${booking.status}` });
+
+  const { eventId, meetingUrl } = await createGoogleCalendarEvent(booking, requestId);
+
+  const payload = { status: 'confirmed', updated_at: new Date().toISOString() };
+  if (eventId) payload.calendar_event_id = eventId;
+  if (meetingUrl) payload.meeting_url = meetingUrl;
+
+  const { error: updateErr } = await supabase.from('bookings').update(payload).eq('id', bookingId);
+  if (updateErr) {
+    console.error(`[${requestId}] Confirm update failed:`, updateErr.message);
+    return res.status(500).json({ success: false, error: 'Failed to confirm booking' });
+  }
+
+  console.log(`[${requestId}] Booking ${bookingId} confirmed, meet: ${meetingUrl || 'none'}`);
+  res.json({ success: true, bookingId, calendarEventId: eventId, meetingUrl, message: meetingUrl ? 'Booking confirmed with Google Meet link' : 'Booking confirmed' });
 });
 
 // --- Admin: require Bearer token and profile.role === 'admin' ---

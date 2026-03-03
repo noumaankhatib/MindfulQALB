@@ -55,7 +55,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     requestId,
     ...(isProduction ? {} : {
       services: {
-        calcom: !!process.env.CALCOM_API_KEY ? 'configured' : 'not configured',
+        google_calendar: !!(process.env.GOOGLE_CALENDAR_ID && process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL) ? 'configured' : 'not configured',
         razorpay: !!process.env.RAZORPAY_KEY_ID ? 'configured' : 'not configured',
         supabase: !!(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) ? 'configured' : 'not configured',
       },

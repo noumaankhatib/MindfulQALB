@@ -29,7 +29,7 @@ import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { processPayment, isPaymentConfigured, isTestMode, validateCoupon } from '../services/paymentService';
 import { AVAILABILITY_CONFIG } from '../config/paymentConfig';
 import { getPricing, isFormatEnabled, getDuration } from '../config/pricingConfig';
-import { fetchCalComAvailability, createCalComBooking, isCalComConfigured } from '../services/calcomService';
+import { fetchAvailability, createBooking, isCalendarConfigured } from '../services/calendarService';
 import { storeConsent, linkPaymentToBooking } from '../services/apiService';
 import ConsentModal from './ConsentModal';
 import { ConsentRecord } from '../data/consentForm';
@@ -439,8 +439,8 @@ const BookingFlow = ({ session, isOpen, onClose }: BookingFlowProps) => {
             booked: !slot.available || allBookedSlots.includes(slot.time),
           }));
 
-      if (isCalComConfigured()) {
-        const calSlots = await fetchCalComAvailability(selectedDate, canonicalSessionType);
+      if (isCalendarConfigured()) {
+        const calSlots = await fetchAvailability(selectedDate, canonicalSessionType);
         setAvailableSlots(applyFilters(calSlots));
       } else if (AVAILABILITY_CONFIG.USE_MOCK_AVAILABILITY) {
         await new Promise((resolve) => setTimeout(resolve, 500));
@@ -663,8 +663,7 @@ const BookingFlow = ({ session, isOpen, onClose }: BookingFlowProps) => {
         return;
       }
 
-      // Create booking on Cal.com and persist to Supabase (for Admin + My Bookings)
-      const bookingResult = await createCalComBooking(
+      const bookingResult = await createBooking(
         selectedSessionType.id,
         selectedDate,
         selectedSlot,
@@ -710,7 +709,7 @@ const BookingFlow = ({ session, isOpen, onClose }: BookingFlowProps) => {
         date: selectedDate.toISOString(),
         time: selectedSlot,
         firstName: customerInfo.name.split(' ')[0], // Only first name for display
-        calComBooked: isCalComConfigured(),
+        calendarBooked: true,
         timestamp: new Date().toISOString(),
       };
       

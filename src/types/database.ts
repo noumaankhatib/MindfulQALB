@@ -53,8 +53,8 @@ export interface Database {
           scheduled_time: string;
           timezone: string;
           status: 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'no_show';
-          calcom_booking_id: string | null;
-          calcom_booking_uid: string | null;
+          calendar_event_id: string | null;
+          meeting_url: string | null;
           customer_name: string;
           customer_email: string;
           customer_phone: string | null;
@@ -74,8 +74,8 @@ export interface Database {
           scheduled_time: string;
           timezone?: string;
           status?: 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'no_show';
-          calcom_booking_id?: string | null;
-          calcom_booking_uid?: string | null;
+          calendar_event_id?: string | null;
+          meeting_url?: string | null;
           customer_name: string;
           customer_email: string;
           customer_phone?: string | null;
@@ -95,8 +95,8 @@ export interface Database {
           scheduled_time?: string;
           timezone?: string;
           status?: 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'no_show';
-          calcom_booking_id?: string | null;
-          calcom_booking_uid?: string | null;
+          calendar_event_id?: string | null;
+          meeting_url?: string | null;
           customer_name?: string;
           customer_email?: string;
           customer_phone?: string | null;
