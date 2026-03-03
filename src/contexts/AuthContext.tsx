@@ -88,13 +88,17 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     initSession();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
+      async (event, session) => {
         try {
           if (!mountedRef.current) return;
           setSession(session);
           setUser(session?.user ?? null);
           if (session?.user) {
-            await fetchProfile(session.user.id);
+            // Brief delay when returning from OAuth redirect so session is ready for profile fetch.
+            if (event === 'INITIAL_SESSION' && typeof window !== 'undefined' && window.location.hash) {
+              await new Promise(r => setTimeout(r, 600));
+            }
+            if (mountedRef.current && session?.user) await fetchProfile(session.user.id);
           } else {
             setProfile(null);
           }
@@ -108,6 +112,18 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
     return () => subscription.unsubscribe();
   }, [isConfigured]);
+
+  // Refetch profile when we have user but profile is null (e.g. after slow OAuth redirect or flaky first fetch).
+  useEffect(() => {
+    if (!user || profile !== null || !isConfigured) return;
+    const t = setTimeout(
+      () => {
+        if (mountedRef.current && user) fetchProfile(user.id, 5);
+      },
+      2500,
+    );
+    return () => clearTimeout(t);
+  }, [user?.id, profile, isConfigured]);
 
   const fetchProfile = async (userId: string, retries = 3) => {
     for (let attempt = 0; attempt <= retries; attempt++) {

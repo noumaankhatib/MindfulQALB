@@ -76,7 +76,15 @@ export const UserMenu = ({ onOpenAuth }: UserMenuProps) => {
     );
   }
 
-  const displayName = profile?.full_name || user.email?.split('@')[0] || 'User';
+  const displayName =
+    profile?.full_name ||
+    user.user_metadata?.full_name ||
+    user.user_metadata?.name ||
+    (user.user_metadata?.given_name && user.user_metadata?.family_name
+      ? `${user.user_metadata.given_name} ${user.user_metadata.family_name}`.trim()
+      : null) ||
+    user.email?.split('@')[0] ||
+    'User';
   const avatarUrl = profile?.avatar_url || user.user_metadata?.avatar_url || null;
   const showImage = avatarUrl && !imageError;
   const initials = getInitials(displayName);
