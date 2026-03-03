@@ -821,6 +821,28 @@ app.post('/api/consent', async (req, res) => {
   });
 });
 
+// GET /api/profile – fetch current user's profile (bypasses RLS, for when client fetch fails).
+app.get('/api/profile', async (req, res) => {
+  const supabase = getSupabase();
+  if (!supabase) {
+    return res.status(503).json({ error: 'Server configuration error' });
+  }
+  const authHeader = req.headers.authorization;
+  const token = typeof authHeader === 'string' && authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : null;
+  if (!token) {
+    return res.status(401).json({ error: 'Missing Authorization: Bearer <access_token>' });
+  }
+  const { data: { user }, error: userError } = await supabase.auth.getUser(token);
+  if (userError || !user) {
+    return res.status(401).json({ error: 'Invalid or expired token' });
+  }
+  const { data: profile, error: profileError } = await supabase.from('profiles').select('*').eq('id', user.id).single();
+  if (profileError) {
+    return res.status(profileError.code === 'PGRST116' ? 404 : 500).json({ error: profileError.message });
+  }
+  res.json(profile);
+});
+
 // --- Admin: require Bearer token and profile.role === 'admin' ---
 async function requireAdmin(req, res) {
   const supabase = getSupabase();

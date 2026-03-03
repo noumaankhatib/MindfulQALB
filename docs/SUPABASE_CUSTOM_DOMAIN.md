@@ -79,8 +79,9 @@ After **api.mindfulqalb.com** is active in Vercel:
 - **Vercel** → Project → **Settings** → **Environment Variables** (for Production and Preview if you want):
   - Set **VITE_SUPABASE_URL** = `https://api.mindfulqalb.com`  
     (so the built frontend uses this URL).
-  - Keep **SUPABASE_URL** = `https://xxxx.supabase.co`  
-    (so the serverless proxy forwards to the real Supabase).
+  - Set **SUPABASE_URL** = `https://xxxx.supabase.co`  
+    (real Supabase — required for API routes like /api/profile and sb-proxy).
+  - If you mistakenly set SUPABASE_URL to api.mindfulqalb.com, add **SUPABASE_UPSTREAM_URL** = `https://xxxx.supabase.co` so the sb-proxy forwards to the real Supabase.
   - Keep **VITE_SUPABASE_ANON_KEY** and **SUPABASE_SERVICE_ROLE_KEY** as they are.
 - **Redeploy** the project so the new env is applied.
 

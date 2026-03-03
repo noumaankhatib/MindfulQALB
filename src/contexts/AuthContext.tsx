@@ -131,6 +131,30 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   };
 
   const fetchProfile = async (userId: string, retries = 3) => {
+    const { data: sessionData } = await supabase.auth.getSession();
+    const accessToken = sessionData.session?.access_token;
+
+    // Try backend API first (same-origin, bypasses RLS — more reliable than Supabase client on some deploys).
+    if (accessToken && typeof window !== 'undefined') {
+      try {
+        const base = (typeof import.meta.env.VITE_BACKEND_URL === 'string' && import.meta.env.VITE_BACKEND_URL) || '/api';
+        const res = await fetch(`${base.replace(/\/$/, '')}/profile`, {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
+        if (res.ok) {
+          const data = (await res.json()) as Profile;
+          if (mountedRef.current) {
+            setProfile(data);
+            setLoading(false);
+          }
+          return;
+        }
+      } catch (err) {
+        logError('Profile API fetch failed:', err);
+      }
+    }
+
+    // Fallback: Supabase client fetch.
     for (let attempt = 0; attempt <= retries; attempt++) {
       try {
         const { data, error } = await supabase
@@ -140,15 +164,16 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           .single();
 
         if (!mountedRef.current) return;
-        if (error) {
-          if (attempt < retries) {
-            await new Promise(r => setTimeout(r, 500 * Math.pow(2, attempt)));
-            continue;
-          }
-          logError('Error fetching profile after retries:', error);
-        } else {
+        if (!error) {
           setProfile(data);
+          if (mountedRef.current) setLoading(false);
+          return;
         }
+        if (attempt < retries) {
+          await new Promise(r => setTimeout(r, 500 * Math.pow(2, attempt)));
+          continue;
+        }
+        logError('Error fetching profile after retries:', error);
         break;
       } catch (err) {
         if (!mountedRef.current) return;

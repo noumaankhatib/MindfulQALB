@@ -6,7 +6,13 @@
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
-const SUPABASE_URL = (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '').trim().replace(/\/$/, '');
+// Proxy MUST forward to the real Supabase project URL (https://xxx.supabase.co).
+// When VITE_SUPABASE_URL=api.mindfulqalb.com, SUPABASE_URL may be wrong for the proxy — use SUPABASE_UPSTREAM_URL.
+const upstream = (process.env.SUPABASE_UPSTREAM_URL || '').trim().replace(/\/$/, '');
+const fallback = (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '').trim().replace(/\/$/, '');
+const isRealSupabase = (u: string) => /\.supabase\.co$/.test(u.replace(/^https?:\/\//, '').split('/')[0]);
+const isProxyDomain = /api\.mindfulqalb\.com/.test(fallback);
+const SUPABASE_URL = (isRealSupabase(upstream) && upstream) || (isRealSupabase(fallback) ? fallback : upstream || (isProxyDomain ? '' : fallback));
 const SUPABASE_ANON_KEY = (process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY || '').trim();
 
 const FORWARD_HEADERS = [
@@ -39,7 +45,10 @@ function buildSupabaseUrl(path: string, query: Record<string, string | string[] 
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (!SUPABASE_URL) {
-    return res.status(500).json({ error: 'Supabase proxy not configured' });
+    const hint = isProxyDomain
+      ? 'Set SUPABASE_UPSTREAM_URL=https://YOUR_PROJECT.supabase.co (real Supabase URL) in Vercel env.'
+      : 'Set SUPABASE_URL or SUPABASE_UPSTREAM_URL in Vercel env.';
+    return res.status(500).json({ error: 'Supabase proxy not configured', hint });
   }
 
   if (req.method === 'OPTIONS') {
