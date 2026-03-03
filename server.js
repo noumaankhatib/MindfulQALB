@@ -644,18 +644,21 @@ async function createGoogleCalendarEvent(booking, requestId) {
     const startISO = parseTimeToUTCISO(booking.scheduled_date, booking.scheduled_time);
     const endISO = new Date(new Date(startISO).getTime() + (booking.duration_minutes || 60) * 60_000).toISOString();
 
+    const meetLink = includeMeet
+      ? `https://meet.jit.si/MindfulQALB-${(booking.id || '').replace(/-/g, '').substring(0, 12)}`
+      : null;
+
+    const desc = `Client: ${booking.customer_name}\nEmail: ${booking.customer_email}` +
+      (meetLink ? `\n\n--- Video Session ---\nJoin: ${meetLink}` : '');
+
     const body = {
       summary,
-      description: `Client: ${booking.customer_name}\nEmail: ${booking.customer_email}`,
+      description: desc,
       start: { dateTime: startISO, timeZone: 'Asia/Kolkata' },
       end: { dateTime: endISO, timeZone: 'Asia/Kolkata' },
-      attendees: [{ email: booking.customer_email }],
     };
-    if (includeMeet) {
-      body.conferenceData = { createRequest: { requestId: requestId || `mq-${Date.now()}`, conferenceSolutionKey: { type: 'hangoutsMeet' } } };
-    }
 
-    const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(googleCalId)}/events?conferenceDataVersion=1&sendUpdates=all`;
+    const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(googleCalId)}/events`;
     const response = await fetch(url, {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
@@ -667,8 +670,7 @@ async function createGoogleCalendarEvent(booking, requestId) {
       throw new Error(`Calendar API ${response.status}: ${text}`);
     }
     const event = await response.json();
-    const meetingUrl = event.hangoutLink || event.conferenceData?.entryPoints?.find(e => e.entryPointType === 'video')?.uri || null;
-    return { eventId: event.id, meetingUrl };
+    return { eventId: event.id, meetingUrl: meetLink };
   } catch (err) {
     console.error(`[${requestId}] Google Calendar event error:`, err.message);
     return { eventId: null, meetingUrl: null };

@@ -95,7 +95,14 @@ export async function getFreeBusy(dateStr: string): Promise<BusyPeriod[]> {
   return data.calendars?.[calendarId]?.busy ?? [];
 }
 
-// ─── Event creation (with optional Google Meet) ─────────────────────────────
+// ─── Jitsi Meet link generation ──────────────────────────────────────────────
+
+function generateMeetingUrl(bookingId: string): string {
+  const slug = bookingId.replace(/-/g, '').substring(0, 12);
+  return `https://meet.jit.si/MindfulQALB-${slug}`;
+}
+
+// ─── Event creation + meeting link ──────────────────────────────────────────
 
 export interface CalendarEventResult {
   eventId: string;
@@ -115,24 +122,23 @@ export async function createCalendarEvent(params: {
   const token = await getAccessToken();
   const calendarId = getCalendarId();
 
-  const body: Record<string, unknown> = {
-    summary: params.summary,
-    description: params.description ?? '',
-    start: { dateTime: params.startISO, timeZone: 'Asia/Kolkata' },
-    end: { dateTime: params.endISO, timeZone: 'Asia/Kolkata' },
-    attendees: [{ email: params.attendeeEmail }],
-  };
+  const meetingUrl = params.includeMeet
+    ? generateMeetingUrl(params.requestId ?? `mq-${Date.now()}`)
+    : null;
 
-  if (params.includeMeet) {
-    body.conferenceData = {
-      createRequest: {
-        requestId: params.requestId ?? `mq-${Date.now()}`,
-        conferenceSolutionKey: { type: 'hangoutsMeet' },
-      },
-    };
+  const descParts = [params.description ?? ''];
+  if (meetingUrl) {
+    descParts.push(`\n--- Video Session ---\nJoin: ${meetingUrl}`);
   }
 
-  const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events?conferenceDataVersion=1&sendUpdates=all`;
+  const body: Record<string, unknown> = {
+    summary: params.summary,
+    description: descParts.join('\n'),
+    start: { dateTime: params.startISO, timeZone: 'Asia/Kolkata' },
+    end: { dateTime: params.endISO, timeZone: 'Asia/Kolkata' },
+  };
+
+  const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events`;
 
   const res = await fetch(url, {
     method: 'POST',
@@ -150,15 +156,8 @@ export async function createCalendarEvent(params: {
 
   const event = await res.json() as {
     id: string;
-    hangoutLink?: string;
     htmlLink?: string;
-    conferenceData?: { entryPoints?: { uri: string; entryPointType: string }[] };
   };
-
-  const meetingUrl =
-    event.hangoutLink ??
-    event.conferenceData?.entryPoints?.find(e => e.entryPointType === 'video')?.uri ??
-    null;
 
   return {
     eventId: event.id,
