@@ -185,6 +185,12 @@ const AdminPage = () => {
         supabase.from('coupons').select('*').order('created_at', { ascending: false }),
       ]);
 
+      if (bookingsRes.error) console.error('[Admin] bookings error:', bookingsRes.error);
+      if (paymentsRes.error) console.error('[Admin] payments error:', paymentsRes.error);
+      if (consentRes.error) console.error('[Admin] consent error:', consentRes.error);
+      if (profilesRes.error) console.error('[Admin] profiles error:', profilesRes.error);
+      if (couponsRes.error) console.error('[Admin] coupons error:', couponsRes.error);
+
       const bookingsData = (bookingsRes.error ? [] : (bookingsRes.data ?? [])) as DbBooking[];
       const paymentsData = (paymentsRes.error ? [] : (paymentsRes.data ?? [])) as DbPayment[];
       const consentData = (consentRes.error ? [] : (consentRes.data ?? [])) as DbConsentRecord[];
