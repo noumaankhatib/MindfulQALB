@@ -87,7 +87,20 @@ const isWeekend = (dateString) => {
 };
 
 // Health check (includes DB config so you can verify before booking)
-app.get('/api/health', (req, res) => {
+// Also handles ?action=profile to fetch the authenticated user's profile (bypasses RLS).
+app.get('/api/health', async (req, res) => {
+  if (req.query.action === 'profile') {
+    const supabase = getSupabase();
+    if (!supabase) return res.status(503).json({ error: 'Server configuration error' });
+    const authHeader = req.headers.authorization;
+    const token = typeof authHeader === 'string' && authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : null;
+    if (!token) return res.status(401).json({ error: 'Missing Authorization: Bearer <access_token>' });
+    const { data: { user }, error: userError } = await supabase.auth.getUser(token);
+    if (userError || !user) return res.status(401).json({ error: 'Invalid or expired token' });
+    const { data: profile, error: profileError } = await supabase.from('profiles').select('*').eq('id', user.id).single();
+    if (profileError) return res.status(profileError.code === 'PGRST116' ? 404 : 500).json({ error: profileError.message });
+    return res.json(profile);
+  }
   res.json({
     status: 'ok',
     timestamp: new Date().toISOString(),
@@ -819,28 +832,6 @@ app.post('/api/consent', async (req, res) => {
     consentId: `consent_mock_${Date.now()}`,
     message: 'Consent recorded (mock – set SUPABASE_* in backend/.env to persist)',
   });
-});
-
-// GET /api/profile – fetch current user's profile (bypasses RLS, for when client fetch fails).
-app.get('/api/profile', async (req, res) => {
-  const supabase = getSupabase();
-  if (!supabase) {
-    return res.status(503).json({ error: 'Server configuration error' });
-  }
-  const authHeader = req.headers.authorization;
-  const token = typeof authHeader === 'string' && authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : null;
-  if (!token) {
-    return res.status(401).json({ error: 'Missing Authorization: Bearer <access_token>' });
-  }
-  const { data: { user }, error: userError } = await supabase.auth.getUser(token);
-  if (userError || !user) {
-    return res.status(401).json({ error: 'Invalid or expired token' });
-  }
-  const { data: profile, error: profileError } = await supabase.from('profiles').select('*').eq('id', user.id).single();
-  if (profileError) {
-    return res.status(profileError.code === 'PGRST116' ? 404 : 500).json({ error: profileError.message });
-  }
-  res.json(profile);
 });
 
 // --- Admin: require Bearer token and profile.role === 'admin' ---

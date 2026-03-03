@@ -138,7 +138,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     if (accessToken && typeof window !== 'undefined') {
       try {
         const base = (typeof import.meta.env.VITE_BACKEND_URL === 'string' && import.meta.env.VITE_BACKEND_URL) || '/api';
-        const res = await fetch(`${base.replace(/\/$/, '')}/profile`, {
+        const res = await fetch(`${base.replace(/\/$/, '')}/health?action=profile`, {
           headers: { Authorization: `Bearer ${accessToken}` },
         });
         if (res.ok) {

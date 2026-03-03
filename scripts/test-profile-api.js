@@ -6,7 +6,7 @@
 const base = process.argv[2] || 'http://localhost:3000';
 
 async function main() {
-  const url = `${base.replace(/\/$/, '')}/api/profile`;
+  const url = `${base.replace(/\/$/, '')}/api/health?action=profile`;
   console.log('Testing', url);
   try {
     const res = await fetch(url, {
