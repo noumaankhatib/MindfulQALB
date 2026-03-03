@@ -1,4 +1,4 @@
-import { useEffect, lazy, Suspense } from 'react'
+import { useEffect, useState, lazy, Suspense, type ReactNode } from 'react'
 import { createBrowserRouter, RouterProvider, Navigate, useLocation } from 'react-router-dom'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { AppErrorBoundary, NotFoundPage } from './components/AppErrorBoundary'
@@ -157,8 +157,26 @@ const HomePage = () => {
 }
 
 /** Protects /admin: only allows access when user is signed in and has role admin. Relies on Supabase RLS to enforce server-side. */
-function AdminRoute({ children }: { children: React.ReactNode }) {
-  const { user, profile, loading } = useAuth()
+function AdminRoute({ children }: { children: ReactNode }) {
+  const { user, profile, loading, refetchProfile } = useAuth()
+  const [retried, setRetried] = useState(false)
+  const [giveUp, setGiveUp] = useState(false)
+
+  useEffect(() => {
+    if (user && profile === null && !retried) {
+      setRetried(true)
+      refetchProfile()
+    }
+  }, [user, profile, retried, refetchProfile])
+
+  useEffect(() => {
+    if (user && profile === null) {
+      const t = setTimeout(() => setGiveUp(true), 8000)
+      return () => clearTimeout(t)
+    }
+    setGiveUp(false)
+  }, [user, profile])
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -170,6 +188,16 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
     )
   }
   if (!user) return <Navigate to="/" replace />
+  if (profile === null && !giveUp) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="animate-pulse flex flex-col items-center gap-3">
+          <div className="w-10 h-10 rounded-full border-2 border-lavender-200 border-t-lavender-600 animate-spin" />
+          <p className="text-sm text-gray-500">Loading profile...</p>
+        </div>
+      </div>
+    )
+  }
   if (profile?.role !== 'admin') return <Navigate to="/" replace />
   return <>{children}</>
 }

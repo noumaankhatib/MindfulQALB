@@ -17,6 +17,7 @@ interface AuthContextType {
   signInWithMagicLink: (email: string) => Promise<{ error: AuthError | null }>;
   signOut: () => Promise<void>;
   updateProfile: (updates: Partial<Profile>) => Promise<{ error: Error | null }>;
+  refetchProfile: () => void;
 }
 
 const NETWORK_ERROR_MESSAGE = 'Network issue detected. Please check your internet connection.';
@@ -125,6 +126,10 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     return () => clearTimeout(t);
   }, [user?.id, profile, isConfigured]);
 
+  const refetchProfile = () => {
+    if (user) fetchProfile(user.id, 5);
+  };
+
   const fetchProfile = async (userId: string, retries = 3) => {
     for (let attempt = 0; attempt <= retries; attempt++) {
       try {
@@ -159,7 +164,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   };
 
   const signInWithGoogle = async (): Promise<{ error: AuthError | null }> => {
-    const redirectTo = import.meta.env.PROD ? 'https://mindfulqalb.com' : `${window.location.origin}/`;
+    const redirectTo = `${window.location.origin}/`;
     const doSignIn = async (): Promise<{ error: AuthError | null; isNetwork?: boolean }> => {
       try {
         const { data, error } = await supabase.auth.signInWithOAuth({
@@ -308,6 +313,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     signInWithMagicLink,
     signOut,
     updateProfile,
+    refetchProfile,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
