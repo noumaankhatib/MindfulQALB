@@ -66,14 +66,21 @@ const MyBookingsPage = () => {
     }
     if (user) {
       fetchMyBookings();
+    } else if (!authLoading) {
+      setLoading(false);
     }
   }, [user, authLoading, navigate]);
 
   const fetchMyBookings = async () => {
     if (!user) return;
     setLoading(true);
+
+    const timeout = setTimeout(() => {
+      setLoading(false);
+      setBookings([]);
+    }, 15000);
+
     try {
-      // Fetch by user_id (primary) or by customer_email (fallback if user_id wasn't stored)
       const { data: byUserId, error: err1 } = await supabase
         .from('bookings')
         .select('id, session_type, session_format, duration_minutes, scheduled_date, scheduled_time, status, customer_name, customer_email, notes, created_at, meeting_url')
@@ -85,6 +92,7 @@ const MyBookingsPage = () => {
         logError('Error fetching bookings by user_id:', err1);
         setBookings([]);
         setLoading(false);
+        clearTimeout(timeout);
         return;
       }
 
@@ -133,6 +141,7 @@ const MyBookingsPage = () => {
       logError('My Bookings fetch error', err);
       setBookings([]);
     } finally {
+      clearTimeout(timeout);
       setLoading(false);
     }
   };
