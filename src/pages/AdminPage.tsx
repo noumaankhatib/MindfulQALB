@@ -408,12 +408,19 @@ const AdminPage = () => {
     setEntityError(null);
     const email = (bookingForm.customer_email || '').toLowerCase().trim();
     const userId = editingBooking.user_id ?? null;
+    const scheduledDate = bookingForm.scheduled_date ?? '';
+    const scheduledTime = bookingForm.scheduled_time ?? '';
+    if (!scheduledDate || !scheduledTime) {
+      setEntityError('Date and time are required.');
+      setSavingEntity(null);
+      return;
+    }
     // One booking per user per date+time: block edit that would create a clash (exclude this booking)
     const { data: existingAtSlot } = await supabase
       .from('bookings')
       .select('id, user_id, customer_email')
-      .eq('scheduled_date', bookingForm.scheduled_date)
-      .eq('scheduled_time', bookingForm.scheduled_time)
+      .eq('scheduled_date', scheduledDate)
+      .eq('scheduled_time', scheduledTime)
       .in('status', ['pending', 'confirmed']);
     const others = (existingAtSlot ?? []).filter((r) => r.id !== editingBooking.id);
     const hasConflict = others.some(

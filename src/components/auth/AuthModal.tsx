@@ -571,7 +571,7 @@ export const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••"
-                    required={mode !== 'magic-link'}
+                    required
                     minLength={6}
                     autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
                       style={{
