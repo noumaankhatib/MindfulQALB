@@ -281,13 +281,14 @@ export const updateUserAdmin = async (
     return { success: false, error: 'Backend API not configured' };
   }
   try {
-    const response = await fetch(`${API_CONFIG.BACKEND_URL}/admin/update-user`, {
-      method: 'PATCH',
+    const response = await fetch(`${API_CONFIG.BACKEND_URL}/admin`, {
+      method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${accessToken}`,
       },
       body: JSON.stringify({
+        action: 'update-user',
         userId: params.userId,
         ...(params.full_name !== undefined && { full_name: params.full_name }),
         ...(params.phone !== undefined && { phone: params.phone }),
@@ -317,13 +318,13 @@ export const deleteUserAdmin = async (
     return { success: false, error: 'Backend API not configured' };
   }
   try {
-    const response = await fetch(`${API_CONFIG.BACKEND_URL}/admin/delete-user`, {
+    const response = await fetch(`${API_CONFIG.BACKEND_URL}/admin`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${accessToken}`,
       },
-      body: JSON.stringify({ userId }),
+      body: JSON.stringify({ action: 'delete-user', userId }),
     });
     const data = await response.json().catch(() => ({})) as { success?: boolean; message?: string; error?: string };
     if (!response.ok) {

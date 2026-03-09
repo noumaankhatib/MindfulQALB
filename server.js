@@ -977,6 +977,14 @@ async function handleUpdateUser(req, res) {
 app.patch('/api/admin/update-user', handleUpdateUser);
 app.put('/api/admin/update-user', handleUpdateUser);
 
+// POST /api/admin – unified admin API (same contract as Vercel api/admin.ts; frontend uses this)
+app.post('/api/admin', (req, res, next) => {
+  const action = req.body?.action;
+  if (action === 'delete-user') return handleDeleteUser(req, res, next);
+  if (action === 'update-user') return handleUpdateUser(req, res, next);
+  return res.status(400).json({ error: 'body.action must be "update-user" or "delete-user"' });
+});
+
 // POST/DELETE /api/admin/delete-user – delete user and all related data
 async function handleDeleteUser(req, res) {
   const admin = await requireAdmin(req, res);
