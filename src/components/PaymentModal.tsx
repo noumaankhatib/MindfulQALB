@@ -179,7 +179,11 @@ const PaymentModal = ({ session, isOpen, onClose }: PaymentModalProps) => {
                   {/* Payment Gateway Info */}
                   <div className="mb-5 p-3 bg-gray-50 rounded-lg border border-gray-100">
                     <p className="text-xs text-gray-600 text-center">
-                      Paying with <strong>Razorpay</strong> (UPI, Cards, NetBanking)
+                      {isIndia ? (
+                        <>Paying with <strong>Razorpay</strong> (UPI, Cards, NetBanking)</>
+                      ) : (
+                        <>Paying with <strong>PayPal</strong> via Razorpay</>
+                      )}
                     </p>
                   </div>
 

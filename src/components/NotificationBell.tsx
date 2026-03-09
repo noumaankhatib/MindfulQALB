@@ -1,8 +1,27 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, Component, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Bell, Calendar, Clock, ChevronRight, X } from 'lucide-react';
 import { useUpcomingBookingAlert, type UpcomingBooking } from '../hooks/useUpcomingBookingAlert';
+
+/** Fallback if notification logic throws (e.g. extension or Supabase) so nav always shows a bell */
+class NotificationBellBoundary extends Component<
+  { children: ReactNode },
+  { hasError: boolean }
+> {
+  state = { hasError: false };
+  static getDerivedStateFromError = () => ({ hasError: true });
+  render() {
+    if (this.state.hasError) {
+      return (
+        <button type="button" className="p-2.5 rounded-xl text-gray-500 hover:bg-lavender-50 hover:text-lavender-600" aria-label="Notifications">
+          <Bell className="w-5 h-5" />
+        </button>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 function formatNotificationMessage(minutesUntil: number, sessionType: string, scheduledTime: string): string {
   if (minutesUntil <= 0) return `Your ${sessionType} session is starting now.`;
@@ -68,7 +87,7 @@ function NotificationItem({
   );
 }
 
-export function NotificationBell() {
+function NotificationBellInner() {
   const { upcomingList, dismiss } = useUpcomingBookingAlert();
   const [isOpen, setIsOpen] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -208,5 +227,13 @@ export function NotificationBell() {
         )}
       </AnimatePresence>
     </div>
+  );
+}
+
+export function NotificationBell() {
+  return (
+    <NotificationBellBoundary>
+      <NotificationBellInner />
+    </NotificationBellBoundary>
   );
 }

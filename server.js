@@ -80,12 +80,20 @@ async function getGoogleAccessToken() {
 app.use(cors());
 app.use(express.json());
 
-// Pricing configuration
+// Pricing configuration (INR for India, USD for international)
 const PRICING = {
   individual: { chat: 499, audio: 899, video: 1299 },
   couples: { audio: 1499, video: 1999 },
   family: { audio: 1799, video: 2499 },
 };
+
+const PRICING_USD = {
+  individual: { chat: 6, audio: 11, video: 16 },
+  couples: { audio: 18, video: 24 },
+  family: { audio: 21, video: 30 },
+  free: { call: 0, chat: 0, audio: 0, video: 0 },
+};
+const APPROX_INR_PER_USD = 83; // for fixed coupon discount on USD orders
 
 // Mock time slots (only allowed times: 9 AM, 10 AM, 5 PM, 6 PM, 7 PM, 8 PM)
 const getMockSlots = () => [
@@ -103,6 +111,33 @@ const isWeekend = (dateString) => {
   const day = date.getDay();
   return day === 0 || day === 6;
 };
+
+// Geo proxy: ipapi.co does not allow CORS from browsers; backend fetches and returns JSON.
+// Cache response to avoid 429 (ipapi.co free tier rate limit); use cache on 429 or timeout.
+const GEO_CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
+let geoCache = { data: null, expires: 0 };
+
+app.get('/api/geo', async (req, res) => {
+  const now = Date.now();
+  if (geoCache.data && geoCache.expires > now) {
+    return res.json(geoCache.data);
+  }
+  try {
+    const resp = await fetch('https://ipapi.co/json/', { signal: AbortSignal.timeout(5000) });
+    const data = await resp.json().catch(() => ({}));
+    if (resp.ok) {
+      geoCache = { data, expires: now + GEO_CACHE_TTL_MS };
+      return res.json(data);
+    }
+    if (resp.status === 429 && geoCache.data) {
+      return res.json(geoCache.data);
+    }
+    return res.status(resp.status).json(data.error ? data : { error: `Upstream ${resp.status}` });
+  } catch (e) {
+    if (geoCache.data) return res.json(geoCache.data);
+    res.status(502).json({ error: e?.message || 'Upstream error' });
+  }
+});
 
 // Health check (includes DB config so you can verify before booking)
 // Also handles ?action=profile to fetch the authenticated user's profile (bypasses RLS).
@@ -254,7 +289,7 @@ app.post('/api/coupons/validate', async (req, res) => {
   }
 });
 
-// Create payment order
+// Create payment order (supports INR for India, USD for international)
 app.post('/api/payments/create-order', async (req, res) => {
   const body = req.body || {};
   if (Object.keys(body).length === 0) {
@@ -270,6 +305,13 @@ app.post('/api/payments/create-order', async (req, res) => {
   const customerEmail = typeof body.customerEmail === 'string' ? body.customerEmail.trim().toLowerCase() : '';
   const customerPhone = typeof body.customerPhone === 'string' ? body.customerPhone.trim() : '';
 
+  // Currency: default INR, accept USD for international clients
+  const rawCurrency = typeof body.currency === 'string' ? body.currency.toUpperCase() : 'INR';
+  const currency = ['INR', 'USD'].includes(rawCurrency) ? rawCurrency : 'INR';
+  const isInternational = currency === 'USD';
+  const pricingTable = isInternational ? PRICING_USD : PRICING;
+  const currencySymbol = isInternational ? '$' : '₹';
+
   const setCouponHeaders = (received, applied) => {
     res.setHeader('X-Coupon-Received', received ? 'true' : 'false');
     res.setHeader('X-Discount-Applied', applied ? 'true' : 'false');
@@ -279,16 +321,27 @@ app.post('/api/payments/create-order', async (req, res) => {
     return res.status(400).json({ error: 'sessionType and format required' });
   }
 
-  const pricing = PRICING[sessionType]?.[format];
-  if (!pricing) {
+  const pricing = pricingTable[sessionType]?.[format];
+  if (pricing === undefined) {
     return res.status(400).json({ error: 'Invalid session type or format' });
   }
 
-  let amountPaise = pricing * 100;
+  if (pricing === 0) {
+    return res.json({
+      success: true,
+      orderId: `free_${Date.now()}`,
+      amount: 0,
+      currency,
+      keyId: RAZORPAY_KEY_ID || 'rzp_test_mock',
+      isFree: true,
+    });
+  }
+
+  let amountSmallest = pricing * 100;
   let couponMeta = null;
 
   if (code) {
-    console.log('[create-order] Coupon received:', code, '| sessionType:', sessionType, '| format:', format);
+    console.log('[create-order] Coupon received:', code, '| sessionType:', sessionType, '| format:', format, '| currency:', currency);
     const supabase = getSupabase();
     if (!supabase) {
       setCouponHeaders(true, false);
@@ -320,7 +373,7 @@ app.post('/api/payments/create-order', async (req, res) => {
     const now = new Date();
     const validFrom = coupon.valid_from ? new Date(coupon.valid_from) : null;
     const validUntil = coupon.valid_until ? new Date(coupon.valid_until) : null;
-    const minPaise = Number(coupon.min_amount_paise) || 0;
+    const minSmallest = Number(coupon.min_amount_paise) || 0;
     const maxReached = coupon.max_uses != null && (coupon.used_count ?? 0) >= coupon.max_uses;
 
     if (validFrom && validFrom > now) {
@@ -332,23 +385,26 @@ app.post('/api/payments/create-order', async (req, res) => {
     if (maxReached) {
       return res.status(400).json({ error: 'This coupon has reached its usage limit.' });
     }
-    if (amountPaise < minPaise) {
+    if (!isInternational && amountSmallest < minSmallest) {
       return res.status(400).json({
-        error: minPaise > 0 ? `Minimum order amount is ₹${Math.round(minPaise / 100)} for this coupon.` : 'Invalid amount.',
+        error: minSmallest > 0 ? `Minimum order amount is ${currencySymbol}${Math.round(minSmallest / 100)} for this coupon.` : 'Invalid amount.',
       });
     }
 
     const discountValue = Number(coupon.discount_value) || 0;
-    let discountPaise = 0;
+    let discountSmallest = 0;
     if (coupon.discount_type === 'percent') {
       const pct = Math.min(100, Math.max(0, discountValue));
-      discountPaise = Math.floor((amountPaise * pct) / 100);
+      discountSmallest = Math.floor((amountSmallest * pct) / 100);
     } else {
-      discountPaise = Math.min(amountPaise, Math.floor(discountValue * 100));
+      const fixedSmallest = isInternational
+        ? Math.floor((discountValue * 100) / APPROX_INR_PER_USD)
+        : Math.floor(discountValue * 100);
+      discountSmallest = Math.min(amountSmallest, fixedSmallest);
     }
-    if (discountPaise > 0) {
-      amountPaise = Math.max(0, amountPaise - discountPaise);
-      couponMeta = { coupon_id: coupon.id, coupon_code: coupon.code, discount_paise: discountPaise };
+    if (discountSmallest > 0) {
+      amountSmallest = Math.max(0, amountSmallest - discountSmallest);
+      couponMeta = { coupon_id: coupon.id, coupon_code: coupon.code, discount_amount: discountSmallest };
     }
   }
 
@@ -359,11 +415,11 @@ app.post('/api/payments/create-order', async (req, res) => {
     return res.json({
       success: true,
       orderId: `order_mock_${Date.now()}`,
-      amount: amountPaise,
-      currency: 'INR',
+      amount: amountSmallest,
+      currency,
       keyId: 'rzp_test_mock',
       mode: 'mock',
-      ...(couponMeta && { discountPaise: couponMeta.discount_paise }),
+      ...(couponMeta && { discountPaise: couponMeta.discount_amount }),
     });
   }
 
@@ -376,9 +432,10 @@ app.post('/api/payments/create-order', async (req, res) => {
     });
 
     const order = await razorpay.orders.create({
-      amount: amountPaise,
-      currency: 'INR',
+      amount: amountSmallest,
+      currency,
       receipt: `receipt_${Date.now()}`,
+      notes: { sessionType, format, currency },
     });
 
     const supabase = getSupabase();
@@ -387,7 +444,7 @@ app.post('/api/payments/create-order', async (req, res) => {
       if (couponMeta) {
         meta.coupon_id = couponMeta.coupon_id;
         meta.coupon_code = couponMeta.coupon_code;
-        meta.discount_paise = couponMeta.discount_paise;
+        meta.discount_amount = couponMeta.discount_amount;
       }
       if (customerName) meta.customer_name = customerName;
       if (customerEmail) meta.customer_email = customerEmail;
@@ -395,8 +452,8 @@ app.post('/api/payments/create-order', async (req, res) => {
 
       const { error: insertErr } = await supabase.from('payments').insert({
         razorpay_order_id: order.id,
-        amount_paise: amountPaise,
-        currency: 'INR',
+        amount_paise: amountSmallest,
+        currency,
         status: 'pending',
         metadata: meta,
       });
@@ -407,11 +464,11 @@ app.post('/api/payments/create-order', async (req, res) => {
     res.json({
       success: true,
       orderId: order.id,
-      amount: amountPaise,
+      amount: amountSmallest,
       currency: order.currency,
       keyId: RAZORPAY_KEY_ID,
       mode: 'live',
-      ...(couponMeta && { discountPaise: couponMeta.discount_paise }),
+      ...(couponMeta && { discountPaise: couponMeta.discount_amount }),
     });
   } catch (error) {
     console.error('Razorpay order creation failed:', error);
@@ -536,6 +593,9 @@ function getRefundAmountPaise(amountPaise, sessionStartUtc) {
 }
 app.post('/api/payments/refund', async (req, res) => {
   try {
+    const admin = await requireAdmin(req, res);
+    if (!admin) return;
+
     const { booking_id: bookingId, razorpay_payment_id: paymentId } = req.body || {};
     if (!bookingId && !paymentId) {
       return res.status(400).json({ error: 'Provide booking_id or razorpay_payment_id' });
@@ -550,10 +610,10 @@ app.post('/api/payments/refund', async (req, res) => {
       const { data: booking } = await supabase.from('bookings').select('id, scheduled_date, scheduled_time').eq('id', bookingId).single();
       if (!booking) return res.status(404).json({ error: 'Booking not found' });
       sessionStartUtc = getSessionStartUtc(String(booking.scheduled_date || ''), String(booking.scheduled_time || ''));
-      const { data: p } = await supabase.from('payments').select('id, razorpay_order_id, razorpay_payment_id, booking_id, amount_paise, status').eq('booking_id', bookingId).eq('status', 'paid').maybeSingle();
+      const { data: p } = await supabase.from('payments').select('id, razorpay_order_id, razorpay_payment_id, booking_id, amount_paise, currency, status').eq('booking_id', bookingId).eq('status', 'paid').maybeSingle();
       payment = p;
     } else {
-      const { data: p } = await supabase.from('payments').select('id, razorpay_order_id, razorpay_payment_id, booking_id, amount_paise, status').eq('razorpay_payment_id', paymentId).eq('status', 'paid').maybeSingle();
+      const { data: p } = await supabase.from('payments').select('id, razorpay_order_id, razorpay_payment_id, booking_id, amount_paise, currency, status').eq('razorpay_payment_id', paymentId).eq('status', 'paid').maybeSingle();
       payment = p;
       if (payment?.booking_id) {
         const { data: b } = await supabase.from('bookings').select('scheduled_date, scheduled_time').eq('id', payment.booking_id).single();
@@ -571,22 +631,22 @@ app.post('/api/payments/refund', async (req, res) => {
       const { error: updateErr } = await supabase.from('payments').update({ status: 'refunded', refunded_at: new Date().toISOString() }).eq('id', payment.id);
       if (updateErr) {
         console.error('Refund mock update failed:', updateErr.message, updateErr.details);
-        return res.status(500).json({ success: false, error: updateErr.message || 'Failed to update payment. Ensure payments table has refunded_at column (run docs/supabase-full-setup.sql).' });
+        return res.status(500).json({ success: false, error: updateErr.message || 'Failed to update payment.' });
       }
-      return res.json({ success: true, refunded: true, amount_paise: payment.amount_paise, mode: 'mock' });
+      return res.json({ success: true, refunded: true, amount_paise: payment.amount_paise, currency: payment.currency, mode: 'mock' });
     }
     if (!RAZORPAY_KEY_SECRET) {
       return res.status(503).json({ success: false, error: 'Payment service not configured' });
     }
-    const refundPaise = getRefundAmountPaise(payment.amount_paise, sessionStartUtc);
-    if (refundPaise <= 0) {
+    const refundAmount = getRefundAmountPaise(payment.amount_paise, sessionStartUtc);
+    if (refundAmount <= 0) {
       return res.status(400).json({ success: false, error: 'No refund amount (session may have passed)' });
     }
     try {
       const Razorpay = (await import('razorpay')).default;
       const razorpay = new Razorpay({ key_id: process.env.RAZORPAY_KEY_ID, key_secret: RAZORPAY_KEY_SECRET });
       const refundParams = { notes: { booking_id: bookingId || payment.booking_id || '', reason: 'cancellation' } };
-      if (refundPaise < payment.amount_paise) refundParams.amount = refundPaise;
+      if (refundAmount < payment.amount_paise) refundParams.amount = refundAmount;
       await razorpay.payments.refund(razorpayPaymentId, refundParams);
     } catch (err) {
       console.error('Razorpay refund error:', err);
@@ -595,9 +655,9 @@ app.post('/api/payments/refund', async (req, res) => {
     const { error: updateErr } = await supabase.from('payments').update({ status: 'refunded', refunded_at: new Date().toISOString() }).eq('id', payment.id);
     if (updateErr) {
       console.error('Refund DB update failed:', updateErr.message, updateErr.details);
-      return res.status(500).json({ success: false, error: updateErr.message || 'Refund issued but failed to update payment record. Ensure payments table has refunded_at (run docs/supabase-full-setup.sql).' });
+      return res.status(500).json({ success: false, error: updateErr.message || 'Refund issued but failed to update payment record.' });
     }
-    return res.json({ success: true, refunded: true, amount_paise: refundPaise, full_refund: refundPaise >= payment.amount_paise });
+    return res.json({ success: true, refunded: true, amount_paise: refundAmount, currency: payment.currency, full_refund: refundAmount >= payment.amount_paise });
   } catch (err) {
     console.error('Refund handler error:', err);
     const msg = err?.message || 'Refund request failed';
@@ -667,13 +727,20 @@ async function createGoogleCalendarEvent(booking, requestId) {
 
     if (!response.ok) {
       const text = await response.text().catch(() => '');
-      throw new Error(`Calendar API ${response.status}: ${text}`);
+      const err = new Error(`Calendar API ${response.status}: ${text}`);
+      err.status = response.status;
+      throw err;
     }
     const event = await response.json();
     return { eventId: event.id, meetingUrl: meetLink };
   } catch (err) {
-    console.error(`[${requestId}] Google Calendar event error:`, err.message);
-    return { eventId: null, meetingUrl: null };
+    const is404 = err.status === 404 || (err.message && String(err.message).includes('404'));
+    if (is404) {
+      console.warn(`[${requestId}] Google Calendar not found (404). Check GOOGLE_CALENDAR_ID and that the calendar is shared with the service account. Using Jitsi Meet fallback.`);
+    } else {
+      console.error(`[${requestId}] Google Calendar event error:`, err.message);
+    }
+    return { eventId: null, meetingUrl: meetLink };
   }
 }
 
@@ -696,6 +763,27 @@ app.post('/api/bookings', async (req, res) => {
   const supabase = getSupabase();
   if (supabase) {
     try {
+      const customerEmail = String(customer.email).toLowerCase().trim();
+      // One booking per user per date+time: no clash across therapy types
+      const { data: existingAtSlot } = await supabase
+        .from('bookings')
+        .select('id, user_id, customer_email')
+        .eq('scheduled_date', date)
+        .eq('scheduled_time', time)
+        .in('status', ['pending', 'confirmed']);
+      const rows = existingAtSlot ?? [];
+      const hasConflict = rows.some(
+        (r) =>
+          (userId && r.user_id === userId) ||
+          (r.customer_email && r.customer_email.toLowerCase() === customerEmail)
+      );
+      if (hasConflict) {
+        return res.status(400).json({
+          success: false,
+          error: 'You already have a booking at this date and time. Please choose a different slot or cancel the existing one.',
+        });
+      }
+
       const row = {
         user_id: userId || null,
         session_type,
@@ -708,7 +796,7 @@ app.post('/api/bookings', async (req, res) => {
         calendar_event_id: null,
         meeting_url: null,
         customer_name: sanitize(customer.name),
-        customer_email: String(customer.email).toLowerCase().trim(),
+        customer_email: customerEmail,
         customer_phone: customer.phone ? String(customer.phone).trim() : null,
         notes: isFreeSession
           ? (customer.notes ? `[FREE_CONSULTATION] ${sanitize(customer.notes)}` : '[FREE_CONSULTATION]')
@@ -801,7 +889,9 @@ app.patch('/api/bookings', async (req, res) => {
   if (fetchErr || !booking) return res.status(404).json({ success: false, error: 'Booking not found' });
   if (booking.status !== 'pending') return res.status(400).json({ success: false, error: `Booking is already ${booking.status}` });
 
-  const { eventId, meetingUrl } = await createGoogleCalendarEvent(booking, requestId);
+  const { eventId, meetingUrl: calendarMeetUrl } = await createGoogleCalendarEvent(booking, requestId);
+  const includeMeet = booking.session_format === 'video' || booking.session_format === 'audio';
+  const meetingUrl = calendarMeetUrl || (includeMeet ? `https://meet.jit.si/MindfulQALB-${(bookingId || '').replace(/-/g, '').substring(0, 12)}` : null);
 
   const payload = { status: 'confirmed', updated_at: new Date().toISOString() };
   if (eventId) payload.calendar_event_id = eventId;

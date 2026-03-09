@@ -71,8 +71,8 @@ Used by the local API server (`npm run dev:api`), Vercel serverless functions (`
 | `CALCOM_EVENT_TYPE_IDS` | server.js, api/* | JSON map of session keys to Cal.com event type IDs, e.g. `{"individual-video":"123","individual-chat":"124"}`. See `docs/CALCOM_SYNC.md`. |
 | `CALCOM_USERNAME` | api/availability.ts | Cal.com username (e.g. `mindfulqalb`). Optional for v2 bookings; used for availability. |
 | `CALCOM_AVAILABILITY_SLUG` | server.js, api/availability.ts | Optional. Event type slug used to fetch available slots (one calendar for all session types). Default: `individual-therapy-video`. |
-| `RAZORPAY_KEY_ID` | server.js, api/payments/* | Razorpay API Key ID (Dashboard → Settings → API Keys). |
-| `RAZORPAY_KEY_SECRET` | server.js, api/payments/* | Razorpay API Key Secret. Never expose in frontend. |
+| `RAZORPAY_KEY_ID` | server.js, api/payments/* | Razorpay API Key ID (Dashboard → Settings → API Keys). Used for both INR (India) and USD (international) payments. |
+| `RAZORPAY_KEY_SECRET` | server.js, api/payments/* | Razorpay API Key Secret. Never expose in frontend. Enable "International Payments" in Razorpay Dashboard for USD support. |
 
 ### Optional
 
@@ -100,7 +100,7 @@ Used by the local API server (`npm run dev:api`), Vercel serverless functions (`
 | Supabase | `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` | `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` (+ optional `SUPABASE_ANON_KEY` for /sb proxy) |
 | Google sign-in | `VITE_GOOGLE_CLIENT_ID` (Client ID only) | — (do **not** put client secret in frontend) |
 | Cal.com | — | `CALCOM_API_KEY`, `CALCOM_USERNAME`, `CALCOM_EVENT_TYPE_IDS` |
-| Razorpay | — | `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET` |
+| Razorpay (INR + USD) | — | `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET` |
 | API URL | `VITE_BACKEND_URL` (optional) | — |
 | Debug / server | — | `DEBUG_CALCOM`, `PORT`, `ALLOWED_ORIGINS`, `ENCRYPTION_KEY` |
 

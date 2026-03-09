@@ -178,12 +178,13 @@ const AdminPage = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
+      const ADMIN_LIMIT = 500;
       const [bookingsRes, paymentsRes, consentRes, profilesRes, couponsRes] = await Promise.all([
-        supabase.from('bookings').select('*').order('created_at', { ascending: false }),
-        supabase.from('payments').select('*').order('created_at', { ascending: false }),
-        supabase.from('consent_records').select('id, email, consent_version, session_type, acknowledgments, consented_at').order('consented_at', { ascending: false }),
-        supabase.from('profiles').select('id, email, full_name, phone, role, created_at').order('created_at', { ascending: false }),
-        supabase.from('coupons').select('*').order('created_at', { ascending: false }),
+        supabase.from('bookings').select('id, user_id, customer_name, customer_email, customer_phone, session_type, session_format, scheduled_date, scheduled_time, status, created_at, notes, meeting_url').order('created_at', { ascending: false }).limit(ADMIN_LIMIT),
+        supabase.from('payments').select('id, razorpay_order_id, razorpay_payment_id, booking_id, amount_paise, status, created_at, paid_at').order('created_at', { ascending: false }).limit(ADMIN_LIMIT),
+        supabase.from('consent_records').select('id, email, consent_version, session_type, acknowledgments, consented_at').order('consented_at', { ascending: false }).limit(ADMIN_LIMIT),
+        supabase.from('profiles').select('id, email, full_name, phone, role, created_at').order('created_at', { ascending: false }).limit(ADMIN_LIMIT),
+        supabase.from('coupons').select('id, code, discount_type, discount_value, min_amount_paise, valid_from, valid_until, max_uses, used_count, is_active, description, created_at, updated_at').order('created_at', { ascending: false }).limit(ADMIN_LIMIT),
       ]);
 
       if (bookingsRes.error) console.error('[Admin] bookings error:', bookingsRes.error);
@@ -287,6 +288,12 @@ const AdminPage = () => {
       });
       const data = await res.json();
       if (res.ok && data.success) {
+        const meetingUrl = data.meetingUrl ?? null;
+        setBookings((prev) =>
+          prev.map((b) =>
+            b.id === bookingId ? { ...b, status: 'confirmed' as const, meeting_url: meetingUrl ?? b.meeting_url } : b
+          )
+        );
         fetchData();
       } else {
         setEntityError(data.error || 'Failed to confirm booking');
@@ -354,7 +361,7 @@ const AdminPage = () => {
     setCancelError(null);
     setCancellingId(bookingId);
     try {
-      const refundRes = await requestRefund({ booking_id: bookingId });
+      const refundRes = await requestRefund({ booking_id: bookingId }, session?.access_token ?? '');
       if (!refundRes.success && refundRes.error && !refundRes.error.includes('No paid payment')) {
         setCancelError(refundRes.error);
         setCancellingId(null);
@@ -372,7 +379,7 @@ const AdminPage = () => {
     if (!window.confirm('Process refund for this payment? (24+ hours before linked session: full; else 50%)')) return;
     setRefundingPaymentId(razorpayPaymentId);
     try {
-      const res = await requestRefund({ razorpay_payment_id: razorpayPaymentId });
+      const res = await requestRefund({ razorpay_payment_id: razorpayPaymentId }, session?.access_token ?? '');
       if (res.success) fetchData();
     } finally {
       setRefundingPaymentId(null);
@@ -399,6 +406,26 @@ const AdminPage = () => {
     if (!editingBooking) return;
     setSavingEntity('booking');
     setEntityError(null);
+    const email = (bookingForm.customer_email || '').toLowerCase().trim();
+    const userId = editingBooking.user_id ?? null;
+    // One booking per user per date+time: block edit that would create a clash (exclude this booking)
+    const { data: existingAtSlot } = await supabase
+      .from('bookings')
+      .select('id, user_id, customer_email')
+      .eq('scheduled_date', bookingForm.scheduled_date)
+      .eq('scheduled_time', bookingForm.scheduled_time)
+      .in('status', ['pending', 'confirmed']);
+    const others = (existingAtSlot ?? []).filter((r) => r.id !== editingBooking.id);
+    const hasConflict = others.some(
+      (r) =>
+        (userId && (r as { user_id?: string | null }).user_id === userId) ||
+        (email && (r as { customer_email?: string | null }).customer_email?.toLowerCase() === email)
+    );
+    if (hasConflict) {
+      setEntityError('This customer already has another booking at this date and time. Please choose a different slot.');
+      setSavingEntity(null);
+      return;
+    }
     const { error } = await supabase.from('bookings').update({
       customer_name: bookingForm.customer_name,
       customer_email: bookingForm.customer_email,
@@ -682,6 +709,16 @@ const AdminPage = () => {
     }
   };
 
+  /** Coupon status for display: active (usable), expired (past valid_until), or blocked (inactive / limit reached / not yet valid). */
+  const getCouponStatus = (c: CouponRow): 'active' | 'expired' | 'blocked' => {
+    const now = new Date();
+    if (c.valid_until && new Date(c.valid_until) < now) return 'expired';
+    if (!c.is_active) return 'blocked';
+    if (c.max_uses != null && (c.used_count ?? 0) >= c.max_uses) return 'blocked';
+    if (c.valid_from && new Date(c.valid_from) > now) return 'blocked';
+    return 'active';
+  };
+
   const getStatusBadge = (status: string) => {
     const styles: Record<string, string> = {
       confirmed: 'bg-green-100 text-green-700',
@@ -753,17 +790,6 @@ const AdminPage = () => {
     );
   }
 
-  if (loading && !stats) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-lavender-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading dashboard...</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-gradient-to-b from-lavender-50/50 to-white">
       <Navigation />
@@ -822,8 +848,18 @@ const AdminPage = () => {
             </div>
           </div>
 
+          {/* Loading state: show shell immediately, only content area shows spinner (initial load or refresh) */}
+          {loading && (
+            <div className="flex items-center justify-center py-24">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-lavender-600 mx-auto mb-4" />
+                <p className="text-gray-600">Loading dashboard...</p>
+              </div>
+            </div>
+          )}
+
           {/* Dashboard Tab */}
-          {activeTab === 'dashboard' && stats && (
+          {!loading && activeTab === 'dashboard' && stats && (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -915,7 +951,7 @@ const AdminPage = () => {
           )}
 
           {/* Bookings Tab - My Bookings */}
-          {activeTab === 'bookings' && (
+          {!loading && activeTab === 'bookings' && (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -1173,7 +1209,7 @@ const AdminPage = () => {
           )}
 
           {/* Payments Tab */}
-          {activeTab === 'payments' && (
+          {!loading && activeTab === 'payments' && (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -1341,7 +1377,7 @@ const AdminPage = () => {
           )}
 
           {/* Coupons Tab */}
-          {activeTab === 'coupons' && (
+          {!loading && activeTab === 'coupons' && (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -1413,7 +1449,7 @@ const AdminPage = () => {
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Min (₹)</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Valid</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Uses</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Active</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
                       <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Actions</th>
                     </tr>
                   </thead>
@@ -1442,9 +1478,12 @@ const AdminPage = () => {
                         </td>
                         <td className="px-6 py-4 text-sm text-gray-600">{c.used_count}{c.max_uses != null ? ` / ${c.max_uses}` : ''}</td>
                         <td className="px-6 py-4">
-                          <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${c.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
-                            {c.is_active ? 'Active' : 'Inactive'}
-                          </span>
+                          {(() => {
+                            const status = getCouponStatus(c);
+                            const styles = status === 'active' ? 'bg-green-100 text-green-700' : status === 'expired' ? 'bg-gray-100 text-gray-600' : 'bg-amber-100 text-amber-800';
+                            const label = status === 'active' ? 'Active' : status === 'expired' ? 'Expired' : 'Blocked';
+                            return <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${styles}`}>{label}</span>;
+                          })()}
                         </td>
                         <td className="px-6 py-4 text-right">
                           <div className="flex items-center justify-end gap-2">
@@ -1483,7 +1522,7 @@ const AdminPage = () => {
           )}
 
           {/* Consent Tab – users who have given consent */}
-          {activeTab === 'consent' && (
+          {!loading && activeTab === 'consent' && (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -1626,7 +1665,7 @@ const AdminPage = () => {
           )}
 
           {/* Users Tab – all registered users (profiles) */}
-          {activeTab === 'users' && (
+          {!loading && activeTab === 'users' && (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}

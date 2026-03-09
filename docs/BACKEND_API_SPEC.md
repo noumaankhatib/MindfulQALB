@@ -14,13 +14,9 @@ CALCOM_API_KEY=cal_live_xxxxx
 CALCOM_USERNAME=mindfulqalb
 CALCOM_EVENT_TYPE_IDS={"individual":"12345","couples":"12346","family":"12347","free":"12348"}
 
-# Razorpay
+# Razorpay (INR + USD via PayPal for international)
 RAZORPAY_KEY_ID=rzp_live_xxxxx
 RAZORPAY_KEY_SECRET=xxxxxxxxxxxxx
-
-# Stripe
-STRIPE_SECRET_KEY=sk_live_xxxxx
-STRIPE_WEBHOOK_SECRET=whsec_xxxxx
 
 # Database
 DATABASE_URL=postgresql://user:password@host:5432/mindfulqalb
@@ -112,9 +108,11 @@ Request:
 ```json
 {
   "sessionType": "individual",
-  "format": "video"
+  "format": "video",
+  "currency": "INR"
 }
 ```
+Optional: `currency` — `"INR"` (default) or `"USD"` for international (PayPal).
 
 Response:
 ```json
@@ -127,7 +125,7 @@ Response:
 ```
 
 Implementation:
-- Server calculates correct amount based on session type
+- Server calculates amount from session type and currency (INR or USD)
 - Creates order with Razorpay API using secret key
 - Returns order details (key_id only, not secret)
 
@@ -163,36 +161,7 @@ Implementation:
 
 ---
 
-### 5. Create Stripe Checkout Session API
-
-**POST `/api/payments/create-checkout`**
-
-Create a Stripe Checkout session.
-
-Request:
-```json
-{
-  "sessionType": "individual",
-  "format": "video",
-  "customer": {
-    "email": "jane@example.com"
-  },
-  "successUrl": "https://mindfulqalb.com/booking/success",
-  "cancelUrl": "https://mindfulqalb.com/booking/cancel"
-}
-```
-
-Response:
-```json
-{
-  "sessionId": "cs_live_xxxxxxxxxxxx",
-  "url": "https://checkout.stripe.com/pay/cs_live_xxxxx"
-}
-```
-
----
-
-### 6. Consent Record API
+### 5. Consent Record API
 
 **POST `/api/consent`**
 

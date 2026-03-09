@@ -54,7 +54,8 @@ const getFallbackSlots = (): TimeSlot[] => [
 
 export const fetchAvailability = async (
   date: Date,
-  sessionType: string = 'individual'
+  sessionType: string = 'individual',
+  signal?: AbortSignal
 ): Promise<TimeSlot[]> => {
   try {
     const response = await fetch(`/api/availability`, {
@@ -64,6 +65,7 @@ export const fetchAvailability = async (
         date: date.toISOString().split('T')[0],
         sessionType,
       }),
+      signal,
     });
 
     if (response.ok) {
@@ -73,6 +75,7 @@ export const fetchAvailability = async (
     logWarn('Availability API error, using fallback slots');
     return getFallbackSlots();
   } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError') throw error;
     logError('Failed to fetch availability', error);
     return getFallbackSlots();
   }

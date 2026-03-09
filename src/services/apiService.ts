@@ -148,18 +148,25 @@ export const linkPaymentToBooking = async (
 
 /**
  * Request a refund (by booking_id or razorpay_payment_id). Applies 24h policy: full refund if 24+ hours before session, else 50%.
+ * Requires admin: pass accessToken (session.access_token) so the backend can verify admin role.
  */
-export const requestRefund = async (params: {
-  booking_id?: string;
-  razorpay_payment_id?: string;
-}): Promise<ApiResponse<{ refunded?: boolean; amount_paise?: number; full_refund?: boolean }>> => {
+export const requestRefund = async (
+  params: { booking_id?: string; razorpay_payment_id?: string },
+  accessToken: string
+): Promise<ApiResponse<{ refunded?: boolean; amount_paise?: number; full_refund?: boolean }>> => {
   if (!API_CONFIG.USE_BACKEND_API) {
     return { success: false, error: 'Backend API not configured' };
+  }
+  if (!accessToken?.trim()) {
+    return { success: false, error: 'Authentication required to request refund' };
   }
   try {
     const response = await fetch(`${API_CONFIG.BACKEND_URL}/payments/refund`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${accessToken}`,
+      },
       body: JSON.stringify(params),
     });
     const data = await response.json().catch(() => ({}));

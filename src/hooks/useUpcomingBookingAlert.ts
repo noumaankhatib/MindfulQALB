@@ -50,31 +50,35 @@ export function useUpcomingBookingAlert() {
       return;
     }
     const today = new Date().toISOString().split('T')[0];
-    const { data: byUser } = await supabase
-      .from('bookings')
-      .select('id, session_type, session_format, scheduled_date, scheduled_time, status')
-      .eq('user_id', user.id)
-      .in('status', ['confirmed', 'pending'])
-      .gte('scheduled_date', today)
-      .order('scheduled_date', { ascending: true })
-      .order('scheduled_time', { ascending: true })
-      .limit(10);
+    const selectCols = 'id, session_type, session_format, scheduled_date, scheduled_time, status';
+    const [byUserRes, byEmailRes] = await Promise.all([
+      supabase
+        .from('bookings')
+        .select(selectCols)
+        .eq('user_id', user.id)
+        .in('status', ['confirmed', 'pending'])
+        .gte('scheduled_date', today)
+        .order('scheduled_date', { ascending: true })
+        .order('scheduled_time', { ascending: true })
+        .limit(10),
+      user.email
+        ? supabase
+            .from('bookings')
+            .select(selectCols)
+            .ilike('customer_email', user.email)
+            .in('status', ['confirmed', 'pending'])
+            .gte('scheduled_date', today)
+            .order('scheduled_date', { ascending: true })
+            .order('scheduled_time', { ascending: true })
+            .limit(10)
+        : { data: [] },
+    ]);
+    const byUser = byUserRes.data ?? [];
+    const byEmail = byEmailRes.data ?? [];
 
-    const byEmail = user.email
-      ? await supabase
-          .from('bookings')
-          .select('id, session_type, session_format, scheduled_date, scheduled_time, status')
-          .ilike('customer_email', user.email)
-          .in('status', ['confirmed', 'pending'])
-          .gte('scheduled_date', today)
-          .order('scheduled_date', { ascending: true })
-          .order('scheduled_time', { ascending: true })
-          .limit(10)
-      : { data: [] };
-
-    const seen = new Set((byUser ?? []).map((b) => b.id));
-    const combined = [...(byUser ?? [])];
-    (byEmail.data ?? []).forEach((b) => {
+    const seen = new Set(byUser.map((b) => b.id));
+    const combined = [...byUser];
+    byEmail.forEach((b) => {
       if (!seen.has(b.id)) {
         seen.add(b.id);
         combined.push(b);

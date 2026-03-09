@@ -90,8 +90,32 @@ async function handleCreate(req: VercelRequest, res: VercelResponse, requestId: 
   const notesRaw = customer.notes ? sanitizeString(customer.notes) : null;
   const notes = isFreeSession ? (notesRaw ? `[FREE_CONSULTATION] ${notesRaw}` : '[FREE_CONSULTATION]') : notesRaw;
 
+  const customerEmail = customer.email.toLowerCase().trim();
+
+  // One booking per user per date+time: no clash across therapy types (free, individual, couples, etc.)
+  const { data: existingAtSlot } = await supabase
+    .from('bookings')
+    .select('id, user_id, customer_email')
+    .eq('scheduled_date', date)
+    .eq('scheduled_time', time)
+    .in('status', ['pending', 'confirmed']);
+  const rows = (existingAtSlot ?? []) as { id: string; user_id?: string | null; customer_email?: string | null }[];
+  const hasConflict = rows.some(
+    (r) =>
+      (typeof userId === 'string' && userId.length > 0 && r.user_id === userId) ||
+      (r.customer_email && r.customer_email.toLowerCase() === customerEmail)
+  );
+  if (hasConflict) {
+    return res.status(400).json({
+      success: false,
+      error: 'You already have a booking at this date and time. Please choose a different slot or cancel the existing one.',
+      requestId,
+    });
+  }
+
+  // Set user_id when provided (logged-in user) so My Bookings can show the booking by user_id.
   const row = {
-    user_id: typeof userId === 'string' ? userId : null,
+    user_id: typeof userId === 'string' && userId.length > 0 ? userId : null,
     session_type,
     session_format,
     duration_minutes,
@@ -102,7 +126,7 @@ async function handleCreate(req: VercelRequest, res: VercelResponse, requestId: 
     calendar_event_id: null,
     meeting_url: null,
     customer_name: sanitizeString(customer.name),
-    customer_email: customer.email.toLowerCase().trim(),
+    customer_email: customerEmail,
     customer_phone: customer.phone?.trim() || null,
     notes,
     created_at: now,
@@ -160,10 +184,10 @@ async function handleConfirm(req: VercelRequest, res: VercelResponse, requestId:
 
   let calendarEventId: string | null = null;
   let meetingUrl: string | null = null;
+  const includeMeet = booking.session_format === 'video' || booking.session_format === 'audio';
 
   // Create Google Calendar event + Meet link for video/audio sessions
   if (isGoogleCalendarConfigured()) {
-    const includeMeet = booking.session_format === 'video' || booking.session_format === 'audio';
     const formatLabel = booking.session_format.charAt(0).toUpperCase() + booking.session_format.slice(1);
     const typeLabel = booking.session_type.charAt(0).toUpperCase() + booking.session_type.slice(1);
     const summary = `${typeLabel} Therapy - ${formatLabel} (${booking.customer_name})`;
@@ -194,9 +218,21 @@ async function handleConfirm(req: VercelRequest, res: VercelResponse, requestId:
       meetingUrl = event.meetingUrl;
       console.log(`[${requestId}] Calendar event created: ${event.eventId}, meet: ${meetingUrl ?? 'none'}`);
     } catch (err) {
-      console.error(`[${requestId}] Google Calendar event creation failed:`, err instanceof Error ? err.message : err);
+      const msg = err instanceof Error ? err.message : String(err);
+      const is404 = msg.includes('404');
+      if (is404) {
+        console.warn(`[${requestId}] Google Calendar not found (404). Check GOOGLE_CALENDAR_ID and calendar sharing. Using Jitsi Meet fallback.`);
+      } else {
+        console.error(`[${requestId}] Google Calendar event creation failed:`, msg);
+      }
       // Continue with confirmation even if calendar fails
     }
+  }
+
+  // For video/audio, always persist a meeting link (same as createCalendarEvent) so admin and user always see it
+  if (includeMeet && !meetingUrl) {
+    const slug = (bookingId || '').replace(/-/g, '').substring(0, 12);
+    meetingUrl = `https://meet.jit.si/MindfulQALB-${slug}`;
   }
 
   const updatePayload: Record<string, unknown> = {

@@ -1,0 +1,7 @@
+-- International payment support (Razorpay multi-currency / PayPal)
+-- The payments table already has a `currency` column (default 'INR').
+-- No schema changes are required — Razorpay handles both INR and USD orders.
+-- amount_paise = smallest unit (paise for INR, cents for USD).
+--
+-- If your payments table was created without currency, run:
+-- ALTER TABLE public.payments ADD COLUMN IF NOT EXISTS currency text NOT NULL DEFAULT 'INR';

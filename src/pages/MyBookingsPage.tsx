@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import {
   Calendar,
@@ -71,6 +71,20 @@ const MyBookingsPage = () => {
     }
   }, [user, authLoading, navigate]);
 
+  // Retry once if first load returned empty (session may not have been attached yet on client-side nav)
+  const retryEmptyRef = useRef(false);
+  useEffect(() => {
+    if (!user || loading || bookings.length > 0) return;
+    if (retryEmptyRef.current) return;
+    retryEmptyRef.current = true;
+    const t = setTimeout(() => {
+      fetchMyBookings();
+    }, 700);
+    return () => clearTimeout(t);
+  }, [user, loading, bookings.length]);
+
+  const BOOKINGS_SELECT = 'id, session_type, session_format, duration_minutes, scheduled_date, scheduled_time, status, customer_name, customer_email, notes, created_at, meeting_url';
+
   const fetchMyBookings = async () => {
     if (!user) return;
     setLoading(true);
@@ -81,44 +95,47 @@ const MyBookingsPage = () => {
     }, 15000);
 
     try {
-      const { data: byUserId, error: err1 } = await supabase
-        .from('bookings')
-        .select('id, session_type, session_format, duration_minutes, scheduled_date, scheduled_time, status, customer_name, customer_email, notes, created_at, meeting_url')
-        .eq('user_id', user.id)
-        .order('scheduled_date', { ascending: false })
-        .order('scheduled_time', { ascending: false });
-
-      if (err1) {
-        logError('Error fetching bookings by user_id:', err1);
-        setBookings([]);
-        setLoading(false);
-        clearTimeout(timeout);
-        return;
-      }
-
-      let bookingsList = (byUserId ?? []) as BookingRow[];
-      const seenIds = new Set(bookingsList.map((b) => b.id));
-
-      if (user.email) {
-        const { data: byEmail } = await supabase
+      // Parallel queries: by user_id and by customer_email (RLS allows both). Bookings show even when user_id was null at creation.
+      const [byUserRes, byEmailRes] = await Promise.all([
+        supabase
           .from('bookings')
-          .select('id, session_type, session_format, duration_minutes, scheduled_date, scheduled_time, status, customer_name, customer_email, notes, created_at, meeting_url')
-          .ilike('customer_email', user.email)
+          .select(BOOKINGS_SELECT)
+          .eq('user_id', user.id)
           .order('scheduled_date', { ascending: false })
-          .order('scheduled_time', { ascending: false });
-        const byEmailList = (byEmail ?? []) as BookingRow[];
-        for (const b of byEmailList) {
-          if (!seenIds.has(b.id)) {
-            seenIds.add(b.id);
-            bookingsList.push(b);
-          }
-        }
-        bookingsList.sort((a, b) => {
-          if (a.scheduled_date !== b.scheduled_date) return b.scheduled_date.localeCompare(a.scheduled_date);
-          return (b.scheduled_time || '').localeCompare(a.scheduled_time || '');
-        });
+          .order('scheduled_time', { ascending: false })
+          .limit(200),
+        user.email
+          ? supabase
+              .from('bookings')
+              .select(BOOKINGS_SELECT)
+              .ilike('customer_email', user.email.trim())
+              .order('scheduled_date', { ascending: false })
+              .order('scheduled_time', { ascending: false })
+              .limit(200)
+          : { data: [] as BookingRow[], error: null },
+      ]);
+
+      if (byUserRes.error) {
+        logError('Error fetching bookings by user_id:', byUserRes.error);
+      }
+      if (byEmailRes.error) {
+        logError('Error fetching bookings by email:', byEmailRes.error);
       }
 
+      const byUser = (byUserRes.data ?? []) as BookingRow[];
+      const byEmail = (byEmailRes.data ?? []) as BookingRow[];
+      const seenIds = new Set(byUser.map((b) => b.id));
+      const bookingsList = [...byUser];
+      for (const b of byEmail) {
+        if (!seenIds.has(b.id)) {
+          seenIds.add(b.id);
+          bookingsList.push(b);
+        }
+      }
+      bookingsList.sort((a, b) => {
+        if (a.scheduled_date !== b.scheduled_date) return b.scheduled_date.localeCompare(a.scheduled_date);
+        return (b.scheduled_time || '').localeCompare(a.scheduled_time || '');
+      });
       setBookings(bookingsList);
 
       if (bookingsList.length > 0) {

@@ -27,7 +27,7 @@ interface AuthModalProps {
 type AuthMode = 'signin' | 'signup' | 'magic-link';
 
 export const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
-  const { signInWithGoogle, signInWithGoogleIdToken, signInWithEmail, signUpWithEmail, signInWithMagicLink } = useAuth();
+  const { session, signInWithGoogle, signInWithGoogleIdToken, signInWithEmail, signUpWithEmail, signInWithMagicLink } = useAuth();
   const [mode, setMode] = useState<AuthMode>('signin');
   const [gsiReady, setGsiReady] = useState(false);
   const googleButtonRef = useRef<HTMLDivElement>(null);
@@ -37,6 +37,32 @@ export const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [successClosing, setSuccessClosing] = useState(false);
+  const formRef = useRef<HTMLFormElement>(null);
+  const emailInputRef = useRef<HTMLInputElement>(null);
+
+  // When session appears while we're still in loading (e.g. Google sign-in succeeded via onAuthStateChange before promise resolved), close modal and clear loading so UI doesn't stay stuck on "Signing in".
+  useEffect(() => {
+    if (loading && session) {
+      setLoading(false);
+      setError(null);
+      onSuccess?.();
+      onClose();
+    }
+  }, [loading, session, onSuccess, onClose]);
+
+  // Reset to a clean state every time the modal opens so returning users don't see old errors or modes.
+  useEffect(() => {
+    if (isOpen) {
+      setMode('signin');
+      setError(null);
+      setSuccess(null);
+      setLoading(false);
+      setEmail('');
+      setPassword('');
+      setFullName('');
+    }
+  }, [isOpen]);
 
   useEffect(() => {
     if (isOpen) {
@@ -58,12 +84,25 @@ export const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
     return () => document.removeEventListener('keydown', handleEscape);
   }, [isOpen, onClose]);
 
+  // Focus first form field when modal opens for keyboard and screen reader users.
+  useEffect(() => {
+    if (!isOpen || loading) return;
+    const t = setTimeout(() => emailInputRef.current?.focus({ preventScroll: true }), 100);
+    return () => clearTimeout(t);
+  }, [isOpen, loading]);
+
   const handleCredential = useCallback(
     async (credential: string) => {
       setLoading(true);
       setError(null);
+      const timeoutMs = 25000;
+      const timeoutId = setTimeout(() => {
+        setError("Sign-in is taking longer than usual. If you're signed in, close this and continue.");
+        setLoading(false);
+      }, timeoutMs);
       try {
         const { error } = await signInWithGoogleIdToken(credential);
+        clearTimeout(timeoutId);
         if (error) {
           setError(displayError(typeof error.message === 'string' ? error.message : String(error.message)));
         } else {
@@ -71,6 +110,7 @@ export const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
           onClose();
         }
       } catch {
+        clearTimeout(timeoutId);
         setError('Google sign-in failed. Please try email sign-in instead.');
       } finally {
         setLoading(false);
@@ -106,7 +146,7 @@ export const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
     }
     const initGsi = () => {
       if (window.google?.accounts?.id && googleButtonRef.current) {
-        googleButtonRef.current.innerHTML = '';
+        googleButtonRef.current.replaceChildren();
         window.google.accounts.id.initialize({
           client_id: clientId,
           callback: (r: { credential: string }) => handleCredential(r.credential),
@@ -143,37 +183,54 @@ export const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
 
   const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
     setError(null);
     setSuccess(null);
 
+    const trimmedEmail = email.trim();
+    if (!trimmedEmail) {
+      setError('Please enter your email address.');
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+      setError('Please enter a valid email address.');
+      return;
+    }
+    if (mode !== 'magic-link' && password.length > 0 && password.length < 6) {
+      setError('Password must be at least 6 characters.');
+      return;
+    }
+    if (mode === 'signup' && !fullName.trim()) {
+      setError('Please enter your name.');
+      return;
+    }
+
+    setLoading(true);
+
     try {
       if (mode === 'magic-link') {
-        const { error } = await signInWithMagicLink(email);
+        const { error } = await signInWithMagicLink(trimmedEmail);
         if (error) {
           setError(displayError(typeof error.message === 'string' ? error.message : String(error.message)));
         } else {
           setSuccess('Check your email for the magic link!');
         }
       } else if (mode === 'signup') {
-        if (!fullName.trim()) {
-          setError('Please enter your name');
-          setLoading(false);
-          return;
-        }
-        const { error } = await signUpWithEmail(email, password, fullName);
+        const { error } = await signUpWithEmail(trimmedEmail, password, fullName.trim());
         if (error) {
           setError(displayError(typeof error.message === 'string' ? error.message : String(error.message)));
         } else {
           setSuccess('Check your email to confirm your account!');
         }
       } else {
-        const { error } = await signInWithEmail(email, password);
+        const { error } = await signInWithEmail(trimmedEmail, password);
         if (error) {
           setError(displayError(typeof error.message === 'string' ? error.message : String(error.message)));
         } else {
-          onSuccess?.();
-          onClose();
+          setSuccessClosing(true);
+          setTimeout(() => {
+            onSuccess?.();
+            onClose();
+          }, 500);
         }
       }
     } catch {
@@ -257,6 +314,50 @@ export const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
           }}
           onClick={(e) => e.stopPropagation()}
         >
+          {/* Loading overlay: blocks double-submit and shows clear feedback */}
+          {loading && (
+            <div
+              style={{
+                position: 'absolute',
+                inset: 0,
+                zIndex: 20,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                background: 'rgba(255, 255, 255, 0.92)',
+                borderRadius: '20px',
+                gap: '12px',
+              }}
+              aria-live="polite"
+              aria-busy="true"
+            >
+              <Loader2 className="animate-spin" style={{ width: '40px', height: '40px', color: '#8B7EC8' }} />
+              <span style={{ fontSize: '15px', fontWeight: 500, color: '#4b5563' }}>Signing you in…</span>
+            </div>
+          )}
+          {/* Brief success state before close (email sign-in) */}
+          {successClosing && !loading && (
+            <div
+              style={{
+                position: 'absolute',
+                inset: 0,
+                zIndex: 19,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                background: 'linear-gradient(135deg, #8B7EC8 0%, #6B5B95 100%)',
+                borderRadius: '20px',
+                gap: '12px',
+                color: '#fff',
+              }}
+              aria-live="polite"
+            >
+              <CheckCircle style={{ width: '48px', height: '48px' }} />
+              <span style={{ fontSize: '18px', fontWeight: 600 }}>Welcome back!</span>
+            </div>
+          )}
           {/* Close Button */}
           <button
             onClick={onClose}
@@ -368,9 +469,14 @@ export const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
                 </span>
               </div>
             </div>
+            {mode === 'signin' && (
+              <p style={{ fontSize: '12px', color: '#6b7280', marginTop: '-8px', marginBottom: '4px', textAlign: 'center' }}>
+                No password? Use magic link below.
+              </p>
+            )}
 
             {/* Email Form */}
-            <form onSubmit={handleEmailAuth} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <form ref={formRef} onSubmit={handleEmailAuth} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               {mode === 'signup' && (
                 <div>
                   <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, color: '#374151', marginBottom: '6px' }}>
@@ -419,11 +525,13 @@ export const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
                 <div style={{ position: 'relative' }}>
                   <Mail style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', width: '20px', height: '20px', color: '#9ca3af' }} />
                   <input
+                    ref={emailInputRef}
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="you@example.com"
                     required
+                    autoComplete="email"
                     style={{
                       width: '100%',
                       paddingLeft: '44px',
@@ -462,9 +570,10 @@ export const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
                       type="password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      placeholder="••••••••"
-                      required
-                      minLength={6}
+                    placeholder="••••••••"
+                    required={mode !== 'magic-link'}
+                    minLength={6}
+                    autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
                       style={{
                         width: '100%',
                         paddingLeft: '44px',
@@ -496,12 +605,15 @@ export const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
               {/* Error Message */}
               {error && (
                 <motion.div
+                  role="alert"
+                  aria-live="polite"
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
                   style={{
                     display: 'flex',
+                    flexDirection: 'column',
                     alignItems: 'flex-start',
-                    gap: '12px',
+                    gap: '8px',
                     padding: '12px',
                     backgroundColor: '#fef2f2',
                     border: '1px solid #fecaca',
@@ -510,8 +622,11 @@ export const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
                     fontSize: '14px',
                   }}
                 >
-                  <AlertCircle style={{ width: '20px', height: '20px', flexShrink: 0, marginTop: '1px' }} />
-                  <span>{error}</span>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                    <AlertCircle style={{ width: '20px', height: '20px', flexShrink: 0, marginTop: '1px' }} />
+                    <span>{error}</span>
+                  </div>
+                  <span style={{ fontSize: '13px', color: '#b91c1c' }}>Correct the details above and try again, or use magic link.</span>
                 </motion.div>
               )}
 

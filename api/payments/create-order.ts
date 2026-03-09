@@ -4,29 +4,38 @@ import { validateSessionType, validateFormat } from '../_utils/validation.js';
 import { rateLimiters } from '../_utils/rateLimit.js';
 import { getSupabaseServer } from '../_utils/supabase.js';
 
-// Dynamic import for Razorpay (CommonJS module)
 const getRazorpay = async () => {
   const Razorpay = (await import('razorpay')).default;
   return Razorpay;
 };
 
-// Pricing configuration (server-side only - secure)
-const PRICING: Record<string, Record<string, number>> = {
+// Pricing in major currency units (INR for India, USD for international)
+const PRICING_INR: Record<string, Record<string, number>> = {
   individual: { chat: 499, audio: 899, video: 1299 },
   couples: { audio: 1499, video: 1999 },
   family: { audio: 1799, video: 2499 },
   free: { call: 0, chat: 0, audio: 0, video: 0 },
 };
 
+const PRICING_USD: Record<string, Record<string, number>> = {
+  individual: { chat: 6, audio: 11, video: 16 },
+  couples: { audio: 18, video: 24 },
+  family: { audio: 21, video: 30 },
+  free: { call: 0, chat: 0, audio: 0, video: 0 },
+};
+
+const ALLOWED_CURRENCIES = ['INR', 'USD'] as const;
+type Currency = (typeof ALLOWED_CURRENCIES)[number];
+
+/** Approximate INR per 1 USD for fixed-value coupon discount on USD orders (coupons stored in INR). */
+const APPROX_INR_PER_USD = 83;
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // Handle CORS
   const corsResult = handleCorsPrelight(req, res);
   if (corsResult === true) return;
   const requestId = corsResult as string;
-  
-  // Rate limiting for payment endpoints
+
   if (rateLimiters.payment(req, res)) return;
-  
   if (!validateMethod(req, res, ['POST'])) return;
 
   const keyId = process.env.RAZORPAY_KEY_ID;
@@ -48,6 +57,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const customerEmail = typeof body.customerEmail === 'string' ? body.customerEmail.trim().toLowerCase() : '';
     const customerPhone = typeof body.customerPhone === 'string' ? body.customerPhone.trim() : '';
 
+    // Currency: default INR, accept USD for international clients
+    const rawCurrency = typeof body.currency === 'string' ? body.currency.toUpperCase() : 'INR';
+    const currency: Currency = ALLOWED_CURRENCIES.includes(rawCurrency as Currency) ? (rawCurrency as Currency) : 'INR';
+    const isInternational = currency === 'USD';
+    const pricingTable = isInternational ? PRICING_USD : PRICING_INR;
+    const currencySymbol = isInternational ? '$' : '₹';
+
     const sessionTypeResult = validateSessionType(sessionType);
     if (!sessionTypeResult.valid) {
       return res.status(400).json({ error: sessionTypeResult.error });
@@ -57,7 +73,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(400).json({ error: formatResult.error });
     }
 
-    const therapyPricing = PRICING[sessionType];
+    const therapyPricing = pricingTable[sessionType];
     if (!therapyPricing) {
       return res.status(400).json({ error: 'Invalid session type for pricing' });
     }
@@ -71,14 +87,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         success: true,
         orderId: `free_${Date.now()}`,
         amount: 0,
-        currency: 'INR',
+        currency,
         keyId: keyId,
         isFree: true,
       });
     }
 
-    let amountPaise = amount * 100;
-    let couponMeta: { coupon_id: string; coupon_code: string; discount_paise: number } | null = null;
+    // Convert to smallest unit (paise for INR, cents for USD)
+    let amountSmallest = amount * 100;
+    let couponMeta: { coupon_id: string; coupon_code: string; discount_amount: number } | null = null;
     const code = typeof couponCode === 'string' ? couponCode.trim().toUpperCase() : '';
 
     if (code) {
@@ -104,7 +121,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const now = new Date();
       const validFrom = coupon.valid_from ? new Date(coupon.valid_from) : null;
       const validUntil = coupon.valid_until ? new Date(coupon.valid_until) : null;
-      const minPaise = Number(coupon.min_amount_paise) || 0;
+      const minSmallest = Number(coupon.min_amount_paise) || 0;
       const maxReached = coupon.max_uses != null && (coupon.used_count ?? 0) >= coupon.max_uses;
 
       if (validFrom && validFrom > now) {
@@ -116,23 +133,27 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (maxReached) {
         return res.status(400).json({ error: 'This coupon has reached its usage limit.' });
       }
-      if (amountPaise < minPaise) {
+      // For international orders, skip min-amount check (coupons are INR-denominated)
+      if (!isInternational && amountSmallest < minSmallest) {
         return res.status(400).json({
-          error: minPaise > 0 ? `Minimum order amount is ₹${Math.round(minPaise / 100)} for this coupon.` : 'Invalid amount.',
+          error: minSmallest > 0 ? `Minimum order amount is ${currencySymbol}${Math.round(minSmallest / 100)} for this coupon.` : 'Invalid amount.',
         });
       }
 
       const discountValue = Number(coupon.discount_value) || 0;
-      let discountPaise = 0;
+      let discountSmallest = 0;
       if (coupon.discount_type === 'percent') {
         const pct = Math.min(100, Math.max(0, discountValue));
-        discountPaise = Math.floor((amountPaise * pct) / 100);
+        discountSmallest = Math.floor((amountSmallest * pct) / 100);
       } else {
-        discountPaise = Math.min(amountPaise, Math.floor(discountValue * 100));
+        const fixedSmallest = isInternational
+          ? Math.floor((discountValue * 100) / APPROX_INR_PER_USD)
+          : Math.floor(discountValue * 100);
+        discountSmallest = Math.min(amountSmallest, fixedSmallest);
       }
-      if (discountPaise > 0) {
-        amountPaise = Math.max(0, amountPaise - discountPaise);
-        couponMeta = { coupon_id: coupon.id, coupon_code: coupon.code, discount_paise: discountPaise };
+      if (discountSmallest > 0) {
+        amountSmallest = Math.max(0, amountSmallest - discountSmallest);
+        couponMeta = { coupon_id: coupon.id, coupon_code: coupon.code, discount_amount: discountSmallest };
       }
     }
 
@@ -143,10 +164,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
 
     const order = await razorpay.orders.create({
-      amount: amountPaise,
-      currency: 'INR',
+      amount: amountSmallest,
+      currency,
       receipt: `receipt_${Date.now()}`,
-      notes: { sessionType, format, ...(couponMeta && { coupon_code: couponMeta.coupon_code }) },
+      notes: { sessionType, format, currency, ...(couponMeta && { coupon_code: couponMeta.coupon_code }) },
     });
 
     const supabase = getSupabaseServer();
@@ -155,7 +176,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (couponMeta) {
         meta.coupon_id = couponMeta.coupon_id;
         meta.coupon_code = couponMeta.coupon_code;
-        meta.discount_paise = couponMeta.discount_paise;
+        meta.discount_amount = couponMeta.discount_amount;
       }
       if (customerName) meta.customer_name = customerName;
       if (customerEmail) meta.customer_email = customerEmail;
@@ -163,8 +184,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       const { error: insertErr } = await supabase.from('payments').insert({
         razorpay_order_id: order.id,
-        amount_paise: amountPaise,
-        currency: 'INR',
+        amount_paise: amountSmallest,
+        currency,
         status: 'pending',
         metadata: meta,
       });
@@ -174,10 +195,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     res.json({
       success: true,
       orderId: order.id,
-      amount: amountPaise,
-      currency: 'INR',
+      amount: amountSmallest,
+      currency,
       keyId: keyId,
-      ...(couponMeta && { discountPaise: couponMeta.discount_paise }),
+      ...(couponMeta && { discountPaise: couponMeta.discount_amount }),
     });
   } catch (error) {
     console.error(`[${requestId}] Create order error:`, error instanceof Error ? error.message : 'Unknown error');

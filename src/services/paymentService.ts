@@ -1,24 +1,21 @@
-// Payment service for handling Razorpay payments
-
 import { SessionRecommendation } from '../data/chatbotFlow';
 import { PAYMENT_CONFIG } from '../config/paymentConfig';
 import { safeParseJson } from '../utils/safeJson';
 import { logError } from '../lib/logger';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 
-
-// Types
-export interface PaymentConfig {
-  razorpayKeyId: string;
+function getApiBase(): string {
+  const base = (typeof import.meta.env.VITE_BACKEND_URL === 'string' && import.meta.env.VITE_BACKEND_URL) || '/api';
+  return base.replace(/\/$/, '');
 }
 
 export interface PaymentResult {
   success: boolean;
   paymentId?: string;
   orderId?: string;
-  /** Actual amount charged in paise (after coupon discount) */
+  /** Actual amount charged in smallest currency unit (paise or cents) */
   amountPaise?: number;
-  /** Discount applied in paise, if any */
+  /** Discount applied in smallest currency unit, if any */
   discountPaise?: number;
   error?: string;
 }
@@ -50,7 +47,6 @@ export interface RazorpayResponse {
   razorpay_signature?: string;
 }
 
-// Declare Razorpay on window
 declare global {
   interface Window {
     Razorpay: new (options: RazorpayOptions) => {
@@ -60,20 +56,12 @@ declare global {
   }
 }
 
-// Note: Razorpay key ID is now fetched from backend API during order creation
-// This ensures the key is always in sync with the server configuration
-export const getPaymentConfig = (): PaymentConfig => ({
-  razorpayKeyId: '', // Populated from backend API response
-});
-
-// Load Razorpay script dynamically
 export const loadRazorpayScript = (): Promise<boolean> => {
   return new Promise((resolve) => {
     if (window.Razorpay) {
       resolve(true);
       return;
     }
-
     const script = document.createElement('script');
     script.src = 'https://checkout.razorpay.com/v1/checkout.js';
     script.onload = () => resolve(true);
@@ -82,9 +70,10 @@ export const loadRazorpayScript = (): Promise<boolean> => {
   });
 };
 
-// Process Razorpay payment (optional couponCode is applied server-side)
+// Process Razorpay payment (supports INR and USD via Razorpay International)
 export const processRazorpayPayment = async (
   session: SessionRecommendation,
+  isIndia: boolean,
   customerInfo: { name?: string; email?: string; phone?: string },
   options?: { couponCode?: string }
 ): Promise<PaymentResult> => {
@@ -96,27 +85,24 @@ export const processRazorpayPayment = async (
     };
   }
 
-  // Same as apiService: VITE_BACKEND_URL in frontend .env (default /api for relative proxy)
-  const base = (typeof import.meta.env.VITE_BACKEND_URL === 'string' && import.meta.env.VITE_BACKEND_URL) || '/api';
-  const apiBase = base.replace(/\/$/, '');
+  const apiBase = getApiBase();
   const createOrderUrl = `${apiBase}/payments/create-order`;
   const verifyUrl = `${apiBase}/payments/verify`;
 
-  // SECURITY: Always create orders via backend API
-  // This ensures server-side price verification and prevents price manipulation
+  const currency = isIndia ? 'INR' : 'USD';
+
   let orderId: string | undefined;
   let amount: number | undefined;
   let keyId: string | undefined;
-  /** Amount actually charged in paise (discounted when coupon applied); set from create-order response */
-  let paidAmountPaise: number | undefined;
-  /** Discount applied in paise, when coupon was used */
-  let discountPaiseFromOrder: number | undefined;
+  let orderCurrency: string | undefined;
+  let paidAmount: number | undefined;
+  let discountFromOrder: number | undefined;
 
   const sessionType = session.id?.split('-')[0] || 'individual';
   const format = session.id?.split('-')[1] || 'video';
   const rawCoupon = options?.couponCode?.trim() || '';
   const couponCodeToSend = rawCoupon ? rawCoupon.toUpperCase() : undefined;
-  const body: Record<string, unknown> = { sessionType, format };
+  const body: Record<string, unknown> = { sessionType, format, currency };
   if (customerInfo.name) body.customerName = customerInfo.name;
   if (customerInfo.email) body.customerEmail = customerInfo.email;
   if (customerInfo.phone) body.customerPhone = customerInfo.phone;
@@ -125,28 +111,30 @@ export const processRazorpayPayment = async (
     body.coupon_code = couponCodeToSend;
   }
 
-  const fullPricePaise = (session.priceINR ?? 0) * 100;
+  const fullPriceSmallest = isIndia
+    ? (session.priceINR ?? 0) * 100
+    : (session.priceUSD ?? 0) * 100;
 
   const callCreateOrder = async (): Promise<Response> => {
     if (import.meta.env.DEV && couponCodeToSend) {
       console.log('[payment] create-order request body (coupon included):', { ...body });
     }
-    const bodyStr = JSON.stringify(body);
-    const request = new Request(createOrderUrl, {
+    return fetch(createOrderUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: bodyStr,
+      body: JSON.stringify(body),
     });
-    return fetch(request);
   };
+
+  type CreateOrderResponse = { isFree?: boolean; orderId?: string; amount?: number; currency?: string; keyId?: string; discountPaise?: number; error?: string };
 
   try {
     let response = await callCreateOrder();
-    let data = await safeParseJson<{ isFree?: boolean; orderId?: string; amount?: number; keyId?: string; discountPaise?: number; error?: string }>(response);
+    let data = await safeParseJson<CreateOrderResponse>(response);
 
-    if (response.ok && couponCodeToSend && fullPricePaise > 0 && data.amount != null && data.amount >= fullPricePaise) {
+    if (response.ok && couponCodeToSend && fullPriceSmallest > 0 && data.amount != null && data.amount >= fullPriceSmallest) {
       response = await callCreateOrder();
-      data = await safeParseJson<{ isFree?: boolean; orderId?: string; amount?: number; keyId?: string; discountPaise?: number; error?: string }>(response);
+      data = await safeParseJson<CreateOrderResponse>(response);
     }
 
     if (!response.ok) {
@@ -154,10 +142,7 @@ export const processRazorpayPayment = async (
         typeof data.error === 'string' && data.error
           ? data.error
           : 'Failed to create payment order';
-      return {
-        success: false,
-        error: serverError,
-      };
+      return { success: false, error: serverError };
     }
 
     if (data.isFree) {
@@ -175,7 +160,7 @@ export const processRazorpayPayment = async (
       };
     }
 
-    if (couponCodeToSend && fullPricePaise > 0 && data.amount >= fullPricePaise) {
+    if (couponCodeToSend && fullPriceSmallest > 0 && data.amount >= fullPriceSmallest) {
       const couponReceived = response.headers.get('X-Coupon-Received');
       const discountApplied = response.headers.get('X-Discount-Applied');
       let hint = '';
@@ -193,15 +178,16 @@ export const processRazorpayPayment = async (
     orderId = data.orderId;
     amount = data.amount;
     keyId = data.keyId;
-    paidAmountPaise = data.amount;
-    discountPaiseFromOrder = typeof data.discountPaise === 'number' ? data.discountPaise : undefined;
+    orderCurrency = data.currency || currency;
+    paidAmount = data.amount;
+    discountFromOrder = typeof data.discountPaise === 'number' ? data.discountPaise : undefined;
   } catch (error) {
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Payment service unavailable',
     };
   }
-  
+
   if (!keyId || !orderId || amount == null) {
     return {
       success: false,
@@ -210,10 +196,10 @@ export const processRazorpayPayment = async (
   }
 
   return new Promise((resolve) => {
-    const options: RazorpayOptions = {
+    const rzpOptions: RazorpayOptions = {
       key: keyId,
       amount,
-      currency: 'INR',
+      currency: orderCurrency || currency,
       name: 'MindfulQALB',
       description: `${session.title} - ${session.duration}`,
       order_id: orderId,
@@ -223,11 +209,9 @@ export const processRazorpayPayment = async (
         contact: customerInfo.phone,
       },
       theme: {
-        color: '#8B7EC8', // Lavender theme color
+        color: '#8B7EC8',
       },
       handler: async (response: RazorpayResponse) => {
-        // SECURITY: Always verify payment signature via backend
-        // Never trust client-side payment confirmation without server verification
         if (!response.razorpay_signature || !response.razorpay_order_id) {
           resolve({
             success: false,
@@ -246,16 +230,16 @@ export const processRazorpayPayment = async (
               razorpay_signature: response.razorpay_signature,
             }),
           });
-          
+
           if (verifyResponse.ok) {
-            const data = await safeParseJson<{ verified?: boolean }>(verifyResponse);
-            if (data.verified) {
+            const vData = await safeParseJson<{ verified?: boolean }>(verifyResponse);
+            if (vData.verified) {
               resolve({
                 success: true,
                 paymentId: response.razorpay_payment_id,
                 orderId: response.razorpay_order_id,
-                amountPaise: paidAmountPaise,
-                discountPaise: discountPaiseFromOrder,
+                amountPaise: paidAmount,
+                discountPaise: discountFromOrder,
               });
             } else {
               resolve({
@@ -287,12 +271,11 @@ export const processRazorpayPayment = async (
       },
     };
 
-    const razorpay = new window.Razorpay(options);
+    const razorpay = new window.Razorpay(rzpOptions);
     razorpay.open();
   });
 };
 
-// Mock payment processor (for testing when payment is disabled)
 export const processMockPayment = async (
   _session: SessionRecommendation,
   _customerInfo: { name?: string; email?: string; phone?: string }
@@ -300,9 +283,7 @@ export const processMockPayment = async (
   const { MOCK_SETTINGS } = PAYMENT_CONFIG;
 
   return new Promise((resolve) => {
-    // Simulate processing delay
     setTimeout(() => {
-      // Simulate success rate
       const isSuccess = Math.random() < MOCK_SETTINGS.SUCCESS_RATE;
 
       if (isSuccess) {
@@ -321,31 +302,24 @@ export const processMockPayment = async (
   });
 };
 
-// Main payment processor - uses Razorpay for all payments
+// Main payment processor — Razorpay for all (INR for India, USD for international)
 export const processPayment = async (
   session: SessionRecommendation,
-  _isIndia: boolean, // Kept for API compatibility, but always uses Razorpay
+  isIndia: boolean,
   customerInfo: { name?: string; email?: string; phone?: string },
   paymentOptions?: { couponCode?: string }
 ): Promise<PaymentResult> => {
-  // Check if payment is enabled
   if (!PAYMENT_CONFIG.isPaymentEnabled) {
-    // Test mode - using mock payment
     return processMockPayment(session, customerInfo);
   }
 
-  // Real payment processing with Razorpay
-  return processRazorpayPayment(session, customerInfo, paymentOptions);
+  return processRazorpayPayment(session, isIndia, customerInfo, paymentOptions);
 };
 
-// Validate payment configuration
 export const isPaymentConfigured = (_isIndia?: boolean): boolean => {
-  // Always return true - the backend API handles Razorpay configuration
-  // If backend is not configured, the payment request will fail gracefully
   return true;
 };
 
-// Validate coupon: tries API first, then Supabase RPC (works when API returns 404 or is down)
 export const validateCoupon = async (code: string, amountPaise: number): Promise<{
   valid: boolean;
   discountPaise?: number;
@@ -365,9 +339,8 @@ export const validateCoupon = async (code: string, amountPaise: number): Promise
     couponId: r.coupon_id,
   });
 
-  // 1) Try API (local server or Vercel)
   try {
-    const response = await fetch('/api/coupons/validate', {
+    const response = await fetch(`${getApiBase()}/coupons/validate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ code: raw, amountPaise: amount }),
@@ -393,10 +366,9 @@ export const validateCoupon = async (code: string, amountPaise: number): Promise
       return { valid: false, message: msg };
     }
   } catch {
-    // Network error or API unreachable – fall through to Supabase RPC
+    // Network error — fall through to Supabase RPC
   }
 
-  // 2) Fallback: validate via Supabase RPC (works without API server)
   if (isSupabaseConfigured()) {
     try {
       const { data: rpcData, error: rpcError } = await supabase.rpc('validate_coupon', {
@@ -421,12 +393,10 @@ export const validateCoupon = async (code: string, amountPaise: number): Promise
   return { valid: false, message: 'Could not validate coupon. Run docs/supabase-coupons-migration.sql in Supabase and try again.' };
 };
 
-// Check if we're in test mode
 export const isTestMode = (): boolean => {
   return PAYMENT_CONFIG.isTestMode;
 };
 
-// Get payment mode label
 export const getPaymentModeLabel = (): string => {
   return PAYMENT_CONFIG.modeLabel;
 };
@@ -438,5 +408,4 @@ export default {
   isPaymentConfigured,
   isTestMode,
   getPaymentModeLabel,
-  getPaymentConfig,
 };

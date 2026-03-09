@@ -1,5 +1,5 @@
 import { useEffect, useState, lazy, Suspense, type ReactNode } from 'react'
-import { createBrowserRouter, RouterProvider, Navigate, useLocation } from 'react-router-dom'
+import { createBrowserRouter, RouterProvider, Navigate, useLocation, Link } from 'react-router-dom'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { AppErrorBoundary, NotFoundPage } from './components/AppErrorBoundary'
 import { Outlet } from 'react-router-dom'
@@ -40,6 +40,29 @@ const LazyFallback = () => (
     </div>
   </div>
 )
+
+// OAuth callback: when session appears redirect to home; after timeout show "Go home" so user isn't stuck on "Signing in…"
+const AuthCallbackPage = () => {
+  const { session, loading: authLoading } = useAuth()
+  const [showFallback, setShowFallback] = useState(false)
+  useEffect(() => {
+    const t = setTimeout(() => setShowFallback(true), 12000)
+    return () => clearTimeout(t)
+  }, [])
+  if (session) return <Navigate to="/" replace />
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', color: '#6b7280', gap: 16 }}>
+      <div className="w-10 h-10 rounded-full border-2 border-lavender-200 border-t-lavender-600 animate-spin" />
+      <p className="text-sm">Signing in…</p>
+      {showFallback && (
+        <p style={{ marginTop: 8 }}>
+          <Link to="/" style={{ color: '#8B7EC8', fontWeight: 600 }}>Go to home</Link>
+          {authLoading ? ' — still completing sign-in' : ''}
+        </p>
+      )}
+    </div>
+  )
+}
 
 // Home page component
 const HomePage = () => {
@@ -216,7 +239,7 @@ const router = createBrowserRouter(
         { path: '/my-bookings', element: <Suspense fallback={<LazyFallback />}><MyBookingsPage /></Suspense> },
         { path: '/profile', element: <Suspense fallback={<LazyFallback />}><ProfilePage /></Suspense> },
         { path: '/admin', element: <AdminRoute><Suspense fallback={<LazyFallback />}><AdminPage /></Suspense></AdminRoute> },
-        { path: '/auth/google/callback', element: <div style={{display:'flex',alignItems:'center',justifyContent:'center',height:'100vh',color:'#6b7280'}}>Signing in…</div> },
+        { path: '/auth/google/callback', element: <AuthCallbackPage /> },
         { path: '*', element: <NotFoundPage /> },
       ],
     },

@@ -21,6 +21,8 @@ import {
   Shield,
   Lock,
   Tag,
+  RefreshCw,
+  ExternalLink,
 } from 'lucide-react';
 import { SessionRecommendation } from '../data/chatbotFlow';
 import { useGeolocation, formatPrice } from '../hooks/useGeolocation';
@@ -181,12 +183,16 @@ interface CustomerInfo {
   notes: string;
 }
 
+const SLOTS_LOAD_TIMEOUT_MS = 15000;
+
 const BookingFlow = ({ session, isOpen, onClose }: BookingFlowProps) => {
   const { isIndia } = useGeolocation();
   const { user, profile } = useAuth();
   const skipAuthForTesting = import.meta.env.DEV && import.meta.env.VITE_SKIP_AUTH_FOR_TESTING === 'true';
   const authRequired = isSupabaseConfigured() && !user && !skipAuthForTesting;
-  
+  const slotsAbortRef = useRef<AbortController | null>(null);
+  const slotTimeoutFiredRef = useRef(false);
+
   // Flow state
   const [currentStep, setCurrentStep] = useState<BookingStep>('therapy');
   const [isProcessing, setIsProcessing] = useState(false);
@@ -358,6 +364,9 @@ const BookingFlow = ({ session, isOpen, onClose }: BookingFlowProps) => {
     if (selectedDate) {
       loadAvailableSlots();
     }
+    return () => {
+      if (slotsAbortRef.current) slotsAbortRef.current.abort();
+    };
   }, [selectedDate]);
 
   const parseSlotTo24h = (timeStr: string): number => {
@@ -418,12 +427,23 @@ const BookingFlow = ({ session, isOpen, onClose }: BookingFlowProps) => {
 
   const loadAvailableSlots = async () => {
     if (!selectedDate || !selectedTherapyType) return;
-    
+
+    // Cancel any in-flight request so Refresh always starts a clean load
+    if (slotsAbortRef.current) {
+      slotsAbortRef.current.abort();
+    }
+    const controller = new AbortController();
+    slotsAbortRef.current = controller;
+    slotTimeoutFiredRef.current = false;
+
     setIsProcessing(true);
     setError(null);
 
-    // Use single canonical type so slots are common for all session types (one therapist, one calendar)
     const canonicalSessionType = 'individual';
+    const timeoutId = setTimeout(() => {
+      slotTimeoutFiredRef.current = true;
+      controller.abort();
+    }, SLOTS_LOAD_TIMEOUT_MS);
 
     try {
       const localBookedSlots = getLocalBookedSlots(selectedDate);
@@ -440,7 +460,7 @@ const BookingFlow = ({ session, isOpen, onClose }: BookingFlowProps) => {
           }));
 
       if (isCalendarConfigured()) {
-        const calSlots = await fetchAvailability(selectedDate, canonicalSessionType);
+        const calSlots = await fetchAvailability(selectedDate, canonicalSessionType, controller.signal);
         setAvailableSlots(applyFilters(calSlots));
       } else if (AVAILABILITY_CONFIG.USE_MOCK_AVAILABILITY) {
         await new Promise((resolve) => setTimeout(resolve, 500));
@@ -448,9 +468,17 @@ const BookingFlow = ({ session, isOpen, onClose }: BookingFlowProps) => {
       } else {
         setAvailableSlots(applyFilters(AVAILABILITY_CONFIG.MOCK_SLOTS));
       }
-    } catch {
-      setError('Failed to load available slots. Please try again.');
+    } catch (e) {
+      if (e instanceof Error && e.name === 'AbortError') {
+        if (slotTimeoutFiredRef.current) {
+          setError('Slots are taking too long. Click Refresh to try again.');
+        }
+      } else {
+        setError('Failed to load available slots. Please try again.');
+      }
     } finally {
+      clearTimeout(timeoutId);
+      slotsAbortRef.current = null;
       setIsProcessing(false);
     }
   };
@@ -1226,6 +1254,18 @@ const BookingFlow = ({ session, isOpen, onClose }: BookingFlowProps) => {
                       {/* Time Slots */}
                       {selectedDate && (
                         <div>
+                          {/* Refresh first so it's always visible; stays clickable during loading to break out of infinite/stuck load */}
+                          <div className="flex items-center justify-between gap-2 mb-3">
+                            <button
+                              type="button"
+                              onClick={() => loadAvailableSlots()}
+                              className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-semibold text-lavender-600 hover:bg-lavender-50 border-2 border-lavender-200 hover:border-lavender-300 transition-colors"
+                              aria-label="Refresh available slots"
+                            >
+                              <RefreshCw className={`w-4 h-4 ${isProcessing ? 'animate-spin' : ''}`} />
+                              {isProcessing ? 'Loading… Click to retry' : 'Refresh slots'}
+                            </button>
+                          </div>
                           <p className="text-sm text-gray-600 mb-3">
                             Available times for {formatDate(selectedDate)}:
                           </p>
@@ -1648,21 +1688,17 @@ const BookingFlow = ({ session, isOpen, onClose }: BookingFlowProps) => {
                                 UPI
                               </button>
                               <button className="flex-1 px-4 py-2.5 border-2 border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:border-lavender-300">
-                                Bank Transfer
+                                NetBanking
                               </button>
                               <button className="flex-1 px-4 py-2.5 border-2 border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:border-lavender-300 flex items-center justify-center gap-1">
                                 <CreditCard className="w-4 h-4" />
-                                Debit/Credit Card
+                                Card
                               </button>
                             </>
                           ) : (
                             <>
-                              <button className="flex-1 px-4 py-2.5 border-2 border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:border-lavender-300">
-                                Bank Transfer
-                              </button>
-                              <button className="flex-1 px-4 py-2.5 border-2 border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:border-lavender-300 flex items-center justify-center gap-1">
-                                <CreditCard className="w-4 h-4" />
-                                Debit/Credit Card
+                              <button className="flex-1 px-4 py-2.5 border-2 border-lavender-300 bg-lavender-50 rounded-lg text-sm font-medium text-lavender-700 flex items-center justify-center gap-1">
+                                PayPal
                               </button>
                             </>
                           )}
@@ -1756,6 +1792,24 @@ const BookingFlow = ({ session, isOpen, onClose }: BookingFlowProps) => {
                           </div>
                         </div>
                       </div>
+
+                      {/* Video/audio/call link: same URL backend saves when admin confirms */}
+                      {(selectedSessionType?.id?.includes('video') || selectedSessionType?.id?.includes('audio') || selectedSessionType?.id?.includes('call')) && paymentResult?.bookingId && (
+                        <div className="mb-4 p-4 bg-blue-50 border border-blue-100 rounded-xl text-left">
+                          <p className="text-sm font-medium text-blue-800 mb-2">Video / audio session link</p>
+                          <p className="text-xs text-blue-600 mb-2">Use this link to join your session. It will also appear in My Bookings after your therapist confirms.</p>
+                          <a
+                            href={`https://meet.jit.si/MindfulQALB-${(paymentResult.bookingId || '').replace(/-/g, '').substring(0, 12)}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-2 px-4 py-3 bg-green-600 text-white rounded-xl font-semibold hover:bg-green-700 transition-colors"
+                          >
+                            <Video className="w-5 h-5" />
+                            Open session link
+                            <ExternalLink className="w-4 h-4" />
+                          </a>
+                        </div>
+                      )}
 
                       <div className="flex gap-3">
                         <button
