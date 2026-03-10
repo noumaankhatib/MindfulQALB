@@ -52,26 +52,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(500).json({ error: 'Supabase proxy not configured', hint });
   }
 
+  const isAllowedOrigin = (o: string | undefined): boolean =>
+    !!o &&
+    (/^https:\/\/(mindfulqalb\.com|www\.mindfulqalb\.com)$/.test(o) ||
+      /^https:\/\/mindful-?qalb[\w.-]*\.vercel\.app$/.test(o) ||
+      /^http:\/\/localhost(:\d+)?$/.test(o));
+
   if (req.method === 'OPTIONS') {
     const preflightOrigin = req.headers.origin;
-    const preflightAllowed =
-      preflightOrigin &&
-      (/^https:\/\/(mindfulqalb\.com|www\.mindfulqalb\.com)$/.test(preflightOrigin) ||
-        /^https:\/\/mindfulqalb[\w.-]*\.vercel\.app$/.test(preflightOrigin) ||
-        /^http:\/\/localhost(:\d+)?$/.test(preflightOrigin));
-    res.setHeader('Access-Control-Allow-Origin', preflightAllowed ? preflightOrigin : 'https://mindfulqalb.com');
+    res.setHeader('Access-Control-Allow-Origin', isAllowedOrigin(preflightOrigin) ? preflightOrigin! : 'https://mindfulqalb.com');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, apikey, x-client-info, x-supabase-api-version, accept-profile, content-profile');
     return res.status(200).end();
   }
 
   const origin = req.headers.origin;
-  const allowed =
-    origin &&
-    (/^https:\/\/(mindfulqalb\.com|www\.mindfulqalb\.com)$/.test(origin) ||
-      /^https:\/\/mindful-qalb[\w.-]*\.vercel\.app$/.test(origin) ||
-      /^http:\/\/localhost(:\d+)?$/.test(origin));
-  const allowOrigin = allowed ? origin : 'https://mindfulqalb.com';
+  const allowOrigin = isAllowedOrigin(origin) ? origin! : 'https://mindfulqalb.com';
   res.setHeader('Access-Control-Allow-Origin', allowOrigin);
 
   const rawPath = req.query.path;
