@@ -163,15 +163,18 @@ export const processRazorpayPayment = async (
     if (couponCodeToSend && fullPriceSmallest > 0 && data.amount >= fullPriceSmallest) {
       const couponReceived = response.headers.get('X-Coupon-Received');
       const discountApplied = response.headers.get('X-Discount-Applied');
-      let hint = '';
-      if (couponReceived === 'false') {
-        hint = ' The server did not receive the coupon (check that the API is running at npm run dev:api and Vite proxy is used, or set VITE_BACKEND_URL=http://localhost:3001/api in .env).';
-      } else if (couponReceived === 'true' && discountApplied === 'false') {
-        hint = ' The server received the coupon but could not apply it (check Supabase coupons table and SUPABASE_SERVICE_ROLE_KEY in .env).';
+      if (import.meta.env.DEV) {
+        let hint = '';
+        if (couponReceived === 'false') {
+          hint = ' [DEV] Server did not receive the coupon. Check API proxy config.';
+        } else if (couponReceived === 'true' && discountApplied === 'false') {
+          hint = ' [DEV] Server received coupon but could not apply. Check coupons table.';
+        }
+        console.warn('[payment] Coupon not applied:', hint);
       }
       return {
         success: false,
-        error: `The discount could not be applied. Remove the coupon and pay the full amount, or start the API server (npm run dev:api) with Supabase configured and try again.${hint}`,
+        error: 'The discount could not be applied. Please remove the coupon and pay the full amount, or contact support.',
       };
     }
 

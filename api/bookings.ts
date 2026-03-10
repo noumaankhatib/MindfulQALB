@@ -11,7 +11,7 @@ import {
 } from './_utils/validation.js';
 import { rateLimiters } from './_utils/rateLimit.js';
 import { getSupabaseServer } from './_utils/supabase.js';
-import { requireAdmin } from './_utils/adminAuth.js';
+import { requireAdmin, requireAuth } from './_utils/adminAuth.js';
 import { isGoogleCalendarConfigured, createCalendarEvent } from './_utils/googleCalendar.js';
 
 const DURATION_BY_RAW_FORMAT: Record<string, number> = {
@@ -54,7 +54,13 @@ const parseTimeToUTCISO = (dateString: string, timeString: string): string => {
 // ─── POST: Create booking (Supabase only, status = pending) ─────────────────
 
 async function handleCreate(req: VercelRequest, res: VercelResponse, requestId: string) {
-  const { sessionType, format, date, time, customer, user_id: userId } = req.body;
+  const authResult = await requireAuth(req);
+  if (!authResult.ok) {
+    return res.status(authResult.status).json({ ...authResult.body, requestId });
+  }
+
+  const { sessionType, format, date, time, customer } = req.body;
+  const userId = authResult.caller.userId;
 
   const sessionTypeResult = validateSessionType(sessionType);
   if (!sessionTypeResult.valid) return res.status(400).json({ error: sessionTypeResult.error, requestId });

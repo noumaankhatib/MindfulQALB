@@ -5,7 +5,6 @@ const ALLOWED_ORIGINS = [
   'https://mindfulqalb.com',
   'https://www.mindfulqalb.com',
   'https://mindfulqalb.vercel.app',
-  'https://mindfulqalb.vercel.app',
   // Staging URLs
   'https://mindfulqalb-staging.vercel.app',
   'https://mindfulqalb-git-staging-noumaankhatibs-projects.vercel.app',
@@ -28,7 +27,7 @@ const isVercelPreviewUrl = (origin: string): boolean => {
   
   // Match patterns like: mindfulqalb-*.vercel.app or mindfulqalb-*.vercel.app
   // More restrictive: only allow alphanumeric and single hyphens, no consecutive hyphens
-  const vercelPreviewPattern = /^https:\/\/(mindfulqalb|mindfulqalb)(-[a-z0-9]+)*\.vercel\.app$/i;
+  const vercelPreviewPattern = /^https:\/\/mindfulqalb(-[a-z0-9]+)*\.vercel\.app$/i;
   
   // More restrictive: require project name prefix to prevent attacker-controlled subdomains
   const projectPreviewPattern = /^https:\/\/mindfulqalb(-[a-z0-9]+)*-noumaankhatibs-projects\.vercel\.app$/i;

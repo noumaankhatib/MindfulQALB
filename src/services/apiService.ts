@@ -125,15 +125,20 @@ export const verifyPayment = async (
  */
 export const linkPaymentToBooking = async (
   bookingId: string,
-  razorpayOrderId: string
+  razorpayOrderId: string,
+  accessToken?: string | null
 ): Promise<ApiResponse<Record<string, never>>> => {
   if (!API_CONFIG.USE_BACKEND_API) {
     return { success: false, error: 'Backend API not configured' };
   }
   try {
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (accessToken) {
+      headers['Authorization'] = `Bearer ${accessToken}`;
+    }
     const response = await fetch(`${API_CONFIG.BACKEND_URL}/payments/link`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify({ razorpay_order_id: razorpayOrderId, booking_id: bookingId }),
     });
     if (!response.ok) {
@@ -225,12 +230,16 @@ export const storeConsent = async (consent: {
   email: string;
   consentVersion: string;
   acknowledgments: string[];
-}): Promise<ApiResponse<{ consentId: string }>> => {
+}, accessToken?: string | null): Promise<ApiResponse<{ consentId: string }>> => {
   if (API_CONFIG.USE_BACKEND_API) {
     try {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (accessToken) {
+        headers['Authorization'] = `Bearer ${accessToken}`;
+      }
       const response = await fetch(`${API_CONFIG.BACKEND_URL}/consent`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify(consent),
       });
       

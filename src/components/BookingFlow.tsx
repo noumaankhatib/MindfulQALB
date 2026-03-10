@@ -183,15 +183,15 @@ interface CustomerInfo {
   notes: string;
 }
 
-const SLOTS_LOAD_TIMEOUT_MS = 15000;
+const SLOTS_LOAD_TIMEOUT_MS = 10000;
 
 const BookingFlow = ({ session, isOpen, onClose }: BookingFlowProps) => {
   const { isIndia } = useGeolocation();
-  const { user, profile } = useAuth();
-  const skipAuthForTesting = import.meta.env.DEV && import.meta.env.VITE_SKIP_AUTH_FOR_TESTING === 'true';
-  const authRequired = isSupabaseConfigured() && !user && !skipAuthForTesting;
+  const { user, profile, session: authSession, loading: authLoading } = useAuth();
+  const authRequired = isSupabaseConfigured() && !user;
   const slotsAbortRef = useRef<AbortController | null>(null);
   const slotTimeoutFiredRef = useRef(false);
+  const [slotsLoadingSlow, setSlotsLoadingSlow] = useState(false);
 
   // Flow state
   const [currentStep, setCurrentStep] = useState<BookingStep>('therapy');
@@ -407,15 +407,23 @@ const BookingFlow = ({ session, isOpen, onClose }: BookingFlowProps) => {
     }
   };
 
-  const getSupabaseBookedSlots = async (date: Date): Promise<string[]> => {
+  const getSupabaseBookedSlots = async (date: Date, signal?: AbortSignal): Promise<string[]> => {
     if (!isSupabaseConfigured()) return [];
     try {
+      if (signal?.aborted) return [];
       const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-      const { data, error } = await supabase
+      const queryPromise = supabase
         .from('bookings')
         .select('scheduled_time')
         .eq('scheduled_date', dateStr)
         .in('status', ['confirmed', 'pending']);
+
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        const id = setTimeout(() => reject(new Error('Supabase query timeout')), 5000);
+        signal?.addEventListener('abort', () => { clearTimeout(id); reject(new DOMException('Aborted', 'AbortError')); });
+      });
+
+      const { data, error } = await Promise.race([queryPromise, timeoutPromise]);
       if (error || !data) return [];
       return data
         .map((b: { scheduled_time: string | null }) => b.scheduled_time)
@@ -438,8 +446,10 @@ const BookingFlow = ({ session, isOpen, onClose }: BookingFlowProps) => {
 
     setIsProcessing(true);
     setError(null);
+    setSlotsLoadingSlow(false);
 
     const canonicalSessionType = 'individual';
+    const slowTimerId = setTimeout(() => setSlotsLoadingSlow(true), 3000);
     const timeoutId = setTimeout(() => {
       slotTimeoutFiredRef.current = true;
       controller.abort();
@@ -447,26 +457,29 @@ const BookingFlow = ({ session, isOpen, onClose }: BookingFlowProps) => {
 
     try {
       const localBookedSlots = getLocalBookedSlots(selectedDate);
-      const supabaseBookedSlots = await getSupabaseBookedSlots(selectedDate);
-      const allBookedSlots = [...new Set([...localBookedSlots, ...supabaseBookedSlots])];
 
-      const applyFilters = (slots: { time: string; available: boolean }[]) =>
+      const applyFilters = (slots: { time: string; available: boolean }[], bookedSlots: string[]) =>
         slots
           .filter(slot => !isSlotInPast(slot.time, selectedDate))
           .map(slot => ({
             ...slot,
-            available: slot.available && !allBookedSlots.includes(slot.time),
-            booked: !slot.available || allBookedSlots.includes(slot.time),
+            available: slot.available && !bookedSlots.includes(slot.time),
+            booked: !slot.available || bookedSlots.includes(slot.time),
           }));
 
       if (isCalendarConfigured()) {
-        const calSlots = await fetchAvailability(selectedDate, canonicalSessionType, controller.signal);
-        setAvailableSlots(applyFilters(calSlots));
+        // Run Supabase booked-slot query and Calendar API in parallel
+        const [supabaseBookedSlots, calSlots] = await Promise.all([
+          getSupabaseBookedSlots(selectedDate, controller.signal),
+          fetchAvailability(selectedDate, canonicalSessionType, controller.signal),
+        ]);
+        const allBookedSlots = [...new Set([...localBookedSlots, ...supabaseBookedSlots])];
+        setAvailableSlots(applyFilters(calSlots, allBookedSlots));
       } else if (AVAILABILITY_CONFIG.USE_MOCK_AVAILABILITY) {
         await new Promise((resolve) => setTimeout(resolve, 500));
-        setAvailableSlots(applyFilters(AVAILABILITY_CONFIG.MOCK_SLOTS));
+        setAvailableSlots(applyFilters(AVAILABILITY_CONFIG.MOCK_SLOTS, localBookedSlots));
       } else {
-        setAvailableSlots(applyFilters(AVAILABILITY_CONFIG.MOCK_SLOTS));
+        setAvailableSlots(applyFilters(AVAILABILITY_CONFIG.MOCK_SLOTS, localBookedSlots));
       }
     } catch (e) {
       if (e instanceof Error && e.name === 'AbortError') {
@@ -478,8 +491,10 @@ const BookingFlow = ({ session, isOpen, onClose }: BookingFlowProps) => {
       }
     } finally {
       clearTimeout(timeoutId);
+      clearTimeout(slowTimerId);
       slotsAbortRef.current = null;
       setIsProcessing(false);
+      setSlotsLoadingSlow(false);
     }
   };
 
@@ -684,7 +699,7 @@ const BookingFlow = ({ session, isOpen, onClose }: BookingFlowProps) => {
         email: bookingEmail,
         consentVersion: consentRecord.consentVersion,
         acknowledgments: consentRecord.acknowledgments,
-      });
+      }, authSession?.access_token);
       if (!consentResult.success) {
         setError(consentResult.error || 'Failed to record consent. Please try again.');
         setIsProcessing(false);
@@ -701,7 +716,7 @@ const BookingFlow = ({ session, isOpen, onClose }: BookingFlowProps) => {
           phone: customerInfo.phone,
           notes: customerInfo.notes,
         },
-        { userId: user?.id ?? undefined }
+        { userId: user?.id ?? undefined, accessToken: authSession?.access_token ?? undefined }
       );
       
       if (!bookingResult.success) {
@@ -713,7 +728,7 @@ const BookingFlow = ({ session, isOpen, onClose }: BookingFlowProps) => {
       // Link payment to booking so refunds can be processed by booking_id (e.g. on cancel)
       if (orderId && !selectedSessionType.isFree) {
         try {
-          await linkPaymentToBooking(bookingId, orderId);
+          await linkPaymentToBooking(bookingId, orderId, authSession?.access_token);
         } catch {
           // Non-blocking: booking is created; refund-by-booking may not work for this one
         }
@@ -922,7 +937,12 @@ const BookingFlow = ({ session, isOpen, onClose }: BookingFlowProps) => {
 
               </div>
 
-              {authRequired ? (
+              {authLoading ? (
+                <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
+                  <Loader2 className="w-8 h-8 text-lavender-500 animate-spin mb-3" />
+                  <p className="text-gray-500 text-sm">Checking authentication...</p>
+                </div>
+              ) : authRequired ? (
                 <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
                   <div className="max-w-sm mx-auto">
                     <div className="w-16 h-16 rounded-full bg-lavender-100 flex items-center justify-center mx-auto mb-4">
@@ -1271,9 +1291,14 @@ const BookingFlow = ({ session, isOpen, onClose }: BookingFlowProps) => {
                           </p>
                           
                           {isProcessing ? (
-                            <div className="flex items-center justify-center py-8">
-                              <Loader2 className="w-6 h-6 text-lavender-500 animate-spin" />
-                              <span className="ml-2 text-gray-600">Loading slots...</span>
+                            <div className="flex flex-col items-center justify-center py-8 gap-2">
+                              <div className="flex items-center">
+                                <Loader2 className="w-6 h-6 text-lavender-500 animate-spin" />
+                                <span className="ml-2 text-gray-600">Loading slots...</span>
+                              </div>
+                              {slotsLoadingSlow && (
+                                <span className="text-xs text-gray-400">Taking longer than usual — please wait or click Refresh</span>
+                              )}
                             </div>
                           ) : availableSlots.length === 0 ? (
                             <div className="text-center py-8 text-gray-500">
@@ -1361,8 +1386,8 @@ const BookingFlow = ({ session, isOpen, onClose }: BookingFlowProps) => {
                                 timestamp: new Date().toISOString(),
                                 consentVersion: '1.0',
                                 sessionType: selectedSessionType?.title || 'Therapy Session',
-                                email: customerInfo.email || 'pending',
-                                signature: customerInfo.name || 'Client',
+                                email: customerInfo.email || user?.email || '',
+                                signature: customerInfo.name || user?.user_metadata?.full_name || '',
                                 ipAddress: 'recorded',
                                 acknowledgments: [
                                   'read_understood',
@@ -1678,38 +1703,13 @@ const BookingFlow = ({ session, isOpen, onClose }: BookingFlowProps) => {
                         </div>
                       </div>
 
-                      {/* Payment Methods */}
-                      <div className="mb-4">
-                        <p className="text-sm text-gray-600 mb-3">Payment Method:</p>
-                        <div className="flex gap-2">
-                          {isIndia ? (
-                            <>
-                              <button className="flex-1 px-4 py-2.5 border-2 border-lavender-300 bg-lavender-50 rounded-lg text-sm font-medium text-lavender-700">
-                                UPI
-                              </button>
-                              <button className="flex-1 px-4 py-2.5 border-2 border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:border-lavender-300">
-                                NetBanking
-                              </button>
-                              <button className="flex-1 px-4 py-2.5 border-2 border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:border-lavender-300 flex items-center justify-center gap-1">
-                                <CreditCard className="w-4 h-4" />
-                                Card
-                              </button>
-                            </>
-                          ) : (
-                            <>
-                              <button className="flex-1 px-4 py-2.5 border-2 border-lavender-300 bg-lavender-50 rounded-lg text-sm font-medium text-lavender-700 flex items-center justify-center gap-1">
-                                PayPal
-                              </button>
-                            </>
-                          )}
-                        </div>
-                      </div>
-
                       {/* Payment Info */}
                       <div className="p-3 bg-gray-50 rounded-lg border border-gray-100">
                         <p className="text-xs text-gray-600 text-center">
                           {isTestMode() ? (
                             <>Payment is in <strong>Test Mode</strong> - No real charges</>
+                          ) : isIndia ? (
+                            <>Secure payment via <strong>Razorpay</strong> — UPI, cards, netbanking accepted</>
                           ) : (
                             <>Secure payment via <strong>Razorpay</strong></>
                           )}

@@ -77,8 +77,36 @@ async function getGoogleAccessToken() {
 }
 
 // Middleware
-app.use(cors());
-app.use(express.json());
+const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || 'http://localhost:5173,http://localhost:5174,http://localhost:3000').split(',').map(o => o.trim()).filter(Boolean);
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin || ALLOWED_ORIGINS.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(null, ALLOWED_ORIGINS[0]);
+    }
+  },
+  credentials: true,
+}));
+app.use(express.json({ limit: '100kb' }));
+
+// Simple in-memory rate limiter for local dev
+const rateLimitMap = new Map();
+function rateLimit(windowMs = 60000, maxRequests = 60) {
+  return (req, res, next) => {
+    const ip = req.ip || req.headers['x-forwarded-for'] || 'unknown';
+    const now = Date.now();
+    const entry = rateLimitMap.get(ip) || { count: 0, resetAt: now + windowMs };
+    if (now > entry.resetAt) { entry.count = 0; entry.resetAt = now + windowMs; }
+    entry.count++;
+    rateLimitMap.set(ip, entry);
+    if (entry.count > maxRequests) {
+      return res.status(429).json({ error: 'Too many requests. Please try again later.' });
+    }
+    next();
+  };
+}
+app.use(rateLimit(60000, 60));
 
 // Pricing configuration (INR for India, USD for international)
 const PRICING = {
@@ -183,20 +211,27 @@ async function fetchGoogleCalendarAvailability(date) {
     const token = await getGoogleAccessToken();
     const timeMin = `${date}T00:00:00+05:30`;
     const timeMax = `${date}T23:59:59+05:30`;
-    const res = await fetch('https://www.googleapis.com/calendar/v3/freeBusy', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ timeMin, timeMax, items: [{ id: googleCalId }] }),
-    });
-    if (!res.ok) { console.error('FreeBusy API error:', res.status); return null; }
-    const data = await res.json();
-    const busyPeriods = data.calendars?.[googleCalId]?.busy ?? [];
-    return ALLOWED_SLOTS.map((time) => {
-      const slotStart = slotToDate(date, time);
-      const slotEnd = new Date(slotStart.getTime() + 60 * 60 * 1000);
-      const isBusy = busyPeriods.some(bp => slotStart < new Date(bp.end) && slotEnd > new Date(bp.start));
-      return { time, available: !isBusy };
-    });
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 8000);
+    try {
+      const res = await fetch('https://www.googleapis.com/calendar/v3/freeBusy', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ timeMin, timeMax, items: [{ id: googleCalId }] }),
+        signal: controller.signal,
+      });
+      if (!res.ok) { console.error('FreeBusy API error:', res.status); return null; }
+      const data = await res.json();
+      const busyPeriods = data.calendars?.[googleCalId]?.busy ?? [];
+      return ALLOWED_SLOTS.map((time) => {
+        const slotStart = slotToDate(date, time);
+        const slotEnd = new Date(slotStart.getTime() + 60 * 60 * 1000);
+        const isBusy = busyPeriods.some(bp => slotStart < new Date(bp.end) && slotEnd > new Date(bp.start));
+        return { time, available: !isBusy };
+      });
+    } finally {
+      clearTimeout(timeout);
+    }
   } catch (e) {
     console.error('Google Calendar availability error:', e.message);
     return null;
@@ -242,10 +277,7 @@ app.post('/api/coupons/validate', async (req, res) => {
 
     if (error) {
       console.error('[coupons/validate] Supabase error:', error.message);
-      const hint = error.message && error.message.includes('does not exist')
-        ? ' Run docs/supabase-coupons-migration.sql in Supabase SQL Editor.'
-        : '';
-      return sendJson(500, { valid: false, message: 'Could not validate coupon.' + hint });
+      return sendJson(500, { valid: false, message: 'Could not validate coupon. Please try again.' });
     }
     if (!row || !row.is_active) {
       return sendJson(200, { valid: false, message: 'Invalid or inactive coupon code' });
@@ -484,14 +516,18 @@ app.post('/api/payments/verify', async (req, res) => {
     return res.status(400).json({ error: 'Missing payment details' });
   }
 
-  // If mock mode or no secret configured
-  if (!RAZORPAY_KEY_SECRET || razorpay_order_id.startsWith('order_mock_')) {
+  // Mock mode: only allow in development
+  const isProduction = process.env.NODE_ENV === 'production';
+  if (!isProduction && (!RAZORPAY_KEY_SECRET || razorpay_order_id.startsWith('order_mock_'))) {
     return res.json({
       success: true,
       verified: true,
       paymentId: razorpay_payment_id,
       mode: 'mock',
     });
+  }
+  if (!RAZORPAY_KEY_SECRET) {
+    return res.status(503).json({ error: 'Payment verification not configured' });
   }
 
   // Verify real Razorpay signature
@@ -545,14 +581,26 @@ app.post('/api/payments/verify', async (req, res) => {
 
 // Link payment to booking (so refunds can be done by booking_id)
 app.post('/api/payments/link', async (req, res) => {
+  // Require authentication
+  const supabase = getSupabase();
+  if (!supabase) return res.status(503).json({ error: 'Database not configured' });
+  const authHeader = req.headers.authorization;
+  const linkToken = typeof authHeader === 'string' && authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : null;
+  if (!linkToken) return res.status(401).json({ error: 'Authentication required' });
+  const { data: { user: linkUser }, error: linkAuthErr } = await supabase.auth.getUser(linkToken);
+  if (linkAuthErr || !linkUser) return res.status(401).json({ error: 'Invalid or expired session' });
+
   const { razorpay_order_id, booking_id } = req.body || {};
   if (!razorpay_order_id || !booking_id) {
     return res.status(400).json({ error: 'razorpay_order_id and booking_id required' });
   }
-  const supabase = getSupabase();
-  if (!supabase) {
-    return res.status(503).json({ error: 'Database not configured' });
+
+  // Verify the booking belongs to this user
+  const { data: linkBooking } = await supabase.from('bookings').select('user_id').eq('id', booking_id).single();
+  if (!linkBooking || linkBooking.user_id !== linkUser.id) {
+    return res.status(403).json({ error: 'You can only link payments to your own bookings' });
   }
+
   const { error } = await supabase
     .from('payments')
     .update({ booking_id })
@@ -746,8 +794,25 @@ async function createGoogleCalendarEvent(booking, requestId) {
 
 // POST: Create booking (Supabase only, status = pending)
 app.post('/api/bookings', async (req, res) => {
-  const { sessionType, format, date, time, customer, user_id: userId } = req.body;
   const requestId = `req_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+
+  // Require authentication
+  const supabaseForAuth = getSupabase();
+  if (!supabaseForAuth) {
+    return res.status(503).json({ error: 'Server configuration error', requestId });
+  }
+  const authHeader = req.headers.authorization;
+  const authToken = typeof authHeader === 'string' && authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : null;
+  if (!authToken) {
+    return res.status(401).json({ error: 'Authentication required. Please sign in to book a session.', requestId });
+  }
+  const { data: { user: authUser }, error: authError } = await supabaseForAuth.auth.getUser(authToken);
+  if (authError || !authUser) {
+    return res.status(401).json({ error: 'Invalid or expired session. Please sign in again.', requestId });
+  }
+  const userId = authUser.id;
+
+  const { sessionType, format, date, time, customer } = req.body;
 
   if (!sessionType || !date || !time || !customer?.name || !customer?.email) {
     return res.status(400).json({ error: 'Missing required fields' });
@@ -833,17 +898,26 @@ app.post('/api/bookings', async (req, res) => {
 
 // Store consent – insert into Supabase when configured (same table as api/consent.ts)
 app.post('/api/consent', async (req, res) => {
+  // Require authentication
+  const consentSupabase = getSupabase();
+  if (!consentSupabase) return res.status(503).json({ error: 'Service unavailable' });
+  const consentAuthHeader = req.headers.authorization;
+  const consentToken = typeof consentAuthHeader === 'string' && consentAuthHeader.startsWith('Bearer ') ? consentAuthHeader.slice(7).trim() : null;
+  if (!consentToken) return res.status(401).json({ error: 'Authentication required' });
+  const { data: { user: consentUser }, error: consentAuthErr } = await consentSupabase.auth.getUser(consentToken);
+  if (consentAuthErr || !consentUser) return res.status(401).json({ error: 'Invalid or expired session' });
+
   const { sessionType, email, consentVersion, acknowledgments } = req.body;
 
   if (!sessionType || !email || !consentVersion || !acknowledgments?.length) {
     return res.status(400).json({ error: 'Missing required fields' });
   }
 
-  const supabase = getSupabase();
+  const supabase = consentSupabase;
   if (supabase) {
     try {
       const row = {
-        user_id: null,
+        user_id: consentUser.id,
         email: String(email).toLowerCase().trim(),
         consent_version: String(consentVersion).trim(),
         session_type: toDbSessionType(String(sessionType).toLowerCase()),

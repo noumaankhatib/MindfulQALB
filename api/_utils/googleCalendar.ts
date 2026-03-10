@@ -35,11 +35,19 @@ function getAuth(): GoogleAuth {
 
 async function getAccessToken(): Promise<string> {
   const auth = getAuth();
-  const client = await auth.getClient();
-  const tokenRes = await client.getAccessToken();
-  const token = typeof tokenRes === 'string' ? tokenRes : tokenRes?.token;
-  if (!token) throw new Error('Failed to obtain Google access token');
-  return token;
+  const tokenPromise = (async () => {
+    const client = await auth.getClient();
+    const tokenRes = await client.getAccessToken();
+    const token = typeof tokenRes === 'string' ? tokenRes : tokenRes?.token;
+    if (!token) throw new Error('Failed to obtain Google access token');
+    return token;
+  })();
+
+  const timeout = new Promise<never>((_, reject) =>
+    setTimeout(() => reject(new Error('Google auth token timeout (5s)')), 5000)
+  );
+
+  return Promise.race([tokenPromise, timeout]);
 }
 
 export function getCalendarId(): string {
@@ -67,32 +75,39 @@ export async function getFreeBusy(dateStr: string): Promise<BusyPeriod[]> {
   const token = await getAccessToken();
   const calendarId = getCalendarId();
 
-  // Query the full day in IST
   const timeMin = `${dateStr}T00:00:00+05:30`;
   const timeMax = `${dateStr}T23:59:59+05:30`;
 
-  const res = await fetch('https://www.googleapis.com/calendar/v3/freeBusy', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      timeMin,
-      timeMax,
-      items: [{ id: calendarId }],
-    }),
-  });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 8000);
 
-  if (!res.ok) {
-    const text = await res.text().catch(() => '');
-    throw new Error(`FreeBusy API ${res.status}: ${text}`);
+  try {
+    const res = await fetch('https://www.googleapis.com/calendar/v3/freeBusy', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        timeMin,
+        timeMax,
+        items: [{ id: calendarId }],
+      }),
+      signal: controller.signal,
+    });
+
+    if (!res.ok) {
+      const text = await res.text().catch(() => '');
+      throw new Error(`FreeBusy API ${res.status}: ${text}`);
+    }
+
+    const data = await res.json() as {
+      calendars: Record<string, { busy: BusyPeriod[] }>;
+    };
+    return data.calendars?.[calendarId]?.busy ?? [];
+  } finally {
+    clearTimeout(timeout);
   }
-
-  const data = await res.json() as {
-    calendars: Record<string, { busy: BusyPeriod[] }>;
-  };
-  return data.calendars?.[calendarId]?.busy ?? [];
 }
 
 // ─── Jitsi Meet link generation ──────────────────────────────────────────────

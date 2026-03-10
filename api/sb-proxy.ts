@@ -53,7 +53,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   if (req.method === 'OPTIONS') {
-    res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
+    const preflightOrigin = req.headers.origin;
+    const preflightAllowed =
+      preflightOrigin &&
+      (/^https:\/\/(mindfulqalb\.com|www\.mindfulqalb\.com)$/.test(preflightOrigin) ||
+        /^https:\/\/mindfulqalb[\w.-]*\.vercel\.app$/.test(preflightOrigin) ||
+        /^http:\/\/localhost(:\d+)?$/.test(preflightOrigin));
+    res.setHeader('Access-Control-Allow-Origin', preflightAllowed ? preflightOrigin : 'https://mindfulqalb.com');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, apikey, x-client-info, x-supabase-api-version, accept-profile, content-profile');
     return res.status(200).end();

@@ -8,6 +8,7 @@ import {
 } from './_utils/validation.js';
 import { rateLimiters } from './_utils/rateLimit.js';
 import { getSupabaseServer } from './_utils/supabase.js';
+import { requireAuth } from './_utils/adminAuth.js';
 
 const toDbSessionType = (s: string): string =>
   s === 'couples' || s === 'family' ? s : 'individual';
@@ -19,6 +20,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   if (rateLimiters.default(req, res)) return;
   if (!validateMethod(req, res, ['POST'])) return;
+
+  const authResult = await requireAuth(req);
+  if (!authResult.ok) {
+    return res.status(authResult.status).json({ ...authResult.body, requestId });
+  }
 
   try {
     const { sessionType, email, consentVersion, acknowledgments } = req.body;
@@ -43,7 +49,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const supabase = getSupabaseServer();
     if (supabase) {
       const row = {
-        user_id: null as string | null,
+        user_id: authResult.caller.userId,
         email: (email as string).toLowerCase().trim(),
         consent_version: String(consentVersion).trim(),
         session_type: toDbSessionType(String(sessionType).toLowerCase()),
@@ -75,7 +81,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     res.status(503).json({
       success: false,
-      error: 'Consent storage not configured (set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY)',
+      error: 'Consent storage is temporarily unavailable. Please try again.',
       requestId,
     });
   } catch (error) {

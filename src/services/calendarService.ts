@@ -57,6 +57,13 @@ export const fetchAvailability = async (
   sessionType: string = 'individual',
   signal?: AbortSignal
 ): Promise<TimeSlot[]> => {
+  const controller = new AbortController();
+  const ownTimeout = setTimeout(() => controller.abort(), 10000);
+
+  // Propagate parent abort to our controller
+  const onParentAbort = () => controller.abort();
+  signal?.addEventListener('abort', onParentAbort);
+
   try {
     const response = await fetch(`/api/availability`, {
       method: 'POST',
@@ -65,7 +72,7 @@ export const fetchAvailability = async (
         date: date.toISOString().split('T')[0],
         sessionType,
       }),
-      signal,
+      signal: controller.signal,
     });
 
     if (response.ok) {
@@ -75,9 +82,16 @@ export const fetchAvailability = async (
     logWarn('Availability API error, using fallback slots');
     return getFallbackSlots();
   } catch (error) {
-    if (error instanceof Error && error.name === 'AbortError') throw error;
+    if (error instanceof Error && error.name === 'AbortError') {
+      if (signal?.aborted) throw error;
+      logWarn('Availability API timed out, using fallback slots');
+      return getFallbackSlots();
+    }
     logError('Failed to fetch availability', error);
     return getFallbackSlots();
+  } finally {
+    clearTimeout(ownTimeout);
+    signal?.removeEventListener('abort', onParentAbort);
   }
 };
 
@@ -91,7 +105,7 @@ export const createBooking = async (
     phone: string;
     notes?: string;
   },
-  options?: { userId?: string | null }
+  options?: { userId?: string | null; accessToken?: string | null }
 ): Promise<BookingResult> => {
   try {
     const parts = sessionTypeId.split('-');
@@ -118,9 +132,14 @@ export const createBooking = async (
       body.user_id = options.userId;
     }
 
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (options?.accessToken) {
+      headers['Authorization'] = `Bearer ${options.accessToken}`;
+    }
+
     const response = await fetch(`/api/bookings`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify(body),
     });
 
