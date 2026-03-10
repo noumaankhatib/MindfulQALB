@@ -44,31 +44,54 @@ function buildSupabaseUrl(path: string, query: Record<string, string | string[] 
   return qs ? `${base}?${qs}` : base;
 }
 
+const isAllowedOrigin = (o: string | undefined): boolean =>
+  !!o &&
+  (/^https:\/\/(mindfulqalb\.com|www\.mindfulqalb\.com)$/.test(o) ||
+    /^https:\/\/mindful-?qalb[\w.-]*\.vercel\.app$/.test(o) ||
+    /^http:\/\/localhost(:\d+)?$/.test(o));
+
+const CORS_HEADERS = [
+  'Content-Type',
+  'Authorization',
+  'apikey',
+  'x-client-info',
+  'x-supabase-api-version',
+  'accept-profile',
+  'content-profile',
+  'Accept',
+  'Accept-Language',
+  'Pragma',
+  'Cache-Control',
+].join(', ');
+
+function setCors(res: VercelResponse, origin: string | undefined): void {
+  const allowOrigin = isAllowedOrigin(origin) ? origin! : 'https://mindfulqalb.com';
+  res.setHeader('Access-Control-Allow-Origin', allowOrigin);
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', CORS_HEADERS);
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  const origin = req.headers.origin as string | undefined;
+
   if (!SUPABASE_URL) {
+    setCors(res, origin);
     const hint = isProxyDomain
       ? 'Set SUPABASE_UPSTREAM_URL=https://YOUR_PROJECT.supabase.co (real Supabase URL) in Vercel env.'
       : 'Set SUPABASE_URL or SUPABASE_UPSTREAM_URL in Vercel env.';
     return res.status(500).json({ error: 'Supabase proxy not configured', hint });
   }
 
-  const isAllowedOrigin = (o: string | undefined): boolean =>
-    !!o &&
-    (/^https:\/\/(mindfulqalb\.com|www\.mindfulqalb\.com)$/.test(o) ||
-      /^https:\/\/mindful-?qalb[\w.-]*\.vercel\.app$/.test(o) ||
-      /^http:\/\/localhost(:\d+)?$/.test(o));
-
   if (req.method === 'OPTIONS') {
     const preflightOrigin = req.headers.origin;
     res.setHeader('Access-Control-Allow-Origin', isAllowedOrigin(preflightOrigin) ? preflightOrigin! : 'https://mindfulqalb.com');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, apikey, x-client-info, x-supabase-api-version, accept-profile, content-profile');
+    res.setHeader('Access-Control-Allow-Headers', CORS_HEADERS);
+    res.setHeader('Access-Control-Max-Age', '86400');
     return res.status(200).end();
   }
 
-  const origin = req.headers.origin;
-  const allowOrigin = isAllowedOrigin(origin) ? origin! : 'https://mindfulqalb.com';
-  res.setHeader('Access-Control-Allow-Origin', allowOrigin);
+  setCors(res, origin);
 
   const rawPath = req.query.path;
   const path = typeof rawPath === 'string' ? decodeURIComponent(rawPath) : (Array.isArray(rawPath) ? rawPath[0] : '') || 'auth/v1/health';
