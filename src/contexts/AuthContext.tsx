@@ -20,7 +20,7 @@ interface AuthContextType {
   refetchProfile: () => void;
 }
 
-const NETWORK_ERROR_MESSAGE = 'Network issue detected. Please check your internet connection.';
+const NETWORK_ERROR_MESSAGE = 'Network issue detected. Please check your internet connection. Try email or magic link below, or try again in a few minutes.';
 
 function isNetworkError(msg: string): boolean {
   return /failed to fetch|networkerror|network request failed/i.test(msg);

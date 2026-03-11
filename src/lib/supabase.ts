@@ -5,14 +5,24 @@ import { logWarn, logErrorCritical } from './logger';
 const rawSupabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-// When using custom domain (e.g. https://api.mindfulqalb.com), use it directly.
+// Optional: in production, use direct Supabase URL to bypass proxy (fixes auth when api.mindfulqalb.com has CORS/network issues).
+const directUrl = (import.meta.env.VITE_SUPABASE_DIRECT_URL || '').trim().replace(/\/$/, '');
+const isDirectSupabaseUrl = (u: string) => /\.supabase\.co$/.test(u.replace(/^https?:\/\//, '').split('/')[0]);
+const useDirectInProd = import.meta.env.PROD && directUrl && isDirectSupabaseUrl(directUrl);
+
+// When using custom domain (e.g. https://api.mindfulqalb.com), use it directly unless useDirectInProd.
 // When using *.supabase.co, route through /sb proxy to bypass ISP blocks (e.g. India).
 // Set VITE_SUPABASE_USE_DIRECT=true in .env to bypass the proxy locally.
 const useDirect = import.meta.env.VITE_SUPABASE_USE_DIRECT === 'true';
 const isCustomDomain = rawSupabaseUrl?.includes('api.mindfulqalb.com');
-const useDirectUrl = isCustomDomain || (import.meta.env.DEV && useDirect);
-const supabaseUrl = (rawSupabaseUrl && !rawSupabaseUrl.includes('placeholder'))
-  ? (useDirectUrl ? rawSupabaseUrl.replace(/\/$/, '') : `${typeof window !== 'undefined' ? window.location.origin : ''}/sb`)
+const useDirectUrl = useDirectInProd
+  ? true
+  : (isCustomDomain || (import.meta.env.DEV && useDirect));
+const baseUrl = useDirectInProd
+  ? directUrl
+  : (rawSupabaseUrl && !rawSupabaseUrl.includes('placeholder') ? rawSupabaseUrl.replace(/\/$/, '') : '');
+const supabaseUrl = baseUrl
+  ? (useDirectUrl ? baseUrl : `${typeof window !== 'undefined' ? window.location.origin : ''}/sb`)
   : rawSupabaseUrl;
 
 if (import.meta.env.DEV && typeof window !== 'undefined') {
