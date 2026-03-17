@@ -120,11 +120,15 @@ const AboutTherapist = () => {
                 viewport={{ once: true }}
                 transition={{ duration: 0.6, delay: 0.2 }}
               >
-                <img 
-                  src={profileImage} 
-                  alt="Aqsa Khatib - Counseling Psychologist" 
+                <img
+                  src={profileImage}
+                  alt="Aqsa Khatib - Counseling Psychologist and Therapist at MindfulQALB"
                   className="w-full h-auto object-cover"
+                  width={600}
+                  height={800}
                   style={{ maxHeight: '800px', objectPosition: 'top' }}
+                  loading="lazy"
+                  decoding="async"
                 />
                 {/* Gradient overlay at bottom */}
                 <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-black/60 to-transparent" />
@@ -392,9 +396,9 @@ const AboutTherapist = () => {
                 viewport={{ once: true }}
                 transition={{ delay: index * 0.1 }}
                 whileHover={{ y: -8, scale: 1.02 }}
-                className={`relative bg-white rounded-2xl overflow-hidden border shadow-soft hover:shadow-xl transition-all duration-300 ${
-                  fee.popular 
-                    ? 'border-lavender-400 ring-2 ring-lavender-100' 
+                className={`relative bg-white rounded-2xl overflow-hidden border shadow-soft hover:shadow-xl transition-all duration-300 flex flex-col ${
+                  fee.popular
+                    ? 'border-lavender-400 ring-2 ring-lavender-100'
                     : 'border-lavender-100/50'
                 }`}
               >
@@ -403,12 +407,12 @@ const AboutTherapist = () => {
                     Most Popular
                   </div>
                 )}
-                <div className="p-6">
+                <div className="p-6 flex flex-col h-full">
                   <h4 className="font-display text-lg font-semibold text-gray-800 mb-1">
                     {fee.type}
                   </h4>
                   <p className="text-sm text-gray-500 mb-3">{fee.duration}</p>
-                  
+
                   {/* Price Display */}
                   <div className="mb-4">
                     {fee.priceLabel && (
@@ -424,7 +428,7 @@ const AboutTherapist = () => {
                       )}
                     </div>
                   </div>
-                  
+
                   {/* Session Formats Table */}
                   {fee.formats && fee.formats.length > 0 && (
                     <div className="mb-4 bg-gradient-to-br from-lavender-50 to-purple-50 rounded-xl p-3 border border-lavender-100">
@@ -443,10 +447,10 @@ const AboutTherapist = () => {
                       </div>
                     </div>
                   )}
-                  
+
                   <p className="text-sm text-gray-600 mb-4">{fee.description}</p>
-                  
-                  <ul className="space-y-2 mb-6">
+
+                  <ul className="space-y-2 mb-6 flex-1">
                     {fee.features.map((feature, i) => (
                       <li key={i} className="flex items-center gap-2 text-sm text-gray-600">
                         <CheckCircle className="w-4 h-4 text-lavender-500 flex-shrink-0" />
@@ -454,12 +458,12 @@ const AboutTherapist = () => {
                       </li>
                     ))}
                   </ul>
-                  
+
                   <motion.a
                     href="#get-help"
                     whileHover={{ scale: 1.03 }}
                     whileTap={{ scale: 0.98 }}
-                    className="block text-center py-3 px-4 rounded-xl font-semibold transition-all shadow-md hover:shadow-lg bg-gradient-to-r from-lavender-500 to-lavender-600 text-white hover:from-lavender-600 hover:to-lavender-700 shadow-lavender-500/25"
+                    className="block text-center py-3 px-4 rounded-xl font-semibold transition-all shadow-md hover:shadow-lg bg-gradient-to-r from-lavender-500 to-lavender-600 text-white hover:from-lavender-600 hover:to-lavender-700 shadow-lavender-500/25 mt-auto"
                   >
                     {fee.price === 'Free' ? 'Book Free Call' : 'Get Started'}
                   </motion.a>

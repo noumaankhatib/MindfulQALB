@@ -1,16 +1,25 @@
 import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
+import { Helmet } from 'react-helmet-async';
 import Logo from '../components/Logo';
 
 const TermsOfServicePage = () => {
   useEffect(() => {
     window.scrollTo(0, 0);
-    document.title = 'Terms of Service | MindfulQALB';
   }, []);
 
   return (
     <div className="min-h-screen bg-white">
+      <Helmet>
+        <title>Terms of Service | MindfulQALB</title>
+        <meta name="description" content="MindfulQALB Terms of Service — please read before using our therapy services." />
+        <link rel="canonical" href="https://mindfulqalb.com/terms" />
+        <meta name="robots" content="noindex, follow" />
+        <meta property="og:title" content="Terms of Service | MindfulQALB" />
+        <meta property="og:description" content="Terms and conditions for using MindfulQALB's online therapy services." />
+        <meta property="og:url" content="https://mindfulqalb.com/terms" />
+      </Helmet>
       {/* Minimal Header */}
       <header className="border-b border-gray-200">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 py-4">

@@ -1,0 +1,17 @@
+{
+  "name": "Mindful QALB",
+  "short_name": "MindfulQALB",
+  "description": "Evidence-based mental health care for individuals and couples",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#8B7EC8",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

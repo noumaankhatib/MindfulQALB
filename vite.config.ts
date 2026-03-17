@@ -1,5 +1,6 @@
 import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
+import sitemap from 'vite-plugin-sitemap'
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
@@ -12,7 +13,25 @@ export default defineConfig(({ mode }) => {
       : 'https://api.mindfulqalb.com'
 
   return {
-  plugins: [react()],
+  plugins: [
+    react(),
+    sitemap({
+      hostname: 'https://mindfulqalb.com',
+      dynamicRoutes: [
+        '/',
+        '/bookings',
+        '/contact',
+      ],
+      exclude: [
+        '/admin',
+        '/profile',
+        '/my-bookings',
+        '/auth/google/callback',
+      ],
+      changefreq: 'weekly',
+      priority: 0.8,
+    }),
+  ],
   build: {
     rollupOptions: {
       output: {

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import { User, Heart, Users, ChevronDown, CheckCircle, Clock, Shield, ArrowRight, Sparkles, Quote } from 'lucide-react'
 
 // Emotional therapy-themed images - showing real connection and healing moments
@@ -184,14 +184,21 @@ const WhoWeHelp = () => {
                   delay: card.delay,
                   ease: [0.25, 0.1, 0.25, 1],
                 }}
-                layout
                 className={`group bg-gradient-to-br from-lavender-50 to-white rounded-3xl border border-lavender-100/60 shadow-soft hover:shadow-lg transition-all duration-500 ease-gentle overflow-hidden ${
                   isExpanded ? 'lg:col-span-3' : ''
                 }`}
               >
+                <AnimatePresence mode="wait" initial={false}>
                 {isExpanded ? (
                   // Expanded View
-                  <div className="p-6 md:p-8">
+                  <motion.div
+                    key="expanded"
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -8 }}
+                    transition={{ duration: 0.3, ease: [0.25, 0.1, 0.25, 1] }}
+                    className="p-6 md:p-8"
+                  >
                     {/* Header with close */}
                     <div className="flex items-start justify-between mb-6">
                       <div className="flex items-center gap-4">
@@ -325,10 +332,15 @@ const WhoWeHelp = () => {
                         </motion.a>
                       </div>
                     </div>
-                  </div>
+                  </motion.div>
                 ) : (
                   // Collapsed View - Emotional Story Card
-                  <div 
+                  <motion.div
+                    key="collapsed"
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -8 }}
+                    transition={{ duration: 0.3, ease: [0.25, 0.1, 0.25, 1] }}
                     className="cursor-pointer"
                     onClick={() => handleToggle(card.title)}
                     onKeyDown={(e) => {
@@ -411,8 +423,9 @@ const WhoWeHelp = () => {
                         <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                       </div>
                     </div>
-                  </div>
+                  </motion.div>
                 )}
+                </AnimatePresence>
               </motion.div>
             )
           })}

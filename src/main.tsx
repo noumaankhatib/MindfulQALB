@@ -1,7 +1,10 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
+import { HelmetProvider } from 'react-helmet-async'
 import App from './App.tsx'
 import './index.css'
+
+const rootEl = document.getElementById('root')!
 
 // Suppress known noisy console messages from third-party scripts and browser extensions
 const stringifyArgs = (args: unknown[]) => args.map((a) => (a != null ? String(a) : '')).join(' ')
@@ -60,9 +63,17 @@ window.addEventListener(
   true
 )
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
+const app = (
   <React.StrictMode>
-    <App />
-  </React.StrictMode>,
+    <HelmetProvider>
+      <App />
+    </HelmetProvider>
+  </React.StrictMode>
 )
+
+if (rootEl.hasChildNodes()) {
+  ReactDOM.hydrateRoot(rootEl, app)
+} else {
+  ReactDOM.createRoot(rootEl).render(app)
+}
 

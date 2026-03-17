@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /profile
+Disallow: /my-bookings
+Disallow: /auth/
+
+Sitemap: https://mindfulqalb.com/sitemap.xml

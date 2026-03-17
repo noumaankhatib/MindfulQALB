@@ -209,7 +209,10 @@ const Hero = () => {
                   src={heroImages.main}
                   alt="Supportive therapy session - a safe space for healing"
                   className="w-full h-[500px] object-cover"
+                  width={1920}
+                  height={2400}
                   loading="eager"
+                  decoding="async"
                 />
                 {/* Soft overlay for calm feel */}
                 <div className="absolute inset-0 bg-gradient-to-t from-lavender-900/10 via-transparent to-lavender-100/10" />
@@ -225,7 +228,10 @@ const Hero = () => {
                   src={heroImages.secondary}
                   alt="Mindfulness and meditation practice"
                   className="w-full h-full object-cover"
+                  width={600}
+                  height={600}
                   loading="lazy"
+                  decoding="async"
                 />
               </motion.div>
 

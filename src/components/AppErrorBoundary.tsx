@@ -1,4 +1,5 @@
 import { useRouteError, isRouteErrorResponse, Link } from 'react-router-dom';
+import { Helmet } from 'react-helmet-async';
 
 /**
  * Catches route errors and shows a friendly message instead of "Unexpected Application Error".
@@ -33,6 +34,10 @@ export function AppErrorBoundary() {
 export function NotFoundPage() {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-4 bg-gray-50">
+      <Helmet>
+        <title>404 Page Not Found | MindfulQALB</title>
+        <meta name="robots" content="noindex, follow" />
+      </Helmet>
       <div className="text-center max-w-md">
         <h1 className="text-2xl font-display font-semibold text-gray-800 mb-2">Page not found</h1>
         <p className="text-gray-600 mb-6">The page you’re looking for doesn’t exist.</p>

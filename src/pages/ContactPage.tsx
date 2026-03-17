@@ -1,13 +1,13 @@
 import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowLeft, Mail, Instagram, Linkedin, Calendar } from 'lucide-react';
+import { Helmet } from 'react-helmet-async';
 import Navigation from '../components/Navigation';
 import Footer from '../components/Footer';
 
 const ContactPage = () => {
   useEffect(() => {
     window.scrollTo(0, 0);
-    document.title = 'Contact | MindfulQALB';
   }, []);
 
   const email = 'mindfulqalb@gmail.com';
@@ -18,6 +18,16 @@ const ContactPage = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-white to-cream-50/30">
+      <Helmet>
+        <title>Contact | MindfulQALB</title>
+        <meta name="description" content="Get in touch with MindfulQALB for appointments or general enquiries. Reach us by email or social media." />
+        <link rel="canonical" href="https://mindfulqalb.com/contact" />
+        <meta name="robots" content="noindex, follow" />
+        <meta property="og:title" content="Contact | MindfulQALB" />
+        <meta property="og:description" content="Get in touch with MindfulQALB for appointments or general enquiries." />
+        <meta property="og:url" content="https://mindfulqalb.com/contact" />
+        <meta property="og:image" content="https://mindfulqalb.com/og-image.png" />
+      </Helmet>
       <Navigation />
       <main className="pt-24 pb-16 px-4 sm:px-6 lg:px-8">
         <div className="max-w-2xl mx-auto">

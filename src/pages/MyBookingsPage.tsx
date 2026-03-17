@@ -16,6 +16,7 @@ import {
   Check,
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
+import { Helmet } from 'react-helmet-async';
 import Navigation from '../components/Navigation';
 import Footer from '../components/Footer';
 import { useAuth } from '../contexts/AuthContext';
@@ -203,6 +204,11 @@ const MyBookingsPage = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-lavender-50/50 to-white">
+      <Helmet>
+        <title>My Bookings | MindfulQALB</title>
+        <meta name="description" content="View and manage your therapy session bookings with MindfulQALB." />
+        <meta name="robots" content="noindex, nofollow" />
+      </Helmet>
       <Navigation />
 
       <main className="pt-24 pb-16">

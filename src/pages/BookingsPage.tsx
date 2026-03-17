@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Calendar, ArrowLeft, Clock, Video, Headphones, MessageSquare, User, Users, ChevronRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { Helmet } from 'react-helmet-async';
 import Navigation from '../components/Navigation';
 import Footer from '../components/Footer';
 import BookingFlow from '../components/BookingFlow';
@@ -118,6 +119,16 @@ const BookingsPage = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-lavender-50/50 to-white">
+      <Helmet>
+        <title>Book a Session | MindfulQALB</title>
+        <meta name="description" content="Book an individual or couples therapy session with MindfulQALB. Choose from video, audio, or chat formats. Free 15-minute consultation available." />
+        <link rel="canonical" href="https://mindfulqalb.com/bookings" />
+        <meta name="robots" content="index, follow" />
+        <meta property="og:title" content="Book a Session | MindfulQALB" />
+        <meta property="og:description" content="Book an individual or couples therapy session. Free 15-minute consultation available." />
+        <meta property="og:url" content="https://mindfulqalb.com/bookings" />
+        <meta property="og:image" content="https://mindfulqalb.com/og-image.png" />
+      </Helmet>
       <Navigation />
       
       <main className="pt-24 pb-16">

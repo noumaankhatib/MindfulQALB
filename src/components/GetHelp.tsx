@@ -126,7 +126,10 @@ const GetHelp = () => {
                 src={feeStructureImage}
                 alt="Session fee structure - Individual, Couples, and Family therapy pricing"
                 className="w-full h-auto object-contain"
+                width={1024}
+                height={1536}
                 loading="lazy"
+                decoding="async"
               />
             </motion.div>
 

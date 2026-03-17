@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { User, Mail, Phone, Save, ArrowLeft } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
+import { Helmet } from 'react-helmet-async';
 import Navigation from '../components/Navigation';
 import Footer from '../components/Footer';
 import { useAuth } from '../contexts/AuthContext';
@@ -60,6 +61,11 @@ const ProfilePage = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <Helmet>
+        <title>Profile & Settings | MindfulQALB</title>
+        <meta name="description" content="Manage your MindfulQALB profile and account settings." />
+        <meta name="robots" content="noindex, nofollow" />
+      </Helmet>
       <Navigation />
       <main className="max-w-2xl mx-auto px-4 py-10">
         <Link
