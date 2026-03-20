@@ -101,7 +101,7 @@ const AboutTherapist = () => {
             Counseling Psychologist & Therapist
           </p>
           <p className="text-sm text-gray-500">
-            MSc Counseling Psychology · CBT · NLP · Trauma-Informed · 3,000+ clinical hours
+            Master's in Counseling Psychology · CBT · NLP · Trauma-Informed · 3,000+ clinical hours
           </p>
         </motion.div>
 
@@ -210,7 +210,7 @@ const AboutTherapist = () => {
             {/* Credential pills — always visible */}
             <div className="flex flex-wrap gap-2 mb-5">
               {[
-                { icon: GraduationCap, label: "MSc Counseling Psychology" },
+                { icon: GraduationCap, label: "Master's in Counseling Psychology" },
                 { icon: Brain, label: "CBT Certified" },
                 { icon: Users, label: "Family & Couple Therapy" },
                 { icon: Sparkles, label: "NLP Practitioner" },
