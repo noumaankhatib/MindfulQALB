@@ -9,7 +9,6 @@ import {
   MessageSquare,
   Phone,
   CreditCard,
-  ChevronRight,
   CalendarPlus,
   ExternalLink,
   Copy,
