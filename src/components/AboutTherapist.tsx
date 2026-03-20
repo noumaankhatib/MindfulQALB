@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Heart, Clock, CheckCircle, ArrowRight, Star, Quote, FileText, CreditCard, Sparkles, ChevronDown, IndianRupee, GraduationCap, Briefcase, Award, Globe, BookOpen, Lightbulb, Users, Brain } from 'lucide-react'
+import { Heart, Clock, CheckCircle, ArrowRight, Star, Quote, FileText, CreditCard, Sparkles, ChevronDown, IndianRupee, GraduationCap, Briefcase, Award, Globe, BookOpen, Lightbulb, Users, Brain, Shield } from 'lucide-react'
 import profileImage from '../assets/images/profile_final_optimized.jpg'
 
 const AboutTherapist = () => {
@@ -223,15 +223,34 @@ const AboutTherapist = () => {
               ))}
             </div>
 
+            {/* Stats row — always visible */}
+            <div className="grid grid-cols-3 gap-3 mb-5">
+              {[
+                { value: '3000+', label: 'Clinical Hours', icon: Clock, color: 'text-lavender-600', bg: 'bg-lavender-50', border: 'border-lavender-200' },
+                { value: '6+', label: 'Certifications', icon: Award, color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-200' },
+                { value: '3', label: 'Countries Reached', icon: Globe, color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-200' },
+              ].map(({ value, label, icon: Icon, color, bg, border }) => (
+                <div key={label} className={`${bg} ${border} border rounded-xl p-3 text-center`}>
+                  <Icon className={`w-4 h-4 ${color} mx-auto mb-1`} />
+                  <p className={`text-lg font-bold ${color}`}>{value}</p>
+                  <p className="text-xs text-gray-500 leading-tight">{label}</p>
+                </div>
+              ))}
+            </div>
+
             {/* More Details Expandable */}
             <motion.button
               onClick={() => setShowMoreDetails(!showMoreDetails)}
               aria-expanded={showMoreDetails}
               aria-controls="about-more-details"
-              className="flex items-center gap-2 text-lavender-600 hover:text-lavender-700 font-semibold mb-4 transition-colors group"
-              whileHover={{ x: 3 }}
+              className="w-full flex items-center justify-between gap-2 px-4 py-3 bg-lavender-50 hover:bg-lavender-100 border border-lavender-200 text-lavender-700 font-semibold rounded-xl mb-4 transition-colors"
+              whileHover={{ scale: 1.01 }}
+              whileTap={{ scale: 0.99 }}
             >
-              <span>{showMoreDetails ? 'Show Less' : 'Credentials & Full Profile'}</span>
+              <span className="flex items-center gap-2">
+                <GraduationCap className="w-4 h-4" />
+                {showMoreDetails ? 'Hide Full Profile' : 'View Full Credentials & Profile'}
+              </span>
               <motion.span
                 animate={{ rotate: showMoreDetails ? 180 : 0 }}
                 transition={{ duration: 0.3 }}
@@ -250,117 +269,121 @@ const AboutTherapist = () => {
                   transition={{ duration: 0.4, ease: 'easeInOut' }}
                   className="overflow-hidden"
                 >
-                  <div className="space-y-5 mb-6">
+                  <div className="space-y-4 mb-6">
 
                     {/* Education & Certifications */}
-                    <div className="bg-gradient-to-br from-lavender-50 to-purple-50/40 rounded-2xl p-5 border border-lavender-100">
-                      <h4 className="font-semibold text-gray-800 mb-4 flex items-center gap-2 text-sm">
-                        <div className="w-7 h-7 rounded-lg bg-lavender-100 flex items-center justify-center flex-shrink-0">
-                          <GraduationCap className="w-4 h-4 text-lavender-600" />
-                        </div>
-                        Education & Certifications
-                      </h4>
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2.5 p-2.5 bg-white rounded-xl border border-lavender-100/60">
-                          <div className="w-2 h-2 rounded-full bg-lavender-500 flex-shrink-0" />
-                          <span className="text-sm font-semibold text-gray-800">Master's in Counseling Psychology</span>
-                        </div>
-                        {[
-                          "Cognitive Behavioral Therapy (CBT)",
-                          "Family & Couple Therapy",
-                          "Psycho-oncology",
-                          "NLP Practitioner",
-                          "EFT & TFT Tapping Practitioner",
-                          "Trauma-Informed Care",
-                        ].map((cert) => (
-                          <div key={cert} className="flex items-center gap-2.5 px-3 py-2">
-                            <CheckCircle className="w-3.5 h-3.5 text-lavender-400 flex-shrink-0" />
-                            <span className="text-sm text-gray-600">{cert}</span>
+                    <div className="rounded-2xl overflow-hidden border border-lavender-100 shadow-sm">
+                      <div className="bg-gradient-to-r from-lavender-500 to-purple-600 px-5 py-3 flex items-center gap-2">
+                        <GraduationCap className="w-4 h-4 text-white" />
+                        <span className="text-white text-sm font-semibold">Education & Certifications</span>
+                      </div>
+                      <div className="bg-white p-4 space-y-2">
+                        <div className="flex items-center gap-3 p-3 bg-lavender-50 rounded-xl border border-lavender-100">
+                          <div className="w-8 h-8 rounded-full bg-lavender-500 flex items-center justify-center flex-shrink-0">
+                            <GraduationCap className="w-4 h-4 text-white" />
                           </div>
-                        ))}
+                          <div>
+                            <p className="text-sm font-bold text-gray-800">Master's in Counseling Psychology</p>
+                            <p className="text-xs text-lavender-600">Postgraduate Degree</p>
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 pt-1">
+                          {[
+                            { cert: "CBT", icon: Brain },
+                            { cert: "Family & Couple Therapy", icon: Users },
+                            { cert: "Psycho-oncology", icon: Heart },
+                            { cert: "NLP Practitioner", icon: Sparkles },
+                            { cert: "EFT & TFT Tapping", icon: Lightbulb },
+                            { cert: "Trauma-Informed Care", icon: Shield },
+                          ].map(({ cert, icon: CIcon }) => (
+                            <div key={cert} className="flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-lg border border-gray-100">
+                              <CIcon className="w-3.5 h-3.5 text-lavender-500 flex-shrink-0" />
+                              <span className="text-xs text-gray-700 font-medium">{cert}</span>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     </div>
 
-                    {/* Professional Experience */}
-                    <div className="bg-gradient-to-br from-amber-50/60 to-orange-50/30 rounded-2xl p-5 border border-amber-100">
-                      <h4 className="font-semibold text-gray-800 mb-4 flex items-center gap-2 text-sm">
-                        <div className="w-7 h-7 rounded-lg bg-amber-100 flex items-center justify-center flex-shrink-0">
-                          <Briefcase className="w-4 h-4 text-amber-600" />
+                    {/* Professional Experience — timeline style */}
+                    <div className="rounded-2xl overflow-hidden border border-amber-100 shadow-sm">
+                      <div className="bg-gradient-to-r from-amber-500 to-orange-500 px-5 py-3 flex items-center gap-2">
+                        <Briefcase className="w-4 h-4 text-white" />
+                        <span className="text-white text-sm font-semibold">Professional Experience</span>
+                      </div>
+                      <div className="bg-white p-4">
+                        <div className="relative pl-5">
+                          {/* Vertical connector line */}
+                          <div className="absolute left-1.5 top-2 bottom-2 w-0.5 bg-amber-200 rounded-full" />
+                          <div className="space-y-4">
+                            {[
+                              { title: "Consultant Psychologist", desc: "Active clinical practice — individual, couple & family therapy", dot: "bg-amber-500" },
+                              { title: "Supervisor & Mentor", desc: "Guiding junior therapists in their professional growth", dot: "bg-orange-400" },
+                              { title: "Workshop Facilitator", desc: "Mental health bootcamps & corporate wellness training", dot: "bg-amber-400" },
+                              { title: "US Startup Collaborator", desc: "Developing mental health modules & wellness programs", dot: "bg-orange-500" },
+                            ].map(({ title, desc, dot }) => (
+                              <div key={title} className="relative">
+                                <div className={`absolute -left-5 top-1.5 w-3 h-3 rounded-full ${dot} border-2 border-white shadow-sm`} />
+                                <p className="text-sm font-semibold text-gray-800">{title}</p>
+                                <p className="text-xs text-gray-500 mt-0.5">{desc}</p>
+                              </div>
+                            ))}
+                          </div>
                         </div>
-                        Professional Experience
-                      </h4>
-                      <div className="space-y-2.5">
+                      </div>
+                    </div>
+
+                    {/* Recognition & Outreach */}
+                    <div className="rounded-2xl overflow-hidden border border-emerald-100 shadow-sm">
+                      <div className="bg-gradient-to-r from-emerald-500 to-teal-500 px-5 py-3 flex items-center gap-2">
+                        <Award className="w-4 h-4 text-white" />
+                        <span className="text-white text-sm font-semibold">Recognition & Outreach</span>
+                      </div>
+                      <div className="bg-white p-4 space-y-3">
                         {[
-                          { title: "Consultant Psychologist", desc: "Active clinical practice — individual, couple & family" },
-                          { title: "Supervisor & Mentor", desc: "Guiding junior therapists in their professional growth" },
-                          { title: "Workshop Facilitator", desc: "Conducting bootcamps & training programs" },
-                          { title: "US Startup Collaborator", desc: "Developing mental health modules & wellness programs" },
-                        ].map(({ title, desc }) => (
-                          <div key={title} className="flex gap-3 p-2.5 bg-white/70 rounded-xl border border-amber-100/50">
-                            <div className="w-1.5 h-1.5 rounded-full bg-amber-400 mt-1.5 flex-shrink-0" />
-                            <div>
-                              <p className="text-sm font-semibold text-gray-800">{title}</p>
-                              <p className="text-xs text-gray-500 mt-0.5">{desc}</p>
+                          { icon: BookOpen, label: "PRESS", badge: "bg-rose-100 text-rose-700", title: "Featured in Inquilab Newspaper", desc: "Promoting unconventional career paths & youth guidance" },
+                          { icon: Globe, label: "BERLIN UNIVERSITY", badge: "bg-blue-100 text-blue-700", title: "International Webinars", desc: "Career Guidance · Interview Prep · Emotional Regulation" },
+                          { icon: FileText, label: "VHEALTHY", badge: "bg-teal-100 text-teal-700", title: "Published Author", desc: "Articles on mental wellness & psychological frameworks" },
+                        ].map(({ icon: IIcon, label, badge, title, desc }) => (
+                          <div key={title} className="flex gap-3 items-start p-3 bg-gray-50 rounded-xl border border-gray-100">
+                            <IIcon className="w-4 h-4 text-emerald-500 mt-0.5 flex-shrink-0" />
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-0.5 flex-wrap">
+                                <p className="text-sm font-semibold text-gray-800">{title}</p>
+                                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${badge}`}>{label}</span>
+                              </div>
+                              <p className="text-xs text-gray-500">{desc}</p>
                             </div>
                           </div>
                         ))}
                       </div>
                     </div>
 
-                    {/* Recognition & Outreach */}
-                    <div className="bg-gradient-to-br from-emerald-50/60 to-teal-50/30 rounded-2xl p-5 border border-emerald-100">
-                      <h4 className="font-semibold text-gray-800 mb-4 flex items-center gap-2 text-sm">
-                        <div className="w-7 h-7 rounded-lg bg-emerald-100 flex items-center justify-center flex-shrink-0">
-                          <Award className="w-4 h-4 text-emerald-600" />
-                        </div>
-                        Recognition & Outreach
-                      </h4>
-                      <div className="space-y-2.5">
-                        <div className="flex gap-3 p-2.5 bg-white/70 rounded-xl border border-emerald-100/50">
-                          <BookOpen className="w-4 h-4 text-emerald-500 mt-0.5 flex-shrink-0" />
-                          <div>
-                            <p className="text-sm font-semibold text-gray-800">Featured in Inquilab Newspaper</p>
-                            <p className="text-xs text-gray-500 mt-0.5">Promoting unconventional career paths & youth guidance</p>
-                          </div>
-                        </div>
-                        <div className="flex gap-3 p-2.5 bg-white/70 rounded-xl border border-emerald-100/50">
-                          <Globe className="w-4 h-4 text-emerald-500 mt-0.5 flex-shrink-0" />
-                          <div>
-                            <p className="text-sm font-semibold text-gray-800">International Webinars — Berlin University</p>
-                            <p className="text-xs text-gray-500 mt-0.5">Career Guidance · Interview Preparation · Emotional Regulation</p>
-                          </div>
-                        </div>
-                        <div className="flex gap-3 p-2.5 bg-white/70 rounded-xl border border-emerald-100/50">
-                          <BookOpen className="w-4 h-4 text-emerald-500 mt-0.5 flex-shrink-0" />
-                          <div>
-                            <p className="text-sm font-semibold text-gray-800">Published on VHealthy</p>
-                            <p className="text-xs text-gray-500 mt-0.5">Articles on mental wellness & psychological frameworks</p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
                     {/* Philosophy */}
-                    <div className="relative bg-gradient-to-br from-lavender-600 to-purple-700 rounded-2xl p-5 overflow-hidden">
-                      <div className="absolute top-0 right-0 w-24 h-24 bg-white/5 rounded-full -translate-y-8 translate-x-8" />
-                      <div className="absolute bottom-0 left-0 w-16 h-16 bg-white/5 rounded-full translate-y-6 -translate-x-4" />
+                    <div className="relative bg-gradient-to-br from-lavender-600 via-purple-700 to-indigo-800 rounded-2xl p-5 overflow-hidden">
+                      <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -translate-y-10 translate-x-10" />
+                      <div className="absolute bottom-0 left-0 w-20 h-20 bg-white/5 rounded-full translate-y-8 -translate-x-6" />
                       <div className="relative">
                         <div className="flex items-center gap-2 mb-3">
-                          <Lightbulb className="w-4 h-4 text-lavender-200" />
-                          <span className="text-lavender-200 text-xs font-semibold uppercase tracking-wide">My Philosophy</span>
+                          <div className="w-7 h-7 rounded-lg bg-white/15 flex items-center justify-center">
+                            <Quote className="w-4 h-4 text-lavender-200" />
+                          </div>
+                          <span className="text-lavender-200 text-xs font-bold uppercase tracking-wider">My Philosophy</span>
                         </div>
-                        <p className="text-white text-sm leading-relaxed mb-3">
+                        <p className="text-white text-sm leading-relaxed mb-4">
                           I bring <strong className="text-lavender-200">versatility, creativity, and depth</strong> into my practice. Therapy should not feel clinical — it should feel <strong className="text-lavender-200">human, safe, and transformative.</strong>
                         </p>
-                        <p className="text-lavender-200 text-xs leading-relaxed italic">
-                          "Creativity and insight are not just encouraged — they are essential for growth."
-                        </p>
+                        <blockquote className="border-l-2 border-lavender-300/60 pl-3">
+                          <p className="text-lavender-100 text-xs leading-relaxed italic">
+                            "Creativity and insight are not just encouraged — they are essential for growth."
+                          </p>
+                        </blockquote>
                       </div>
                     </div>
 
-                    {/* Areas of Expertise */}
-                    <div className="pt-1">
-                      <h5 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Areas of Focus</h5>
+                    {/* Areas of Focus */}
+                    <div className="bg-gray-50 rounded-2xl p-4 border border-gray-100">
+                      <h5 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Areas of Focus</h5>
                       <div className="flex flex-wrap gap-2">
                         {[
                           { text: 'Anxiety & Overthinking', bg: 'bg-blue-50', border: 'border-blue-200', color: 'text-blue-700' },
@@ -471,7 +494,7 @@ const AboutTherapist = () => {
                       <span className="text-white font-semibold text-sm">{testimonial.author}</span>
                     </div>
                     <div>
-                      <p className="font-medium text-gray-800 text-sm">Anonymous</p>
+                      <p className="font-medium text-gray-800 text-sm">{testimonial.name}</p>
                       <p className="text-xs text-gray-500">{testimonial.details}</p>
                     </div>
                   </div>
