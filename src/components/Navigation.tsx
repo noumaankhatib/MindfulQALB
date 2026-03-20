@@ -347,9 +347,8 @@ const Navigation = () => {
             </div>
           </div>
 
-          {/* Mobile: Notifications + Auth + Menu */}
+          {/* Mobile: Auth + Menu (bell moved inside drawer to prevent overflow) */}
           <div className="flex items-center gap-1 lg:hidden">
-            <NotificationBell />
             <UserMenu onOpenAuth={() => setIsAuthModalOpen(true)} />
             
             {/* Mobile Menu Button */}
@@ -483,11 +482,9 @@ const Navigation = () => {
                   >
                     Book a Session
                   </Link>
-                  <div className="flex justify-center">
-                    <UserMenu onOpenAuth={() => {
-                      closeMobileMenu();
-                      setIsAuthModalOpen(true);
-                    }} />
+                  {/* Notification bell in drawer so header doesn't overflow */}
+                  <div className="flex items-center justify-center gap-3 pt-1">
+                    <NotificationBell />
                   </div>
                 </div>
               </div>

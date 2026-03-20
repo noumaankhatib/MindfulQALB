@@ -71,7 +71,7 @@ export const UserMenu = ({ onOpenAuth }: UserMenuProps) => {
         className="px-4 py-2 bg-lavender-600 text-white rounded-lg hover:bg-lavender-700 transition-all font-medium text-sm shadow-sm hover:shadow-md flex items-center gap-2"
       >
         <User className="w-4 h-4" />
-        <span className="hidden sm:inline">Sign In</span>
+        <span>Sign In</span>
       </button>
     );
   }
@@ -122,10 +122,10 @@ export const UserMenu = ({ onOpenAuth }: UserMenuProps) => {
         aria-expanded={isOpen}
         aria-haspopup="true"
         aria-label={isOpen ? 'Close user menu' : 'Open user menu'}
-        className="flex items-center gap-2 p-1.5 pr-3 rounded-full bg-lavender-50 hover:bg-lavender-100 transition-colors border border-lavender-100"
+        className="flex items-center gap-2 p-1.5 sm:pr-3 rounded-full bg-lavender-50 hover:bg-lavender-100 transition-colors border border-lavender-100"
       >
         {avatarEl('sm')}
-        <span className="text-sm font-medium text-gray-700 max-w-[100px] truncate hidden sm:block">
+        <span className="text-sm font-medium text-gray-700 max-w-[80px] truncate hidden sm:block">
           {displayName}
         </span>
         <ChevronDown className={`w-4 h-4 text-gray-500 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
