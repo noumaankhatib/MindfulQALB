@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Heart, Clock, CheckCircle, ArrowRight, Star, Quote, FileText, CreditCard, Sparkles, ChevronDown, IndianRupee } from 'lucide-react'
+import { Heart, Clock, CheckCircle, ArrowRight, Star, Quote, FileText, CreditCard, Sparkles, ChevronDown, IndianRupee, GraduationCap, Briefcase, Award, Globe, BookOpen, Lightbulb, Users, Brain } from 'lucide-react'
 import profileImage from '../assets/images/profile_final_optimized.jpg'
 
 const AboutTherapist = () => {
@@ -10,18 +10,21 @@ const AboutTherapist = () => {
     {
       text: "My therapy sessions have been extremely helpful. They provide a safe and understanding space, listen without judgment, and give practical guidance that really works. I feel more confident, calmer, and better equipped to handle challenges.",
       author: "AB",
+      name: "Avilash",
       details: "24, Male",
       highlight: "More confident & calmer",
     },
     {
       text: "After talking to you, I feel like I've been able to open up a bit more about things I couldn't share with others. Your guidance has helped me identify my problems and work through them, and I feel like I can be myself around you. Your support has given me the strength to improve myself, and I'm grateful for that.",
       author: "SA",
+      name: "Sonia",
       details: "42, Female",
       highlight: "Found strength to improve",
     },
     {
       text: "We had our first session on the night of 20th February, 2025 and it was an audio call and I was mesmerized by her way of putting things into perspective. Out of all the psychologists I consulted, she had the most different approach which I had never experienced before and she is such a lively and kind woman. Just in 3-4 sessions, this woman has completely changed the way I see things.",
       author: "KS",
+      name:"Kamal",
       details: "23, Male",
       highlight: "Life-changing perspective",
     },
@@ -98,7 +101,7 @@ const AboutTherapist = () => {
             Counseling Psychologist & Therapist
           </p>
           <p className="text-sm text-gray-500">
-            MSc Clinical Psychology · RCI-Registered · 3,000+ clinical hours
+            MSc Counseling Psychology · CBT · NLP · Trauma-Informed · 3,000+ clinical hours
           </p>
         </motion.div>
 
@@ -204,6 +207,22 @@ const AboutTherapist = () => {
               </p>
             </div>
 
+            {/* Credential pills — always visible */}
+            <div className="flex flex-wrap gap-2 mb-5">
+              {[
+                { icon: GraduationCap, label: "MSc Counseling Psychology" },
+                { icon: Brain, label: "CBT Certified" },
+                { icon: Users, label: "Family & Couple Therapy" },
+                { icon: Sparkles, label: "NLP Practitioner" },
+                { icon: Heart, label: "Trauma-Informed Care" },
+              ].map(({ icon: Icon, label }) => (
+                <span key={label} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-lavender-50 border border-lavender-200 text-lavender-700 text-xs font-semibold rounded-full">
+                  <Icon className="w-3 h-3" />
+                  {label}
+                </span>
+              ))}
+            </div>
+
             {/* More Details Expandable */}
             <motion.button
               onClick={() => setShowMoreDetails(!showMoreDetails)}
@@ -212,7 +231,7 @@ const AboutTherapist = () => {
               className="flex items-center gap-2 text-lavender-600 hover:text-lavender-700 font-semibold mb-4 transition-colors group"
               whileHover={{ x: 3 }}
             >
-              <span>{showMoreDetails ? 'Show Less' : 'More About My Approach'}</span>
+              <span>{showMoreDetails ? 'Show Less' : 'Credentials & Full Profile'}</span>
               <motion.span
                 animate={{ rotate: showMoreDetails ? 180 : 0 }}
                 transition={{ duration: 0.3 }}
@@ -231,43 +250,134 @@ const AboutTherapist = () => {
                   transition={{ duration: 0.4, ease: 'easeInOut' }}
                   className="overflow-hidden"
                 >
-                  <div className="bg-lavender-50/60 rounded-xl p-5 mb-6 border border-lavender-100">
-                    <h4 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
-                      <Sparkles className="w-5 h-5 text-lavender-500" />
-                      My Therapeutic Philosophy
-                    </h4>
-                    <div className="space-y-3 text-gray-600 text-sm">
-                      <p>
-                        Each session is thoughtfully adapted to <strong>your needs, goals, and pace</strong>—there's no one-size-fits-all here. Whether you're feeling stuck, overwhelmed, or seeking deeper self-understanding, I offer a <strong>safe, respectful, and confidential space</strong> for you to explore, heal, and grow.
-                      </p>
-                      <p>
-                        My approach is <strong>warm, eclectic, and collaborative</strong>. I blend science-backed therapeutic methods with a holistic understanding of your unique circumstances—honoring your values, beliefs, and personal journey.
-                      </p>
+                  <div className="space-y-5 mb-6">
+
+                    {/* Education & Certifications */}
+                    <div className="bg-gradient-to-br from-lavender-50 to-purple-50/40 rounded-2xl p-5 border border-lavender-100">
+                      <h4 className="font-semibold text-gray-800 mb-4 flex items-center gap-2 text-sm">
+                        <div className="w-7 h-7 rounded-lg bg-lavender-100 flex items-center justify-center flex-shrink-0">
+                          <GraduationCap className="w-4 h-4 text-lavender-600" />
+                        </div>
+                        Education & Certifications
+                      </h4>
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2.5 p-2.5 bg-white rounded-xl border border-lavender-100/60">
+                          <div className="w-2 h-2 rounded-full bg-lavender-500 flex-shrink-0" />
+                          <span className="text-sm font-semibold text-gray-800">Master's in Counseling Psychology</span>
+                        </div>
+                        {[
+                          "Cognitive Behavioral Therapy (CBT)",
+                          "Family & Couple Therapy",
+                          "Psycho-oncology",
+                          "NLP Practitioner",
+                          "EFT & TFT Tapping Practitioner",
+                          "Trauma-Informed Care",
+                        ].map((cert) => (
+                          <div key={cert} className="flex items-center gap-2.5 px-3 py-2">
+                            <CheckCircle className="w-3.5 h-3.5 text-lavender-400 flex-shrink-0" />
+                            <span className="text-sm text-gray-600">{cert}</span>
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                    
-                    <div className="mt-4 pt-4 border-t border-lavender-200">
-                      <h5 className="font-semibold text-gray-800 mb-3 text-sm flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full bg-gradient-to-r from-lavender-500 to-purple-500 animate-pulse"></span>
-                        Areas of Expertise
-                      </h5>
+
+                    {/* Professional Experience */}
+                    <div className="bg-gradient-to-br from-amber-50/60 to-orange-50/30 rounded-2xl p-5 border border-amber-100">
+                      <h4 className="font-semibold text-gray-800 mb-4 flex items-center gap-2 text-sm">
+                        <div className="w-7 h-7 rounded-lg bg-amber-100 flex items-center justify-center flex-shrink-0">
+                          <Briefcase className="w-4 h-4 text-amber-600" />
+                        </div>
+                        Professional Experience
+                      </h4>
+                      <div className="space-y-2.5">
+                        {[
+                          { title: "Consultant Psychologist", desc: "Active clinical practice — individual, couple & family" },
+                          { title: "Supervisor & Mentor", desc: "Guiding junior therapists in their professional growth" },
+                          { title: "Workshop Facilitator", desc: "Conducting bootcamps & training programs" },
+                          { title: "US Startup Collaborator", desc: "Developing mental health modules & wellness programs" },
+                        ].map(({ title, desc }) => (
+                          <div key={title} className="flex gap-3 p-2.5 bg-white/70 rounded-xl border border-amber-100/50">
+                            <div className="w-1.5 h-1.5 rounded-full bg-amber-400 mt-1.5 flex-shrink-0" />
+                            <div>
+                              <p className="text-sm font-semibold text-gray-800">{title}</p>
+                              <p className="text-xs text-gray-500 mt-0.5">{desc}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Recognition & Outreach */}
+                    <div className="bg-gradient-to-br from-emerald-50/60 to-teal-50/30 rounded-2xl p-5 border border-emerald-100">
+                      <h4 className="font-semibold text-gray-800 mb-4 flex items-center gap-2 text-sm">
+                        <div className="w-7 h-7 rounded-lg bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                          <Award className="w-4 h-4 text-emerald-600" />
+                        </div>
+                        Recognition & Outreach
+                      </h4>
+                      <div className="space-y-2.5">
+                        <div className="flex gap-3 p-2.5 bg-white/70 rounded-xl border border-emerald-100/50">
+                          <BookOpen className="w-4 h-4 text-emerald-500 mt-0.5 flex-shrink-0" />
+                          <div>
+                            <p className="text-sm font-semibold text-gray-800">Featured in Inquilab Newspaper</p>
+                            <p className="text-xs text-gray-500 mt-0.5">Promoting unconventional career paths & youth guidance</p>
+                          </div>
+                        </div>
+                        <div className="flex gap-3 p-2.5 bg-white/70 rounded-xl border border-emerald-100/50">
+                          <Globe className="w-4 h-4 text-emerald-500 mt-0.5 flex-shrink-0" />
+                          <div>
+                            <p className="text-sm font-semibold text-gray-800">International Webinars — Berlin University</p>
+                            <p className="text-xs text-gray-500 mt-0.5">Career Guidance · Interview Preparation · Emotional Regulation</p>
+                          </div>
+                        </div>
+                        <div className="flex gap-3 p-2.5 bg-white/70 rounded-xl border border-emerald-100/50">
+                          <BookOpen className="w-4 h-4 text-emerald-500 mt-0.5 flex-shrink-0" />
+                          <div>
+                            <p className="text-sm font-semibold text-gray-800">Published on VHealthy</p>
+                            <p className="text-xs text-gray-500 mt-0.5">Articles on mental wellness & psychological frameworks</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Philosophy */}
+                    <div className="relative bg-gradient-to-br from-lavender-600 to-purple-700 rounded-2xl p-5 overflow-hidden">
+                      <div className="absolute top-0 right-0 w-24 h-24 bg-white/5 rounded-full -translate-y-8 translate-x-8" />
+                      <div className="absolute bottom-0 left-0 w-16 h-16 bg-white/5 rounded-full translate-y-6 -translate-x-4" />
+                      <div className="relative">
+                        <div className="flex items-center gap-2 mb-3">
+                          <Lightbulb className="w-4 h-4 text-lavender-200" />
+                          <span className="text-lavender-200 text-xs font-semibold uppercase tracking-wide">My Philosophy</span>
+                        </div>
+                        <p className="text-white text-sm leading-relaxed mb-3">
+                          I bring <strong className="text-lavender-200">versatility, creativity, and depth</strong> into my practice. Therapy should not feel clinical — it should feel <strong className="text-lavender-200">human, safe, and transformative.</strong>
+                        </p>
+                        <p className="text-lavender-200 text-xs leading-relaxed italic">
+                          "Creativity and insight are not just encouraged — they are essential for growth."
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Areas of Expertise */}
+                    <div className="pt-1">
+                      <h5 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Areas of Focus</h5>
                       <div className="flex flex-wrap gap-2">
                         {[
-                          { text: 'Anxiety, Overthinking & Emotional Overwhelm', color: 'from-blue-500 to-indigo-500', bg: 'bg-blue-50', border: 'border-blue-200', textColor: 'text-blue-700' },
-                          { text: 'Grief, Trauma & Difficult Life Events', color: 'from-purple-500 to-pink-500', bg: 'bg-purple-50', border: 'border-purple-200', textColor: 'text-purple-700' },
-                          { text: 'Career Stress, Burnout & Work-Life Challenges', color: 'from-amber-500 to-orange-500', bg: 'bg-amber-50', border: 'border-amber-200', textColor: 'text-amber-700' },
-                          { text: 'Relationship, Couple & Family Issues', color: 'from-rose-500 to-red-500', bg: 'bg-rose-50', border: 'border-rose-200', textColor: 'text-rose-700' },
-                          { text: 'Self-Growth & Health Psychology', color: 'from-emerald-500 to-teal-500', bg: 'bg-emerald-50', border: 'border-emerald-200', textColor: 'text-emerald-700' }
-                        ].map((area) => (
-                          <span 
-                            key={area.text} 
-                            className={`group relative px-4 py-2 ${area.bg} rounded-xl text-xs font-semibold ${area.textColor} border ${area.border} hover:shadow-md transition-all duration-300 cursor-default flex items-center gap-2`}
-                          >
-                            <span className={`w-2 h-2 rounded-full bg-gradient-to-r ${area.color}`}></span>
-                            {area.text}
+                          { text: 'Anxiety & Overthinking', bg: 'bg-blue-50', border: 'border-blue-200', color: 'text-blue-700' },
+                          { text: 'Grief & Trauma', bg: 'bg-purple-50', border: 'border-purple-200', color: 'text-purple-700' },
+                          { text: 'Career Stress & Burnout', bg: 'bg-amber-50', border: 'border-amber-200', color: 'text-amber-700' },
+                          { text: 'Relationships & Family', bg: 'bg-rose-50', border: 'border-rose-200', color: 'text-rose-700' },
+                          { text: 'Self-Esteem & Growth', bg: 'bg-emerald-50', border: 'border-emerald-200', color: 'text-emerald-700' },
+                          { text: 'Psycho-oncology', bg: 'bg-teal-50', border: 'border-teal-200', color: 'text-teal-700' },
+                          { text: 'Emotional Regulation', bg: 'bg-indigo-50', border: 'border-indigo-200', color: 'text-indigo-700' },
+                        ].map(({ text, bg, border, color }) => (
+                          <span key={text} className={`px-3 py-1.5 ${bg} ${border} border ${color} text-xs font-semibold rounded-full`}>
+                            {text}
                           </span>
                         ))}
                       </div>
                     </div>
+
                   </div>
                 </motion.div>
               )}
