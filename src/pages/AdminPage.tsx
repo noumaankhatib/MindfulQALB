@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { 
-  ArrowLeft, 
-  Calendar, 
-  Users, 
-  CreditCard, 
-  BarChart3, 
+import {
+  ArrowLeft,
+  Calendar,
+  Users,
+  CreditCard,
+  BarChart3,
   Clock,
   CheckCircle,
   XCircle,
@@ -22,6 +22,9 @@ import {
   Trash2,
   Tag,
   Plus,
+  Bell,
+  ChevronRight,
+  Inbox,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import Navigation from '../components/Navigation';
@@ -829,31 +832,43 @@ const AdminPage = () => {
           </div>
 
           {/* Tabs */}
-          <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 mb-8">
-            <div className="flex gap-1 p-1 bg-white/80 rounded-2xl border border-lavender-100 shadow-sm w-fit min-w-0">
-              {[
-                { id: 'dashboard', label: 'Dashboard', icon: BarChart3 },
-                { id: 'bookings', label: 'Bookings', icon: Calendar },
-                { id: 'payments', label: 'Payments', icon: CreditCard },
-                { id: 'coupons', label: 'Coupons', icon: Tag },
-                { id: 'consent', label: 'Consent', icon: FileCheck },
-                { id: 'users', label: 'Users', icon: Users },
-              ].map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id as typeof activeTab)}
-                  className={`flex items-center gap-2 px-4 py-2.5 sm:px-5 sm:py-3 rounded-xl font-medium text-sm whitespace-nowrap transition-all ${
-                    activeTab === tab.id
-                      ? 'bg-gradient-to-r from-lavender-600 to-purple-600 text-white shadow-lg shadow-lavender-500/25'
-                      : 'text-gray-600 hover:bg-lavender-50 hover:text-lavender-700'
-                  }`}
-                >
-                  <tab.icon className="w-4 h-4" />
-                  {tab.label}
-                </button>
-              ))}
-            </div>
-          </div>
+          {(() => {
+            const pendingCount = bookings.filter(b => b.status === 'pending').length;
+            return (
+              <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 mb-8">
+                <div className="flex gap-1 p-1 bg-white/80 rounded-2xl border border-lavender-100 shadow-sm w-fit min-w-0">
+                  {[
+                    { id: 'dashboard', label: 'Dashboard', icon: BarChart3 },
+                    { id: 'bookings', label: 'Bookings', icon: Calendar, badge: pendingCount },
+                    { id: 'payments', label: 'Payments', icon: CreditCard },
+                    { id: 'coupons', label: 'Coupons', icon: Tag },
+                    { id: 'consent', label: 'Consent', icon: FileCheck },
+                    { id: 'users', label: 'Users', icon: Users },
+                  ].map((tab) => (
+                    <button
+                      key={tab.id}
+                      onClick={() => setActiveTab(tab.id as typeof activeTab)}
+                      className={`relative flex items-center gap-2 px-4 py-2.5 sm:px-5 sm:py-3 rounded-xl font-medium text-sm whitespace-nowrap transition-all ${
+                        activeTab === tab.id
+                          ? 'bg-gradient-to-r from-lavender-600 to-purple-600 text-white shadow-lg shadow-lavender-500/25'
+                          : 'text-gray-600 hover:bg-lavender-50 hover:text-lavender-700'
+                      }`}
+                    >
+                      <tab.icon className="w-4 h-4" />
+                      {tab.label}
+                      {'badge' in tab && (tab.badge ?? 0) > 0 && (
+                        <span className={`ml-0.5 min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold flex items-center justify-center ${
+                          activeTab === tab.id ? 'bg-white text-lavender-700' : 'bg-amber-500 text-white'
+                        }`}>
+                          {tab.badge}
+                        </span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
 
           {/* Loading state: show shell immediately, only content area shows spinner (initial load or refresh) */}
           {loading && (
@@ -903,10 +918,218 @@ const AdminPage = () => {
                   <AlertCircle className="w-5 h-5 text-sky-600 flex-shrink-0 mt-0.5" />
                   <div>
                     <p className="font-medium text-sky-800">No bookings loaded</p>
-                    <p className="text-sm text-sky-700 mt-1">If you expect bookings, run <code className="bg-sky-100 px-1 rounded">docs/supabase-full-setup.sql</code> in Supabase (creates <code className="bg-sky-100 px-1 rounded">is_admin()</code> and RLS). Then set your user’s <code className="bg-sky-100 px-1 rounded">profiles.role</code> to <code className="bg-sky-100 px-1 rounded">admin</code> and refresh.</p>
+                    <p className="text-sm text-sky-700 mt-1">If you expect bookings, run <code className="bg-sky-100 px-1 rounded">docs/supabase-full-setup.sql</code> in Supabase (creates <code className="bg-sky-100 px-1 rounded">is_admin()</code> and RLS). Then set your user's <code className="bg-sky-100 px-1 rounded">profiles.role</code> to <code className="bg-sky-100 px-1 rounded">admin</code> and refresh.</p>
                   </div>
                 </div>
               )}
+
+              {/* ── Requests Inbox ─────────────────────────────────── */}
+              {(() => {
+                const now = new Date();
+                const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+                const newRequests = bookings.filter(b => new Date(b.created_at) >= oneDayAgo && b.status === 'pending');
+                const pendingRequests = bookings.filter(b => b.status === 'pending');
+                const totalActionable = pendingRequests.length;
+
+                if (totalActionable === 0) return null;
+
+                return (
+                  <div className="space-y-4">
+                    {/* Alert banner */}
+                    <motion.div
+                      initial={{ opacity: 0, y: -8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="flex items-center gap-3 px-5 py-3.5 rounded-2xl bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 shadow-sm"
+                    >
+                      <div className="relative flex-shrink-0">
+                        <div className="w-9 h-9 rounded-xl bg-amber-100 flex items-center justify-center">
+                          <Bell className="w-5 h-5 text-amber-600" />
+                        </div>
+                        {newRequests.length > 0 && (
+                          <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center text-[9px] font-bold text-white">
+                            {newRequests.length}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-amber-900 text-sm">
+                          {newRequests.length > 0
+                            ? `${newRequests.length} new booking request${newRequests.length > 1 ? 's' : ''} in the last 24 hours`
+                            : `${totalActionable} pending booking${totalActionable > 1 ? 's' : ''} awaiting confirmation`}
+                        </p>
+                        <p className="text-xs text-amber-700 mt-0.5">
+                          {totalActionable} total pending · confirm or cancel below
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => setActiveTab('bookings')}
+                        className="flex items-center gap-1 text-xs font-semibold text-amber-700 hover:text-amber-900 whitespace-nowrap transition-colors"
+                      >
+                        View all <ChevronRight className="w-3.5 h-3.5" />
+                      </button>
+                    </motion.div>
+
+                    {/* Requests Inbox card */}
+                    <div className="bg-white rounded-2xl border border-lavender-100 shadow-gentle overflow-hidden">
+                      <div className="px-6 py-4 border-b border-lavender-100 bg-gradient-to-r from-amber-50/60 to-white flex items-center justify-between">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-8 h-8 rounded-xl bg-amber-100 flex items-center justify-center">
+                            <Inbox className="w-4 h-4 text-amber-600" />
+                          </div>
+                          <div>
+                            <h3 className="font-semibold text-gray-900">Requests Inbox</h3>
+                            <p className="text-xs text-gray-500">
+                              {newRequests.length > 0 && <span className="text-red-600 font-medium">{newRequests.length} new · </span>}
+                              {totalActionable} pending confirmation
+                            </p>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => setActiveTab('bookings')}
+                          className="text-xs font-medium text-lavender-600 hover:text-lavender-800 transition-colors flex items-center gap-1"
+                        >
+                          All bookings <ChevronRight className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+
+                      {/* New requests swimlane */}
+                      {newRequests.length > 0 && (
+                        <div className="px-6 pt-4 pb-2">
+                          <p className="text-xs font-semibold text-red-600 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                            <span className="inline-block w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                            New — last 24 hours
+                          </p>
+                          <div className="space-y-2">
+                            {newRequests.slice(0, 5).map((b) => {
+                              const isFree = b.notes?.includes('[FREE_CONSULTATION]') || false;
+                              return (
+                                <div
+                                  key={b.id}
+                                  className="flex flex-col sm:flex-row sm:items-center gap-3 p-3.5 bg-red-50/40 rounded-xl border border-red-100 hover:bg-red-50/70 transition-colors"
+                                >
+                                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                                    <div className="w-9 h-9 rounded-xl bg-white border border-red-100 flex items-center justify-center flex-shrink-0 text-lavender-500">
+                                      {isFree ? <Phone className="w-4 h-4" /> : getFormatIcon(b.session_format)}
+                                    </div>
+                                    <div className="min-w-0">
+                                      <p className="font-medium text-gray-900 text-sm truncate">{b.customer_name}</p>
+                                      <p className="text-xs text-gray-500 truncate">{b.customer_email}</p>
+                                      <p className="text-xs text-gray-400 mt-0.5">
+                                        {isFree ? 'Free Consultation' : `${b.session_type} · ${b.session_format}`} · {new Date(b.scheduled_date + 'T00:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} at {b.scheduled_time}
+                                      </p>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-2 flex-shrink-0">
+                                    <span className="text-xs text-gray-400 hidden sm:block">
+                                      {Math.floor((Date.now() - new Date(b.created_at).getTime()) / 60000) < 60
+                                        ? `${Math.floor((Date.now() - new Date(b.created_at).getTime()) / 60000)}m ago`
+                                        : `${Math.floor((Date.now() - new Date(b.created_at).getTime()) / 3600000)}h ago`}
+                                    </span>
+                                    <button
+                                      onClick={() => confirmBookingWithMeet(b.id)}
+                                      disabled={confirmingBookingId === b.id}
+                                      className="flex items-center gap-1.5 px-3 py-1.5 bg-green-500 hover:bg-green-600 disabled:opacity-60 text-white rounded-lg text-xs font-semibold transition-colors"
+                                    >
+                                      {confirmingBookingId === b.id
+                                        ? <span className="w-3 h-3 border border-white/60 border-t-white rounded-full animate-spin" />
+                                        : <CheckCircle className="w-3.5 h-3.5" />}
+                                      Confirm
+                                    </button>
+                                    <button
+                                      onClick={() => cancelAndRefund(b.id)}
+                                      disabled={cancellingId === b.id}
+                                      className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 hover:bg-red-50 hover:text-red-700 disabled:opacity-60 text-gray-600 rounded-lg text-xs font-semibold transition-colors"
+                                    >
+                                      <XCircle className="w-3.5 h-3.5" />
+                                      Cancel
+                                    </button>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* All pending swimlane (excluding those already shown in new) */}
+                      {(() => {
+                        const olderPending = pendingRequests.filter(b => {
+                          const isNew = newRequests.some(n => n.id === b.id);
+                          return !isNew;
+                        });
+                        if (olderPending.length === 0) return null;
+                        return (
+                          <div className={`px-6 pb-4 ${newRequests.length > 0 ? 'pt-4 border-t border-lavender-100 mt-4' : 'pt-4'}`}>
+                            <p className="text-xs font-semibold text-amber-700 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                              <Clock className="w-3 h-3" />
+                              Pending — older requests
+                            </p>
+                            <div className="space-y-2">
+                              {olderPending.slice(0, 8).map((b) => {
+                                const isFree = b.notes?.includes('[FREE_CONSULTATION]') || false;
+                                const daysAgo = Math.floor((Date.now() - new Date(b.created_at).getTime()) / 86400000);
+                                return (
+                                  <div
+                                    key={b.id}
+                                    className="flex flex-col sm:flex-row sm:items-center gap-3 p-3.5 bg-amber-50/30 rounded-xl border border-amber-100/70 hover:bg-amber-50/60 transition-colors"
+                                  >
+                                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                                      <div className="w-9 h-9 rounded-xl bg-white border border-amber-100 flex items-center justify-center flex-shrink-0 text-lavender-500">
+                                        {isFree ? <Phone className="w-4 h-4" /> : getFormatIcon(b.session_format)}
+                                      </div>
+                                      <div className="min-w-0">
+                                        <p className="font-medium text-gray-900 text-sm truncate">{b.customer_name}</p>
+                                        <p className="text-xs text-gray-500 truncate">{b.customer_email}</p>
+                                        <p className="text-xs text-gray-400 mt-0.5">
+                                          {isFree ? 'Free Consultation' : `${b.session_type} · ${b.session_format}`} · {new Date(b.scheduled_date + 'T00:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} at {b.scheduled_time}
+                                        </p>
+                                      </div>
+                                    </div>
+                                    <div className="flex items-center gap-2 flex-shrink-0">
+                                      <span className="text-xs text-gray-400 hidden sm:block">
+                                        {daysAgo === 0 ? 'Today' : daysAgo === 1 ? 'Yesterday' : `${daysAgo}d ago`}
+                                      </span>
+                                      <button
+                                        onClick={() => confirmBookingWithMeet(b.id)}
+                                        disabled={confirmingBookingId === b.id}
+                                        className="flex items-center gap-1.5 px-3 py-1.5 bg-green-500 hover:bg-green-600 disabled:opacity-60 text-white rounded-lg text-xs font-semibold transition-colors"
+                                      >
+                                        {confirmingBookingId === b.id
+                                          ? <span className="w-3 h-3 border border-white/60 border-t-white rounded-full animate-spin" />
+                                          : <CheckCircle className="w-3.5 h-3.5" />}
+                                        Confirm
+                                      </button>
+                                      <button
+                                        onClick={() => cancelAndRefund(b.id)}
+                                        disabled={cancellingId === b.id}
+                                        className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 hover:bg-red-50 hover:text-red-700 disabled:opacity-60 text-gray-600 rounded-lg text-xs font-semibold transition-colors"
+                                      >
+                                        <XCircle className="w-3.5 h-3.5" />
+                                        Cancel
+                                      </button>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        );
+                      })()}
+
+                      {totalActionable > 13 && (
+                        <div className="px-6 py-3 bg-lavender-50/50 border-t border-lavender-100 text-center">
+                          <button
+                            onClick={() => setActiveTab('bookings')}
+                            className="text-sm font-medium text-lavender-600 hover:text-lavender-800 transition-colors"
+                          >
+                            + {totalActionable - 13} more pending · View all in Bookings
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
 
               {/* Recent Bookings */}
               <div className="bg-white rounded-2xl border border-lavender-100 shadow-gentle overflow-hidden">

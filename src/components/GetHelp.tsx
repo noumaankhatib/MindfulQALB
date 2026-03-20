@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { motion } from 'framer-motion'
-import { Phone, MessageCircle, AlertTriangle, ExternalLink, IndianRupee, Clock, Shield, CheckCircle, Video, Headphones, Users, Calendar } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Phone, MessageCircle, AlertTriangle, ExternalLink, IndianRupee, Clock, Shield, CheckCircle, Video, Headphones, Users, Calendar, ChevronDown, Sparkles } from 'lucide-react'
 // BookingCalendar removed - using BookingFlow modal instead
 import BookingFlow from './BookingFlow'
 import { sessionTypes, SessionRecommendation } from '../data/chatbotFlow'
@@ -8,9 +8,82 @@ import { useGeolocation, formatPrice } from '../hooks/useGeolocation'
 import { isTestMode } from '../services/paymentService'
 import feeStructureImage from '../assets/images/fee/fee-structure.png'
 
+interface SessionPackage {
+  id: string
+  title: string
+  subtitle: string
+  sessionCount: number
+  sessionType: string
+  sessionLabel: string
+  durationPerSession: string
+  originalPriceINR: number
+  discountedPriceINR: number
+  originalPriceUSD: number
+  discountedPriceUSD: number
+  discountPercent: number
+  badge?: string
+  badgeColor?: string
+  highlight?: boolean
+  perks: string[]
+}
+
+const sessionPackages: SessionPackage[] = [
+  {
+    id: 'chat-bundle',
+    title: 'Chat Bundle',
+    subtitle: 'Great for beginners',
+    sessionCount: 4,
+    sessionType: 'chat',
+    sessionLabel: 'Chat Sessions',
+    durationPerSession: '30 min each',
+    originalPriceINR: 1996,
+    discountedPriceINR: 1697,
+    originalPriceUSD: 24,
+    discountedPriceUSD: 20,
+    discountPercent: 15,
+    perks: ['Text-based, low-pressure format', 'Use at your own pace', 'Valid for 6 months', 'No camera needed'],
+  },
+  {
+    id: 'starter-pack',
+    title: 'Starter Pack',
+    subtitle: 'Most popular choice',
+    sessionCount: 4,
+    sessionType: 'audio',
+    sessionLabel: 'Audio Sessions',
+    durationPerSession: '45 min each',
+    originalPriceINR: 3596,
+    discountedPriceINR: 3057,
+    originalPriceUSD: 44,
+    discountedPriceUSD: 37,
+    discountPercent: 15,
+    badge: 'Most Popular',
+    badgeColor: 'from-lavender-500 to-lavender-600',
+    highlight: true,
+    perks: ['Voice sessions, no camera needed', 'Aligns with a standard therapy arc', 'Valid for 6 months', 'Save ₹539 vs single sessions'],
+  },
+  {
+    id: 'growth-pack',
+    title: 'Growth Pack',
+    subtitle: 'Best value for deeper work',
+    sessionCount: 8,
+    sessionType: 'video',
+    sessionLabel: 'Video Sessions',
+    durationPerSession: '60 min each',
+    originalPriceINR: 10392,
+    discountedPriceINR: 8314,
+    originalPriceUSD: 128,
+    discountedPriceUSD: 102,
+    discountPercent: 20,
+    badge: 'Best Value',
+    badgeColor: 'from-emerald-500 to-teal-600',
+    perks: ['Full video — deepest connection', 'Covers a complete therapy program', 'Valid for 6 months', 'Save ₹2,078 vs single sessions'],
+  },
+]
+
 const GetHelp = () => {
   const [showBookingFlow, setShowBookingFlow] = useState(false)
   const [selectedSession, setSelectedSession] = useState<SessionRecommendation | null>(null)
+  const [showPackages, setShowPackages] = useState(false)
   const { isIndia } = useGeolocation()
 
   const handleBookSession = (session: SessionRecommendation | null = null) => {
@@ -187,10 +260,115 @@ const GetHelp = () => {
               })}
             </div>
 
+            {/* Session Packages Toggle */}
+            <div className="mt-6">
+              <button
+                onClick={() => setShowPackages(!showPackages)}
+                className="w-full flex items-center justify-between p-4 bg-gradient-to-r from-lavender-50 to-purple-50 rounded-xl border border-lavender-200/60 hover:border-lavender-300 transition-all"
+                aria-expanded={showPackages}
+                aria-controls="session-packages"
+              >
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-lg bg-lavender-100 flex items-center justify-center">
+                    <Sparkles className="w-4 h-4 text-lavender-600" />
+                  </div>
+                  <div className="text-left">
+                    <p className="text-sm font-semibold text-gray-800">Session Packages — Save up to 20%</p>
+                    <p className="text-xs text-gray-500">Bundle sessions for better value · Valid 6 months</p>
+                  </div>
+                </div>
+                <ChevronDown
+                  className={`w-5 h-5 text-lavender-500 transition-transform duration-300 ${showPackages ? 'rotate-180' : ''}`}
+                />
+              </button>
+
+              <AnimatePresence>
+                {showPackages && (
+                  <motion.div
+                    id="session-packages"
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    transition={{ duration: 0.3, ease: [0.25, 0.1, 0.25, 1] }}
+                    className="overflow-hidden"
+                  >
+                    <div className="pt-3 grid grid-cols-1 gap-3">
+                      {sessionPackages.map((pkg) => (
+                        <motion.div
+                          key={pkg.id}
+                          initial={{ opacity: 0, y: 8 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className={`relative rounded-2xl border p-4 transition-all ${
+                            pkg.highlight
+                              ? 'bg-gradient-to-br from-lavender-50 to-purple-50 border-lavender-300 shadow-soft'
+                              : 'bg-white/80 border-lavender-100/70 hover:border-lavender-200'
+                          }`}
+                        >
+                          {pkg.badge && (
+                            <span className={`absolute -top-2.5 left-4 px-3 py-0.5 rounded-full text-xs font-semibold text-white bg-gradient-to-r ${pkg.badgeColor}`}>
+                              {pkg.badge}
+                            </span>
+                          )}
+
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-0.5 flex-wrap">
+                                <p className="font-semibold text-gray-800 text-sm">{pkg.title}</p>
+                                <span className="text-xs text-gray-400">·</span>
+                                <span className="text-xs text-gray-500">{pkg.subtitle}</span>
+                              </div>
+                              <p className="text-xs text-gray-500 mb-2">
+                                {pkg.sessionCount} × {pkg.sessionLabel} · {pkg.durationPerSession}
+                              </p>
+                              <ul className="space-y-0.5">
+                                {pkg.perks.map((perk) => (
+                                  <li key={perk} className="flex items-center gap-1.5 text-xs text-gray-600">
+                                    <CheckCircle className="w-3 h-3 text-lavender-400 flex-shrink-0" />
+                                    {perk}
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+
+                            <div className="flex flex-col items-end gap-2 flex-shrink-0">
+                              <div className="text-right">
+                                <p className="text-xs text-gray-400 line-through">
+                                  {isIndia ? `₹${pkg.originalPriceINR.toLocaleString('en-IN')}` : `$${pkg.originalPriceUSD}`}
+                                </p>
+                                <p className="text-lg font-bold text-lavender-700">
+                                  {isIndia ? `₹${pkg.discountedPriceINR.toLocaleString('en-IN')}` : `$${pkg.discountedPriceUSD}`}
+                                </p>
+                                <span className="inline-block px-2 py-0.5 bg-green-100 text-green-700 text-xs font-semibold rounded-full">
+                                  {pkg.discountPercent}% off
+                                </span>
+                              </div>
+                              <motion.button
+                                whileHover={{ scale: 1.03 }}
+                                whileTap={{ scale: 0.97 }}
+                                onClick={() => handleBookSession(null)}
+                                className="px-4 py-2 bg-gradient-to-r from-lavender-500 to-lavender-600 text-white rounded-lg text-xs font-semibold shadow-sm transition-all flex items-center gap-1.5"
+                              >
+                                <Calendar className="w-3.5 h-3.5" />
+                                Book Pack
+                              </motion.button>
+                            </div>
+                          </div>
+                        </motion.div>
+                      ))}
+                    </div>
+
+                    <p className="mt-3 text-xs text-gray-500 text-center">
+                      Package pricing is discussed and confirmed during your free consultation call.
+                    </p>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
             {/* Additional Info */}
             <div className="mt-6 p-4 bg-lavender-50/50 rounded-xl border border-lavender-100/30">
               <p className="text-sm text-gray-600 leading-relaxed">
-                <strong className="text-gray-800">Payment Options:</strong> UPI, Bank Transfer, or Cash. 
+                <strong className="text-gray-800">Payment Options:</strong> UPI, Bank Transfer, or Cash.
                 Payment is due at the time of booking. Rescheduling available with 24-hour notice.
               </p>
             </div>
