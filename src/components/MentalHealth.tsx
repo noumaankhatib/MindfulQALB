@@ -219,9 +219,11 @@ const MentalHealth = () => {
                   delay: domain.delay,
                   ease: [0.25, 0.1, 0.25, 1],
                 }}
-                layout
                 className={`group bg-gradient-to-br ${domain.gradient} rounded-3xl border ${domain.borderColor} shadow-soft hover:shadow-card-hover transition-all duration-500 ease-gentle overflow-hidden`}
               >
+                {/* Preload image so it's ready when expanded */}
+                <img src={domain.image} alt="" aria-hidden="true" className="hidden" loading="eager" decoding="async" />
+
                 {/* Card Header - Clickable */}
                 <div 
                   className="p-7 cursor-pointer"
@@ -265,13 +267,13 @@ const MentalHealth = () => {
                 </div>
 
                 {/* Expandable Details */}
-                <AnimatePresence>
+                <AnimatePresence initial={false}>
                   {isExpanded && (
                     <motion.div
                       initial={{ height: 0, opacity: 0 }}
                       animate={{ height: 'auto', opacity: 1 }}
                       exit={{ height: 0, opacity: 0 }}
-                      transition={{ duration: 0.4, ease: [0.25, 0.1, 0.25, 1] }}
+                      transition={{ duration: 0.3, ease: [0.25, 0.1, 0.25, 1] }}
                       className="overflow-hidden"
                     >
                       <div className="px-7 pb-7 pt-0">
@@ -279,11 +281,12 @@ const MentalHealth = () => {
                           <div className="grid md:grid-cols-2 gap-6">
                             {/* Image */}
                             <div className="relative rounded-2xl overflow-hidden h-48">
-                              <img 
-                                src={domain.image} 
+                              <img
+                                src={domain.image}
                                 alt={domain.title}
                                 className="w-full h-full object-cover"
-                                loading="lazy"
+                                loading="eager"
+                                decoding="async"
                               />
                               <div className="absolute inset-0 bg-gradient-to-t from-lavender-900/20 via-transparent to-transparent" />
                               <div className="absolute bottom-3 left-3 px-3 py-1.5 bg-white/90 backdrop-blur-sm rounded-lg">

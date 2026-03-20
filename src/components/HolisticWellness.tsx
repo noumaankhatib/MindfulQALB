@@ -189,7 +189,6 @@ const HolisticWellness = () => {
                   delay: service.delay,
                   ease: [0.25, 0.1, 0.25, 1],
                 }}
-                layout
                 className={`group bg-gradient-to-br ${isExpanded ? colors.expanded : colors.gradient} rounded-3xl p-7 ${colors.border} border shadow-soft hover:shadow-card-hover transition-all duration-500 ease-gentle cursor-pointer ${isExpanded ? 'md:col-span-2 lg:col-span-3' : ''}`}
                 onClick={() => setExpandedCard(isExpanded ? null : service.id)}
                 onKeyDown={(e) => {
