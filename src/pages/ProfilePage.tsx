@@ -114,7 +114,7 @@ const ProfilePage = () => {
                   type="text"
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
-                  className="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:border-lavender-500 focus:ring-0 transition-all text-gray-900"
+                  className="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:border-lavender-500 focus:ring-2 focus:ring-lavender-400/40 focus:outline-none transition-all text-gray-900"
                   placeholder="Your name"
                 />
               </div>
@@ -131,7 +131,7 @@ const ProfilePage = () => {
                   type="tel"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
-                  className="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:border-lavender-500 focus:ring-0 transition-all text-gray-900"
+                  className="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:border-lavender-500 focus:ring-2 focus:ring-lavender-400/40 focus:outline-none transition-all text-gray-900"
                   placeholder="Phone number"
                 />
               </div>
@@ -139,7 +139,8 @@ const ProfilePage = () => {
 
             {message && (
               <p
-                className={`text-sm ${message.type === 'success' ? 'text-green-600' : 'text-red-600'}`}
+                role="alert"
+                className={`text-sm font-medium ${message.type === 'success' ? 'text-green-700' : 'text-red-600'}`}
               >
                 {message.text}
               </p>
@@ -148,7 +149,7 @@ const ProfilePage = () => {
             <button
               type="submit"
               disabled={saving}
-              className="inline-flex items-center gap-2 px-6 py-3 bg-lavender-600 text-white font-medium rounded-xl hover:bg-lavender-700 focus:ring-2 focus:ring-lavender-500 focus:ring-offset-2 disabled:opacity-50 transition-colors"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-lavender-600 text-white font-medium rounded-xl hover:bg-lavender-700 focus:outline-none focus:ring-2 focus:ring-lavender-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               <Save className="w-4 h-4" />
               {saving ? 'Saving...' : 'Save changes'}

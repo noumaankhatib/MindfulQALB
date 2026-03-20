@@ -94,8 +94,11 @@ const AboutTherapist = () => {
           <h2 className="font-display text-3xl md:text-4xl lg:text-5xl font-semibold text-gray-800 mb-3">
             Aqsa Khatib
           </h2>
-          <p className="text-lg md:text-xl text-lavender-600 font-medium">
+          <p className="text-lg md:text-xl text-lavender-600 font-medium mb-2">
             Counseling Psychologist & Therapist
+          </p>
+          <p className="text-sm text-gray-500">
+            MSc Clinical Psychology · RCI-Registered · 3,000+ clinical hours
           </p>
         </motion.div>
 
@@ -154,7 +157,7 @@ const AboutTherapist = () => {
                   </div>
                   <div>
                     <p className="text-lg font-bold text-lavender-600">3000+</p>
-                    <p className="text-[10px] text-gray-500">Hours</p>
+                    <p className="text-xs text-gray-500">Hours</p>
                   </div>
                 </div>
               </motion.div>
@@ -204,6 +207,8 @@ const AboutTherapist = () => {
             {/* More Details Expandable */}
             <motion.button
               onClick={() => setShowMoreDetails(!showMoreDetails)}
+              aria-expanded={showMoreDetails}
+              aria-controls="about-more-details"
               className="flex items-center gap-2 text-lavender-600 hover:text-lavender-700 font-semibold mb-4 transition-colors group"
               whileHover={{ x: 3 }}
             >
@@ -219,6 +224,7 @@ const AboutTherapist = () => {
             <AnimatePresence>
               {showMoreDetails && (
                 <motion.div
+                  id="about-more-details"
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: 'auto' }}
                   exit={{ opacity: 0, height: 0 }}

@@ -341,7 +341,7 @@ const WhoWeHelp = () => {
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -8 }}
                     transition={{ duration: 0.3, ease: [0.25, 0.1, 0.25, 1] }}
-                    className="cursor-pointer"
+                    className="cursor-pointer focus:outline-none focus:ring-2 focus:ring-lavender-500 focus:ring-offset-2 rounded-3xl"
                     onClick={() => handleToggle(card.title)}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' || e.key === ' ') {
@@ -351,7 +351,7 @@ const WhoWeHelp = () => {
                     }}
                     role="button"
                     tabIndex={0}
-                    aria-expanded="false"
+                    aria-expanded={false}
                     aria-label={`Expand ${card.title} section`}
                   >
                     {/* Card Image with Emotional Overlay */}

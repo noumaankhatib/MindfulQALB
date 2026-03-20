@@ -176,9 +176,14 @@ const SelfHelpTools = () => {
                 <img src={tool.details.image} alt="" aria-hidden="true" className="hidden" loading="eager" decoding="async" />
 
                 {/* Main Card Content */}
-                <div 
+                <div
                   className="p-8 cursor-pointer"
+                  role="button"
+                  tabIndex={0}
+                  aria-expanded={isExpanded}
+                  aria-controls={`tool-details-${tool.title.replace(/\s+/g, '-').toLowerCase()}`}
                   onClick={() => handleToggle(tool.title)}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleToggle(tool.title); } }}
                 >
                   <div className="flex items-start justify-between">
                     <motion.div 
@@ -221,6 +226,7 @@ const SelfHelpTools = () => {
                 <AnimatePresence initial={false}>
                   {isExpanded && (
                     <motion.div
+                      id={`tool-details-${tool.title.replace(/\s+/g, '-').toLowerCase()}`}
                       initial={{ height: 0, opacity: 0 }}
                       animate={{ height: 'auto', opacity: 1 }}
                       exit={{ height: 0, opacity: 0 }}

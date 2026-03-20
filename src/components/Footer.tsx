@@ -247,8 +247,8 @@ const Footer = () => {
                   )
                 })}
               </div>
-              <p className="text-xs text-gray-500 mt-2">
-                <span className="font-medium text-pink-600">@mindfulqalb</span>
+              <p className="text-xs text-gray-500 mt-2" aria-hidden="true">
+                <span className="font-medium text-pink-700">@mindfulqalb</span>
               </p>
             </div>
           </div>
@@ -279,7 +279,7 @@ const Footer = () => {
               </div>
               
               {/* Disclaimer */}
-              <p className="text-gray-400 text-xs max-w-sm md:max-w-none">
+              <p className="text-gray-500 text-xs max-w-sm md:max-w-none">
                 This platform is not a crisis service. For emergencies, call 911 or your local crisis line.
               </p>
             </div>

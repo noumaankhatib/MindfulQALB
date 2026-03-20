@@ -106,16 +106,16 @@ const Hero = () => {
               className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/80 backdrop-blur-sm border border-lavender-200/60 mb-6 shadow-soft"
             >
               <Sparkles className="w-4 h-4 text-lavender-600" />
-              <span className="text-sm font-medium text-lavender-700 tracking-wide">Licensed & Confidential Care</span>
+              <span className="text-sm font-medium text-lavender-700 tracking-wide">MSc Psychology · Licensed Counselor · 3000+ Hours</span>
             </motion.div>
 
             {/* Main Heading */}
             <motion.h1
               variants={itemVariants}
-              className="font-display text-4xl sm:text-5xl md:text-6xl lg:text-5xl xl:text-6xl font-semibold mb-6 leading-[1.1] tracking-tight text-gray-800 text-soft-shadow"
+              className="font-display text-4xl sm:text-5xl md:text-6xl font-semibold mb-6 leading-[1.1] tracking-tight text-gray-800 text-soft-shadow text-balance"
             >
-              Support for your mind,<br />
-              <span className="text-gradient">your relationships,</span><br />
+              Support for your mind,{' '}
+              <span className="text-gradient">your relationships,</span>{' '}
               and the challenges you carry.
             </motion.h1>
 
@@ -124,22 +124,22 @@ const Hero = () => {
               variants={itemVariants}
               className="text-lg sm:text-xl lg:text-lg mb-8 max-w-xl mx-auto lg:mx-0 leading-relaxed font-normal text-gray-600"
             >
-              Evidence-based mental health care for individuals and couples—accessible, human, and private.
+              Online therapy with a licensed counseling psychologist. Anxiety, relationships, burnout, grief—whatever you're carrying, you don't have to carry it alone.
             </motion.p>
 
             {/* CTA Buttons */}
             <motion.div
               variants={itemVariants}
-              className="flex flex-col sm:flex-row gap-3 justify-center lg:justify-start items-center mb-8"
+              className="flex flex-col sm:flex-row gap-3 justify-center lg:justify-start items-center mb-3"
             >
               <motion.a
                 href="#get-help"
                 whileHover={{ scale: 1.03, y: -2 }}
                 whileTap={{ scale: 0.98 }}
-                className="btn-primary px-8 py-4 text-base font-medium glow-breathe group"
+                className="btn-primary px-8 py-4 text-base font-medium glow-breathe group w-full sm:w-auto text-center"
               >
-                <span className="flex items-center gap-2.5">
-                  Begin Your Journey
+                <span className="flex items-center justify-center gap-2.5">
+                  Book a Free Consultation
                   <ArrowRight className="w-5 h-5 transition-transform duration-300 group-hover:translate-x-1" />
                 </span>
               </motion.a>
@@ -147,7 +147,7 @@ const Hero = () => {
                 href="#approach"
                 whileHover={{ scale: 1.03, y: -2 }}
                 whileTap={{ scale: 0.98 }}
-                className="btn-secondary"
+                className="btn-secondary w-full sm:w-auto text-center"
                 onClick={(e) => {
                   e.preventDefault()
                   const element = document.getElementById('approach')
@@ -161,14 +161,22 @@ const Hero = () => {
                   }
                 }}
               >
-                Explore My Approach
+                How It Works
               </motion.a>
             </motion.div>
+
+            {/* Free consultation reassurance */}
+            <motion.p
+              variants={itemVariants}
+              className="text-xs text-gray-500 text-center lg:text-left mb-6"
+            >
+              No commitment · 15-minute free call · Confidential
+            </motion.p>
 
             {/* Trust Indicators - All lavender themed for consistency */}
             <motion.div
               variants={itemVariants}
-              className="flex flex-wrap justify-center lg:justify-start gap-4 md:gap-6"
+              className="flex flex-wrap justify-center lg:justify-start gap-2 sm:gap-4 md:gap-6"
             >
               {[
                 { icon: Heart, text: 'Evidence-Based', color: 'text-lavender-600' },

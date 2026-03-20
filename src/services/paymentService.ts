@@ -101,6 +101,9 @@ export const processRazorpayPayment = async (
   const sessionType = session.id?.split('-')[0] || 'individual';
   const format = session.id?.split('-')[1] || 'video';
   const rawCoupon = options?.couponCode?.trim() || '';
+  if (rawCoupon && !/^[A-Z0-9_-]{1,32}$/i.test(rawCoupon)) {
+    return { success: false, error: 'Invalid coupon code format.' };
+  }
   const couponCodeToSend = rawCoupon ? rawCoupon.toUpperCase() : undefined;
   const body: Record<string, unknown> = { sessionType, format, currency };
   if (customerInfo.name) body.customerName = customerInfo.name;

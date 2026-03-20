@@ -202,9 +202,11 @@ const Navigation = () => {
                       <button
                         onClick={() => handleDropdownToggle(item.label)}
                         onMouseEnter={() => setOpenDropdown(item.label)}
-                        className={`flex items-center gap-1.5 px-4 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 ${
-                          openDropdown === item.label 
-                            ? 'bg-lavender-100 text-lavender-700' 
+                        aria-expanded={openDropdown === item.label}
+                        aria-haspopup="true"
+                        className={`flex items-center gap-1.5 px-4 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-lavender-500 focus:ring-offset-2 ${
+                          openDropdown === item.label
+                            ? 'bg-lavender-100 text-lavender-700'
                             : isActive
                             ? 'bg-lavender-50 text-lavender-700'
                             : 'text-gray-700 hover:bg-lavender-50 hover:text-lavender-600'
@@ -353,8 +355,9 @@ const Navigation = () => {
             {/* Mobile Menu Button */}
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="p-2.5 rounded-xl hover:bg-lavender-50 transition-colors"
-              aria-label="Toggle menu"
+              className="p-2.5 rounded-xl hover:bg-lavender-50 transition-colors focus:outline-none focus:ring-2 focus:ring-lavender-500 focus:ring-offset-2"
+              aria-label={isMobileMenuOpen ? 'Close menu' : 'Open menu'}
+              aria-expanded={isMobileMenuOpen}
             >
               {isMobileMenuOpen ? (
                 <X className="w-6 h-6 text-gray-700" />
@@ -387,7 +390,8 @@ const Navigation = () => {
                         <>
                           <button
                             onClick={() => handleMobileSectionToggle(item.label)}
-                            className={`w-full flex items-center justify-between px-4 py-3 rounded-xl font-medium transition-colors ${
+                            aria-expanded={mobileOpenSection === item.label}
+                            className={`w-full flex items-center justify-between px-4 py-3 rounded-xl font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-lavender-500 focus:ring-inset ${
                               isActive ? 'bg-lavender-50 text-lavender-700' : 'text-gray-700 hover:bg-lavender-50'
                             }`}
                           >
@@ -493,10 +497,28 @@ const Navigation = () => {
       </div>
       
       {/* Auth Modal */}
-      <AuthModal 
-        isOpen={isAuthModalOpen} 
-        onClose={() => setIsAuthModalOpen(false)} 
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
       />
+
+      {/* Sticky bottom CTA bar — mobile only, hidden when menu is open */}
+      {!isMobileMenuOpen && (
+        <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-lavender-100 px-4 py-3 flex gap-2 shadow-[0_-4px_16px_rgba(139,92,246,0.10)]">
+          <Link
+            to="/#get-help"
+            className="flex-1 py-3 bg-gradient-to-r from-lavender-600 to-lavender-700 text-white rounded-xl font-semibold text-sm text-center shadow-md shadow-lavender-500/25 active:opacity-90 transition-opacity"
+          >
+            Book Free Consultation
+          </Link>
+          <Link
+            to="/my-bookings"
+            className="px-4 py-3 bg-lavender-50 border border-lavender-200 text-lavender-700 rounded-xl font-semibold text-sm text-center active:opacity-90 transition-opacity whitespace-nowrap"
+          >
+            My Bookings
+          </Link>
+        </div>
+      )}
     </nav>
   )
 }

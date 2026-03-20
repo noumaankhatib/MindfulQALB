@@ -152,9 +152,13 @@ const GetHelp = () => {
               <Calendar className="w-6 h-6" />
               Book a Session
             </motion.button>
+            <p className="mt-2 text-xs text-gray-500 text-center flex items-center justify-center gap-1">
+              <Shield className="w-3.5 h-3.5 text-lavender-400 flex-shrink-0" />
+              Your information is kept strictly confidential. No data is shared with third parties.
+            </p>
 
             {/* Quick Book Buttons */}
-            <div className="mt-4 grid grid-cols-1 min-[400px]:grid-cols-2 gap-3">
+            <div className="mt-4 grid grid-cols-1 min-[420px]:grid-cols-2 gap-3">
               {sessionCards.map((session) => {
                 const Icon = session.icon
                 return (
@@ -163,7 +167,7 @@ const GetHelp = () => {
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                     onClick={() => handleBookSession(session)}
-                    className="flex items-center gap-3 p-3 bg-white/80 rounded-xl border border-lavender-100/50 hover:border-lavender-300 hover:shadow-soft transition-all text-left group"
+                    className="flex items-center gap-3 p-4 bg-white/80 rounded-xl border border-lavender-100/50 hover:border-lavender-300 hover:shadow-soft transition-all text-left group min-h-[56px]"
                   >
                     <div className={`w-10 h-10 flex-shrink-0 rounded-lg bg-gradient-to-br ${session.color} flex items-center justify-center shadow-sm`}>
                       <Icon className="w-5 h-5 text-white" />
@@ -229,7 +233,12 @@ const GetHelp = () => {
                   <strong className="text-sm text-gray-800 block mb-1">
                     {resource.title}
                   </strong>
-                  <p className="text-lavender-600 font-semibold text-base mb-0.5">{resource.contact}</p>
+                  <a
+                    href={`tel:${resource.contact.replace(/[^0-9+]/g, '')}`}
+                    className="text-lavender-600 font-semibold text-base mb-0.5 hover:text-lavender-700 transition-colors"
+                  >
+                    {resource.contact}
+                  </a>
                   <p className="text-gray-500 text-xs">{resource.availability}</p>
                 </motion.div>
               )

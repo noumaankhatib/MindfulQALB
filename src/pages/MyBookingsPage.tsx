@@ -182,7 +182,7 @@ const MyBookingsPage = () => {
   const getStatusStyle = (status: string) => {
     const styles: Record<string, string> = {
       confirmed: 'bg-green-100 text-green-700',
-      pending: 'bg-yellow-100 text-yellow-700',
+      pending: 'bg-amber-100 text-amber-800',
       completed: 'bg-blue-100 text-blue-700',
       cancelled: 'bg-red-100 text-red-700',
       no_show: 'bg-gray-100 text-gray-700',
@@ -254,7 +254,7 @@ const MyBookingsPage = () => {
               </p>
               <a
                 href="/#get-help"
-                className="inline-flex items-center gap-2 px-6 py-3.5 bg-gradient-to-r from-lavender-600 to-purple-600 text-white rounded-xl font-semibold hover:from-lavender-700 hover:to-purple-700 transition-all shadow-lg shadow-lavender-500/25"
+                className="inline-flex items-center gap-2 px-6 py-3.5 bg-gradient-to-r from-lavender-600 to-purple-600 text-white rounded-xl font-semibold hover:from-lavender-700 hover:to-purple-700 transition-all shadow-lg shadow-lavender-500/25 focus:outline-none focus:ring-2 focus:ring-lavender-500 focus:ring-offset-2"
               >
                 <CalendarPlus className="w-5 h-5" />
                 Book a Session
@@ -315,7 +315,7 @@ const MyBookingsPage = () => {
                                   payment.status === 'paid'
                                     ? 'bg-green-100 text-green-700'
                                     : payment.status === 'pending'
-                                    ? 'bg-yellow-100 text-yellow-700'
+                                    ? 'bg-amber-100 text-amber-800'
                                     : 'bg-gray-100 text-gray-600'
                                 }`}
                               >
@@ -364,14 +364,13 @@ const MyBookingsPage = () => {
                 );
               })}
 
-              <div className="pt-4 text-center">
+              <div className="pt-6 text-center">
                 <a
                   href="/#get-help"
-                  className="inline-flex items-center gap-2 text-lavender-600 hover:text-lavender-700 font-medium"
+                  className="inline-flex items-center gap-2 px-6 py-3.5 bg-gradient-to-r from-lavender-600 to-lavender-700 text-white rounded-xl font-semibold shadow-md shadow-lavender-500/20 hover:from-lavender-700 hover:to-lavender-800 transition-all focus:outline-none focus:ring-2 focus:ring-lavender-500 focus:ring-offset-2"
                 >
-                  <CalendarPlus className="w-4 h-4" />
-                  Book another session
-                  <ChevronRight className="w-4 h-4" />
+                  <CalendarPlus className="w-5 h-5" />
+                  Book Another Session
                 </a>
               </div>
             </div>

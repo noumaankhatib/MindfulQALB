@@ -70,9 +70,9 @@
     @apply text-lavender-700;
   }
   
-  /* Selection - Subtle lavender */
+  /* Selection - Solid lavender for sufficient contrast */
   ::selection {
-    @apply bg-lavender-200/60 text-lavender-900;
+    @apply bg-lavender-300 text-lavender-950;
   }
 }
 
@@ -289,7 +289,8 @@
     background: linear-gradient(90deg, #8B5CF6, #A78BFA);
   }
   
-  .link-underline:hover::after {
+  .link-underline:hover::after,
+  .link-underline:focus-visible::after {
     @apply w-full;
   }
   
@@ -373,6 +374,13 @@
   
   * {
     border-width: 2px !important;
+  }
+}
+
+/* Sticky mobile bottom CTA bar — pad page content so nothing hides behind it */
+@media (max-width: 1023px) {
+  body {
+    padding-bottom: 72px;
   }
 }
 
