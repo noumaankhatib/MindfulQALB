@@ -59,8 +59,12 @@ async function handleCreate(req: VercelRequest, res: VercelResponse, requestId: 
     return res.status(authResult.status).json({ ...authResult.body, requestId });
   }
 
-  const { sessionType, format, date, time, customer } = req.body;
+  const { sessionType, format, date, time, customer, packageId } = req.body;
   const userId = authResult.caller.userId;
+
+  // Validate package if provided
+  const isPackageSession = typeof packageId === 'string' && packageId.length > 0;
+  let resolvedPackageDbId: string | null = null;
 
   const sessionTypeResult = validateSessionType(sessionType);
   if (!sessionTypeResult.valid) return res.status(400).json({ error: sessionTypeResult.error, requestId });
@@ -85,6 +89,29 @@ async function handleCreate(req: VercelRequest, res: VercelResponse, requestId: 
   const supabase = getSupabaseServer();
   if (!supabase) {
     return res.status(503).json({ success: false, error: 'Server configuration error', requestId });
+  }
+
+  // Validate package availability if booking against a package
+  if (isPackageSession) {
+    const { data: pkg, error: pkgErr } = await supabase
+      .from('session_packages')
+      .select('id, status, sessions_remaining, valid_until, session_type, session_format')
+      .eq('id', packageId)
+      .maybeSingle();
+
+    if (pkgErr || !pkg) {
+      return res.status(404).json({ success: false, error: 'Package not found', requestId });
+    }
+    if (pkg.status !== 'active') {
+      return res.status(400).json({ success: false, error: `Package is not active (status: ${pkg.status})`, requestId });
+    }
+    if (pkg.sessions_remaining <= 0) {
+      return res.status(400).json({ success: false, error: 'No sessions remaining in this package', requestId });
+    }
+    if (pkg.valid_until && new Date(pkg.valid_until) < new Date()) {
+      return res.status(400).json({ success: false, error: 'This package has expired', requestId });
+    }
+    resolvedPackageDbId = pkg.id;
   }
 
   const rawFormat = format.toLowerCase();
@@ -137,6 +164,8 @@ async function handleCreate(req: VercelRequest, res: VercelResponse, requestId: 
     notes,
     created_at: now,
     updated_at: now,
+    // Package fields
+    ...(resolvedPackageDbId ? { package_id: resolvedPackageDbId, is_package_session: true } : {}),
   };
 
   const { data, error } = await supabase.from('bookings').insert(row).select('id').single();
@@ -146,12 +175,23 @@ async function handleCreate(req: VercelRequest, res: VercelResponse, requestId: 
     return res.status(500).json({ success: false, error: 'Failed to create booking', requestId });
   }
 
-  console.log(`[${requestId}] Booking created: db=${data.id}`);
+  // Decrement package sessions atomically via DB function
+  if (resolvedPackageDbId) {
+    const { data: useResult, error: useErr } = await supabase
+      .rpc('use_package_session', { p_package_id: resolvedPackageDbId });
+    if (useErr || !useResult?.success) {
+      // Booking was created but package decrement failed — log and continue (admin can fix)
+      console.error(`[${requestId}] use_package_session failed for ${resolvedPackageDbId}:`, useErr?.message ?? useResult?.error);
+    }
+  }
+
+  console.log(`[${requestId}] Booking created: db=${data.id}${resolvedPackageDbId ? ` (package ${resolvedPackageDbId})` : ''}`);
   res.json({
     success: true,
     bookingId: data.id,
     databaseId: data.id,
-    message: 'Booking created successfully',
+    isPackageSession: !!resolvedPackageDbId,
+    message: resolvedPackageDbId ? 'Package session booked successfully' : 'Booking created successfully',
     requestId,
   });
 }

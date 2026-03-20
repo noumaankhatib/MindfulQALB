@@ -13,6 +13,8 @@ import {
   ExternalLink,
   Copy,
   Check,
+  Sparkles,
+  Package,
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
@@ -47,11 +49,31 @@ interface PaymentRow {
   paid_at: string | null;
 }
 
+interface PackageRow {
+  id: string;
+  package_id: string;
+  package_title: string;
+  session_type: string;
+  session_format: string;
+  duration_minutes: number;
+  total_sessions: number;
+  sessions_used: number;
+  sessions_remaining: number;
+  status: string;
+  valid_until: string | null;
+  amount_paid_paise: number | null;
+  currency: string;
+  created_at: string;
+}
+
 const MyBookingsPage = () => {
   const { user, profile, loading: authLoading } = useAuth();
   const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState<'bookings' | 'packages'>('bookings');
   const [bookings, setBookings] = useState<BookingRow[]>([]);
   const [paymentsByBooking, setPaymentsByBooking] = useState<Record<string, PaymentRow>>({});
+  const [packages, setPackages] = useState<PackageRow[]>([]);
+  const [packagesLoading, setPackagesLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
@@ -163,6 +185,32 @@ const MyBookingsPage = () => {
     }
   };
 
+  const fetchMyPackages = async () => {
+    if (!user) return;
+    setPackagesLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('session_packages')
+        .select('id, package_id, package_title, session_type, session_format, duration_minutes, total_sessions, sessions_used, sessions_remaining, status, valid_until, amount_paid_paise, currency, created_at')
+        .or(`user_id.eq.${user.id},customer_email.ilike.${user.email ?? ''}`)
+        .order('created_at', { ascending: false })
+        .limit(50);
+
+      if (!error && data) setPackages(data as PackageRow[]);
+    } catch (err) {
+      logError('My Packages fetch error', err);
+    } finally {
+      setPackagesLoading(false);
+    }
+  };
+
+  // Load packages when tab switches to packages
+  useEffect(() => {
+    if (activeTab === 'packages' && user && packages.length === 0 && !packagesLoading) {
+      fetchMyPackages();
+    }
+  }, [activeTab, user]);
+
   const getFormatIcon = (format: string) => {
     switch (format) {
       case 'video':
@@ -220,20 +268,164 @@ const MyBookingsPage = () => {
             Back to Home
           </Link>
 
-          <div className="mb-8">
+          <div className="mb-6">
             <div className="flex items-center gap-3 mb-2">
               <div className="p-2 rounded-xl bg-lavender-100 text-lavender-600">
                 <Calendar className="w-5 h-5" />
               </div>
-              <h1 className="text-3xl font-bold text-gray-900 font-display">My Bookings</h1>
+              <h1 className="text-3xl font-bold text-gray-900 font-display">My Sessions</h1>
             </div>
             <p className="text-gray-600 ml-12">
               {profile?.full_name ? `Welcome back, ${profile.full_name}. ` : ''}
-              Here are your therapy session bookings and payment details.
+              Manage your bookings and session packages.
             </p>
           </div>
 
-          {loading ? (
+          {/* Tabs */}
+          <div className="flex gap-1 bg-lavender-50 p-1 rounded-xl mb-6 w-fit">
+            <button
+              onClick={() => setActiveTab('bookings')}
+              className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold transition-all ${
+                activeTab === 'bookings'
+                  ? 'bg-white text-lavender-700 shadow-sm'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <Calendar className="w-4 h-4" />
+              Bookings
+              {bookings.length > 0 && (
+                <span className="bg-lavender-100 text-lavender-700 text-xs px-2 py-0.5 rounded-full">{bookings.length}</span>
+              )}
+            </button>
+            <button
+              onClick={() => setActiveTab('packages')}
+              className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold transition-all ${
+                activeTab === 'packages'
+                  ? 'bg-white text-lavender-700 shadow-sm'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <Sparkles className="w-4 h-4" />
+              Packages
+              {packages.filter(p => p.status === 'active').length > 0 && (
+                <span className="bg-green-100 text-green-700 text-xs px-2 py-0.5 rounded-full">
+                  {packages.filter(p => p.status === 'active').length} active
+                </span>
+              )}
+            </button>
+          </div>
+
+          {/* ── PACKAGES TAB ── */}
+          {activeTab === 'packages' && (
+            <>
+              {packagesLoading ? (
+                <div className="flex justify-center py-16">
+                  <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-lavender-600" />
+                </div>
+              ) : packages.length === 0 ? (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="bg-white rounded-2xl border border-lavender-100 shadow-gentle p-10 text-center"
+                >
+                  <div className="w-20 h-20 mx-auto mb-6 rounded-2xl bg-lavender-100 flex items-center justify-center">
+                    <Sparkles className="w-10 h-10 text-lavender-500" />
+                  </div>
+                  <h2 className="text-xl font-semibold text-gray-900 mb-2">No packages yet</h2>
+                  <p className="text-gray-500 mb-6 max-w-sm mx-auto text-sm">
+                    Buy a session bundle to save up to 20% and have sessions ready whenever you need them.
+                  </p>
+                  <a
+                    href="/#get-help"
+                    className="inline-flex items-center gap-2 px-6 py-3.5 bg-gradient-to-r from-lavender-600 to-lavender-700 text-white rounded-xl font-semibold shadow-md"
+                  >
+                    <Sparkles className="w-5 h-5" />
+                    View Packages
+                  </a>
+                </motion.div>
+              ) : (
+                <div className="space-y-4">
+                  {packages.map((pkg) => {
+                    const progress = pkg.total_sessions > 0 ? (pkg.sessions_used / pkg.total_sessions) * 100 : 0;
+                    const statusColor: Record<string, string> = {
+                      active: 'bg-green-100 text-green-700',
+                      exhausted: 'bg-gray-100 text-gray-600',
+                      expired: 'bg-red-100 text-red-600',
+                      pending_payment: 'bg-amber-100 text-amber-700',
+                      refunded: 'bg-blue-100 text-blue-700',
+                      cancelled: 'bg-gray-100 text-gray-500',
+                    };
+                    return (
+                      <motion.div
+                        key={pkg.id}
+                        initial={{ opacity: 0, y: 12 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="bg-white rounded-2xl border border-lavender-100 shadow-gentle p-6"
+                      >
+                        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+                          <div className="flex items-start gap-3">
+                            <div className="p-2.5 rounded-xl bg-lavender-50 flex-shrink-0">
+                              <Package className="w-5 h-5 text-lavender-500" />
+                            </div>
+                            <div>
+                              <p className="font-semibold text-gray-900">{pkg.package_title}</p>
+                              <p className="text-sm text-gray-500 capitalize mt-0.5">
+                                {pkg.session_type} · {pkg.session_format} · {pkg.duration_minutes} min/session
+                              </p>
+                              {pkg.valid_until && (
+                                <p className="text-xs text-gray-400 mt-0.5">
+                                  Valid until {new Date(pkg.valid_until).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex flex-col items-start sm:items-end gap-1.5 flex-shrink-0">
+                            <span className={`px-3 py-1 rounded-full text-xs font-semibold capitalize ${statusColor[pkg.status] ?? 'bg-gray-100 text-gray-600'}`}>
+                              {pkg.status.replace('_', ' ')}
+                            </span>
+                            {pkg.amount_paid_paise != null && (
+                              <p className="text-xs text-gray-400">
+                                Paid {pkg.currency === 'USD' ? `$${(pkg.amount_paid_paise / 100).toFixed(0)}` : `₹${(pkg.amount_paid_paise / 100).toLocaleString('en-IN')}`}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Progress bar */}
+                        <div className="mt-4">
+                          <div className="flex justify-between text-xs text-gray-500 mb-1.5">
+                            <span>{pkg.sessions_used} of {pkg.total_sessions} sessions used</span>
+                            <span className="font-medium text-lavender-700">{pkg.sessions_remaining} remaining</span>
+                          </div>
+                          <div className="h-2 bg-lavender-100 rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-gradient-to-r from-lavender-500 to-lavender-600 rounded-full transition-all"
+                              style={{ width: `${Math.min(100, progress)}%` }}
+                            />
+                          </div>
+                        </div>
+
+                        {pkg.status === 'active' && pkg.sessions_remaining > 0 && (
+                          <div className="mt-4 pt-4 border-t border-lavender-50">
+                            <a
+                              href="/#get-help"
+                              className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-lavender-600 to-lavender-700 text-white rounded-xl font-semibold text-sm shadow-md"
+                            >
+                              <Calendar className="w-4 h-4" />
+                              Book a session from this package
+                            </a>
+                          </div>
+                        )}
+                      </motion.div>
+                    );
+                  })}
+                </div>
+              )}
+            </>
+          )}
+
+          {/* ── BOOKINGS TAB ── */}
+          {activeTab === 'bookings' && (loading ? (
             <div className="flex justify-center py-16">
               <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-lavender-600" />
             </div>
@@ -373,7 +565,7 @@ const MyBookingsPage = () => {
                 </a>
               </div>
             </div>
-          )}
+          ))}
         </div>
       </main>
 

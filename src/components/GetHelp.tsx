@@ -3,37 +3,25 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Phone, MessageCircle, AlertTriangle, ExternalLink, IndianRupee, Clock, Shield, CheckCircle, Video, Headphones, Users, Calendar, ChevronDown, Sparkles } from 'lucide-react'
 // BookingCalendar removed - using BookingFlow modal instead
 import BookingFlow from './BookingFlow'
+import PackageBookingFlow, { type SessionPackageDef } from './PackageBookingFlow'
 import { sessionTypes, SessionRecommendation } from '../data/chatbotFlow'
 import { useGeolocation, formatPrice } from '../hooks/useGeolocation'
 import { isTestMode } from '../services/paymentService'
 import feeStructureImage from '../assets/images/fee/fee-structure.png'
 
-interface SessionPackage {
-  id: string
-  title: string
-  subtitle: string
-  sessionCount: number
-  sessionType: string
-  sessionLabel: string
-  durationPerSession: string
-  originalPriceINR: number
-  discountedPriceINR: number
-  originalPriceUSD: number
-  discountedPriceUSD: number
-  discountPercent: number
+interface SessionPackage extends SessionPackageDef {
   badge?: string
   badgeColor?: string
   highlight?: boolean
-  perks: string[]
 }
 
 const sessionPackages: SessionPackage[] = [
   {
-    id: 'chat-bundle',
+    id: 'chat_bundle',
     title: 'Chat Bundle',
     subtitle: 'Great for beginners',
     sessionCount: 4,
-    sessionType: 'chat',
+    sessionFormat: 'chat',
     sessionLabel: 'Chat Sessions',
     durationPerSession: '30 min each',
     originalPriceINR: 1996,
@@ -44,11 +32,11 @@ const sessionPackages: SessionPackage[] = [
     perks: ['Text-based, low-pressure format', 'Use at your own pace', 'Valid for 6 months', 'No camera needed'],
   },
   {
-    id: 'starter-pack',
+    id: 'starter_pack',
     title: 'Starter Pack',
     subtitle: 'Most popular choice',
     sessionCount: 4,
-    sessionType: 'audio',
+    sessionFormat: 'audio',
     sessionLabel: 'Audio Sessions',
     durationPerSession: '45 min each',
     originalPriceINR: 3596,
@@ -62,11 +50,11 @@ const sessionPackages: SessionPackage[] = [
     perks: ['Voice sessions, no camera needed', 'Aligns with a standard therapy arc', 'Valid for 6 months', 'Save ₹539 vs single sessions'],
   },
   {
-    id: 'growth-pack',
+    id: 'growth_pack',
     title: 'Growth Pack',
     subtitle: 'Best value for deeper work',
     sessionCount: 8,
-    sessionType: 'video',
+    sessionFormat: 'video',
     sessionLabel: 'Video Sessions',
     durationPerSession: '60 min each',
     originalPriceINR: 10392,
@@ -84,6 +72,7 @@ const GetHelp = () => {
   const [showBookingFlow, setShowBookingFlow] = useState(false)
   const [selectedSession, setSelectedSession] = useState<SessionRecommendation | null>(null)
   const [showPackages, setShowPackages] = useState(false)
+  const [selectedPackage, setSelectedPackage] = useState<SessionPackage | null>(null)
   const { isIndia } = useGeolocation()
 
   const handleBookSession = (session: SessionRecommendation | null = null) => {
@@ -345,11 +334,11 @@ const GetHelp = () => {
                               <motion.button
                                 whileHover={{ scale: 1.03 }}
                                 whileTap={{ scale: 0.97 }}
-                                onClick={() => handleBookSession(null)}
+                                onClick={() => setSelectedPackage(pkg)}
                                 className="px-4 py-2 bg-gradient-to-r from-lavender-500 to-lavender-600 text-white rounded-lg text-xs font-semibold shadow-sm transition-all flex items-center gap-1.5"
                               >
-                                <Calendar className="w-3.5 h-3.5" />
-                                Book Pack
+                                <Sparkles className="w-3.5 h-3.5" />
+                                Buy Pack
                               </motion.button>
                             </div>
                           </div>
@@ -357,8 +346,9 @@ const GetHelp = () => {
                       ))}
                     </div>
 
-                    <p className="mt-3 text-xs text-gray-500 text-center">
-                      Package pricing is discussed and confirmed during your free consultation call.
+                    <p className="mt-3 text-xs text-gray-500 text-center flex items-center justify-center gap-1.5">
+                      <Shield className="w-3 h-3 text-lavender-400 flex-shrink-0" />
+                      Secure payment · Sessions valid 6 months · Rescheduling with 24h notice
                     </p>
                   </motion.div>
                 )}
@@ -451,6 +441,16 @@ const GetHelp = () => {
           }}
         />
       )}
+
+      {/* Package Purchase Flow Modal */}
+      <AnimatePresence>
+        {selectedPackage && (
+          <PackageBookingFlow
+            pkg={selectedPackage}
+            onClose={() => setSelectedPackage(null)}
+          />
+        )}
+      </AnimatePresence>
     </section>
   )
 }

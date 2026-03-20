@@ -297,3 +297,28 @@ export type Profile = Database['public']['Tables']['profiles']['Row'];
 export type Booking = Database['public']['Tables']['bookings']['Row'];
 export type Payment = Database['public']['Tables']['payments']['Row'];
 export type ConsentRecord = Database['public']['Tables']['consent_records']['Row'];
+
+// Session package purchase record
+export interface SessionPackageRow {
+  id: string;
+  user_id: string | null;
+  customer_email: string;
+  customer_name: string | null;
+  customer_phone: string | null;
+  package_id: 'chat_bundle' | 'starter_pack' | 'growth_pack';
+  package_title: string;
+  session_type: 'individual' | 'couples' | 'family';
+  session_format: 'chat' | 'audio' | 'video';
+  duration_minutes: number;
+  total_sessions: number;
+  sessions_used: number;
+  sessions_remaining: number;
+  amount_paid_paise: number | null;
+  currency: string;
+  razorpay_order_id: string | null;
+  razorpay_payment_id: string | null;
+  status: 'pending_payment' | 'active' | 'exhausted' | 'expired' | 'refunded' | 'cancelled';
+  valid_until: string | null;
+  created_at: string;
+  updated_at: string;
+}

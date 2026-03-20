@@ -111,7 +111,7 @@ interface DashboardStats {
 
 const AdminPage = () => {
   const { user, profile, session, loading: authLoading } = useAuth();
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'bookings' | 'payments' | 'consent' | 'users' | 'coupons'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'bookings' | 'payments' | 'consent' | 'users' | 'coupons' | 'packages'>('dashboard');
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [consentRecords, setConsentRecords] = useState<ConsentRecordRow[]>([]);
@@ -157,6 +157,14 @@ const AdminPage = () => {
   const [selectedConsentIds, setSelectedConsentIds] = useState<Set<string>>(new Set());
   const [selectedUserIds, setSelectedUserIds] = useState<Set<string>>(new Set());
   const [bulkDeleting, setBulkDeleting] = useState<'bookings' | 'payments' | 'coupons' | 'consent' | 'users' | null>(null);
+  const [adminPackages, setAdminPackages] = useState<Array<{
+    id: string; user_id: string | null; customer_name: string | null; customer_email: string;
+    package_id: string; package_title: string; session_type: string; session_format: string;
+    duration_minutes: number; total_sessions: number; sessions_used: number; sessions_remaining: number;
+    status: string; valid_until: string | null; amount_paid_paise: number | null; currency: string; created_at: string;
+  }>>([]);
+  const [packagesAdminLoading, setPackagesAdminLoading] = useState(false);
+  const [packagesAdminLoaded, setPackagesAdminLoaded] = useState(false);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -841,6 +849,7 @@ const AdminPage = () => {
                     { id: 'dashboard', label: 'Dashboard', icon: BarChart3 },
                     { id: 'bookings', label: 'Bookings', icon: Calendar, badge: pendingCount },
                     { id: 'payments', label: 'Payments', icon: CreditCard },
+                    { id: 'packages', label: 'Packages', icon: Inbox },
                     { id: 'coupons', label: 'Coupons', icon: Tag },
                     { id: 'consent', label: 'Consent', icon: FileCheck },
                     { id: 'users', label: 'Users', icon: Users },
@@ -2474,6 +2483,122 @@ const AdminPage = () => {
           </div>
         </div>
       )}
+
+      {/* Packages tab content (outside main content div so it renders at page level) */}
+      {!loading && activeTab === 'packages' && (() => {
+        // Lazy-load packages when tab is opened
+        if (!packagesAdminLoaded && !packagesAdminLoading) {
+          setPackagesAdminLoading(true);
+          supabase
+            .from('session_packages')
+            .select('id, user_id, customer_name, customer_email, package_id, package_title, session_type, session_format, duration_minutes, total_sessions, sessions_used, sessions_remaining, status, valid_until, amount_paid_paise, currency, created_at')
+            .order('created_at', { ascending: false })
+            .limit(500)
+            .then(({ data }) => {
+              if (data) setAdminPackages(data as typeof adminPackages);
+              setPackagesAdminLoaded(true);
+              setPackagesAdminLoading(false);
+            });
+        }
+
+        const pkgStatusColor: Record<string, string> = {
+          active: 'bg-green-100 text-green-700',
+          exhausted: 'bg-gray-100 text-gray-600',
+          expired: 'bg-red-100 text-red-600',
+          pending_payment: 'bg-amber-100 text-amber-700',
+          refunded: 'bg-blue-100 text-blue-700',
+          cancelled: 'bg-gray-100 text-gray-500',
+        };
+
+        return (
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="p-2 rounded-xl bg-lavender-100 text-lavender-600">
+                  <Inbox className="w-5 h-5" />
+                </div>
+                <h2 className="text-xl font-bold text-gray-900 font-display">Session Packages</h2>
+                <span className="text-sm text-gray-500 ml-1">({adminPackages.length} total)</span>
+              </div>
+
+              {packagesAdminLoading && (
+                <div className="flex justify-center py-12">
+                  <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-lavender-600" />
+                </div>
+              )}
+
+              {packagesAdminLoaded && adminPackages.length === 0 && (
+                <div className="bg-white rounded-2xl border border-lavender-100 p-10 text-center text-gray-500">
+                  No packages purchased yet.
+                </div>
+              )}
+
+              {packagesAdminLoaded && adminPackages.length > 0 && (
+                <div className="bg-white rounded-2xl border border-lavender-100 shadow-gentle overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead className="bg-lavender-50 border-b border-lavender-100">
+                        <tr>
+                          {['Client', 'Package', 'Sessions', 'Progress', 'Status', 'Paid', 'Valid Until', 'Purchased'].map((h) => (
+                            <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-600 whitespace-nowrap">{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-lavender-50">
+                        {adminPackages.map((pkg) => {
+                          const progress = pkg.total_sessions > 0 ? (pkg.sessions_used / pkg.total_sessions) * 100 : 0;
+                          return (
+                            <tr key={pkg.id} className="hover:bg-lavender-50/40 transition-colors">
+                              <td className="px-4 py-3">
+                                <p className="font-medium text-gray-800">{pkg.customer_name ?? '—'}</p>
+                                <p className="text-xs text-gray-400">{pkg.customer_email}</p>
+                              </td>
+                              <td className="px-4 py-3">
+                                <p className="font-medium text-gray-800">{pkg.package_title}</p>
+                                <p className="text-xs text-gray-400 capitalize">{pkg.session_type} · {pkg.session_format} · {pkg.duration_minutes}min</p>
+                              </td>
+                              <td className="px-4 py-3 text-center">
+                                <span className="text-lavender-700 font-semibold">{pkg.sessions_remaining}</span>
+                                <span className="text-gray-400 text-xs"> / {pkg.total_sessions}</span>
+                              </td>
+                              <td className="px-4 py-3 min-w-[120px]">
+                                <div className="h-2 bg-lavender-100 rounded-full overflow-hidden">
+                                  <div className="h-full bg-lavender-500 rounded-full" style={{ width: `${Math.min(100, progress)}%` }} />
+                                </div>
+                                <p className="text-xs text-gray-400 mt-0.5">{pkg.sessions_used} used</p>
+                              </td>
+                              <td className="px-4 py-3">
+                                <span className={`px-2 py-0.5 rounded-full text-xs font-semibold capitalize ${pkgStatusColor[pkg.status] ?? 'bg-gray-100 text-gray-600'}`}>
+                                  {pkg.status.replace('_', ' ')}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
+                                {pkg.amount_paid_paise != null
+                                  ? pkg.currency === 'USD'
+                                    ? `$${(pkg.amount_paid_paise / 100).toFixed(0)}`
+                                    : `₹${(pkg.amount_paid_paise / 100).toLocaleString('en-IN')}`
+                                  : '—'}
+                              </td>
+                              <td className="px-4 py-3 text-sm text-gray-500 whitespace-nowrap">
+                                {pkg.valid_until
+                                  ? new Date(pkg.valid_until).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
+                                  : '—'}
+                              </td>
+                              <td className="px-4 py-3 text-xs text-gray-400 whitespace-nowrap">
+                                {new Date(pkg.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </motion.div>
+          </div>
+        );
+      })()}
 
       <Footer />
     </div>
