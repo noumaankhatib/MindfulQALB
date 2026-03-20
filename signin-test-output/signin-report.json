@@ -1,0 +1,61 @@
+{
+  "url": "https://www.mindfulqalb.com/",
+  "timestamp": "2026-02-27T04:26:15.140Z",
+  "credentials": {
+    "email": "test@example.com",
+    "password": "***"
+  },
+  "modalError": null,
+  "authRequests": [
+    {
+      "type": "request",
+      "url": "https://www.mindfulqalb.com/sb/auth/v1/token?grant_type=password",
+      "method": "POST"
+    },
+    {
+      "type": "response",
+      "url": "https://www.mindfulqalb.com/sb/auth/v1/token?grant_type=password",
+      "method": "POST",
+      "status": 400,
+      "headers": {
+        "sb-project-ref": "tmegikggtccjqskuwpxi",
+        "x-sb-error-code": "invalid_credentials",
+        "access-control-expose-headers": "X-Total-Count, Link, X-Supabase-Api-Version",
+        "cf-cache-status": "DYNAMIC",
+        "sb-request-id": "019c9d59-004c-77c8-9ea1-7663a6603b85",
+        "x-envoy-attempt-count": "1",
+        "x-content-type-options": "nosniff",
+        "date": "Fri, 27 Feb 2026 04:26:21 GMT",
+        "content-type": "application/json",
+        "vary": "Origin, Accept-Encoding",
+        "x-frame-options": "SAMEORIGIN",
+        "strict-transport-security": "max-age=31536000; includeSubDomains; preload",
+        "content-security-policy": "frame-ancestors 'self'",
+        "cache-control": "public, max-age=0, must-revalidate",
+        "x-supabase-api-version": "2024-01-01",
+        "x-vercel-cache": "MISS",
+        "x-envoy-upstream-service-time": "17",
+        "access-control-allow-credentials": "true",
+        "referrer-policy": "strict-origin-when-cross-origin",
+        "cf-ray": "9d44ec6d3d3799af-BOM",
+        "permissions-policy": "camera=(self \"https://checkout.razorpay.com\"), microphone=(self \"https://checkout.razorpay.com\"), geolocation=(), accelerometer=(), gyroscope=()",
+        "access-control-allow-origin": "https://www.mindfulqalb.com",
+        "content-length": "68",
+        "x-xss-protection": "1; mode=block",
+        "server": "Vercel",
+        "sb-gateway-version": "1",
+        "x-vercel-id": "bom1::rwhdn-1772166381548-e782f444950a"
+      },
+      "bodyLength": 68,
+      "bodyPreview": "{\"code\":\"invalid_credentials\",\"message\":\"Invalid login credentials\"}",
+      "bodyParseError": null,
+      "contentType": "application/json"
+    }
+  ],
+  "consoleErrors": [
+    "Failed to load resource: the server responded with a status of 400 ()"
+  ],
+  "jsonErrorFound": false,
+  "error": "page.screenshot: Target page, context or browser has been closed",
+  "stack": "page.screenshot: Target page, context or browser has been closed\n    at main (/home/noumaan/Documents/aqsa/therapy-website-react/MindfulQALB/scripts/test-signin-flow.js:182:16)"
+}

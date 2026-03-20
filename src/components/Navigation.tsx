@@ -40,7 +40,7 @@ const navItems: NavItem[] = [
   {
     label: 'Resources',
     dropdown: [
-      { label: 'Self-Help Tools', href: '#self-help', description: 'Empower your journey', icon: '🛠️' },
+      // { label: 'Self-Help Tools', href: '#self-help', description: 'Empower your journey', icon: '🛠️' },
       { label: 'Guided Exercises', href: '#self-help', description: 'Practical wellness activities', icon: '🧘' },
       { label: 'Articles & Blogs', href: '#self-help', description: 'Insights and education', icon: '📚' },
       { label: 'Assessments', href: '#self-help', description: 'Understand yourself better', icon: '📋' },

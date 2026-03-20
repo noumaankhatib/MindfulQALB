@@ -131,7 +131,7 @@ const HomePage = () => {
         {/* <TherapySupport /> */}
         <FamilyCounseling />
         <HolisticWellness />
-        <SelfHelpTools />
+        {/* <SelfHelpTools /> */}
         <SupportGroups />
         <Programs />
         <GetHelp />
