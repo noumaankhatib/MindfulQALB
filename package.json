@@ -9,7 +9,7 @@
     "dev:full": "vercel dev",
     "clean": "rm -rf dist",
     "build": "tsc && vite build",
-    "postbuild": "node -e \"if(!process.env.VERCEL && !process.env.CI) { require('child_process').execSync('react-snap', {stdio:'inherit'}) } else { console.log('Skipping react-snap on CI/Vercel') }\"",
+    "postbuild": "node --input-type=module -e \"import {execSync} from 'child_process'; if(!process.env.VERCEL && !process.env.CI){execSync('react-snap',{stdio:'inherit'})}else{console.log('Skipping react-snap on CI/Vercel')}\"",
     "build:clean": "npm run clean && npm run build",
     "preview": "vite preview",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",

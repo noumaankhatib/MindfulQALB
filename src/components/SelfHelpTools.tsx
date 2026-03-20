@@ -170,9 +170,11 @@ const SelfHelpTools = () => {
                   delay: tool.delay,
                   ease: [0.25, 0.1, 0.25, 1],
                 }}
-                layout
                 className={`group bg-gradient-to-br from-lavender-50 to-lavender-50/50 rounded-3xl border border-lavender-100/60 shadow-soft hover:shadow-card-hover transition-all duration-500 ease-gentle overflow-hidden ${isExpanded ? 'md:col-span-2 lg:col-span-2' : ''}`}
               >
+                {/* Preload image so it's ready when expanded */}
+                <img src={tool.details.image} alt="" aria-hidden="true" className="hidden" loading="eager" decoding="async" />
+
                 {/* Main Card Content */}
                 <div 
                   className="p-8 cursor-pointer"
@@ -216,13 +218,13 @@ const SelfHelpTools = () => {
                 </div>
 
                 {/* Expandable Details */}
-                <AnimatePresence>
+                <AnimatePresence initial={false}>
                   {isExpanded && (
                     <motion.div
                       initial={{ height: 0, opacity: 0 }}
                       animate={{ height: 'auto', opacity: 1 }}
                       exit={{ height: 0, opacity: 0 }}
-                      transition={{ duration: 0.4, ease: [0.25, 0.1, 0.25, 1] }}
+                      transition={{ duration: 0.3, ease: [0.25, 0.1, 0.25, 1] }}
                       className="overflow-hidden"
                     >
                       <div className="px-8 pb-8 pt-0">
@@ -230,11 +232,12 @@ const SelfHelpTools = () => {
                           <div className="grid md:grid-cols-2 gap-6">
                             {/* Image */}
                             <div className="relative rounded-2xl overflow-hidden h-48 md:h-full">
-                              <img 
-                                src={tool.details.image} 
+                              <img
+                                src={tool.details.image}
                                 alt={tool.title}
                                 className="w-full h-full object-cover"
-                                loading="lazy"
+                                loading="eager"
+                                decoding="async"
                               />
                               <div className="absolute inset-0 bg-gradient-to-t from-lavender-900/20 via-transparent to-transparent" />
                             </div>
