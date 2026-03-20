@@ -6,7 +6,6 @@ import BookingFlow from './BookingFlow'
 import PackageBookingFlow, { type SessionPackageDef } from './PackageBookingFlow'
 import { sessionTypes, SessionRecommendation } from '../data/chatbotFlow'
 import { useGeolocation, formatPrice } from '../hooks/useGeolocation'
-import { isTestMode } from '../services/paymentService'
 import feeStructureImage from '../assets/images/fee/fee-structure.png'
 
 interface SessionPackage extends SessionPackageDef {
@@ -195,16 +194,8 @@ const GetHelp = () => {
               />
             </motion.div>
 
-            {/* Test Mode Indicator */}
-            {isTestMode() && (
-              <div className="mt-4 p-2 bg-amber-50 rounded-lg border border-amber-200 text-center">
-                <span className="text-xs text-amber-700 font-medium">
-                  🧪 Test Mode - Payments are simulated
-                </span>
-              </div>
-            )}
 
-            {/* Primary Book Now Button */}
+{/* Primary Book Now Button */}
             <motion.button
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
@@ -338,7 +329,7 @@ const GetHelp = () => {
                                 className="px-4 py-2 bg-gradient-to-r from-lavender-500 to-lavender-600 text-white rounded-lg text-xs font-semibold shadow-sm transition-all flex items-center gap-1.5"
                               >
                                 <Sparkles className="w-3.5 h-3.5" />
-                                Buy Pack
+                                Enquire
                               </motion.button>
                             </div>
                           </div>
@@ -348,7 +339,7 @@ const GetHelp = () => {
 
                     <p className="mt-3 text-xs text-gray-500 text-center flex items-center justify-center gap-1.5">
                       <Shield className="w-3 h-3 text-lavender-400 flex-shrink-0" />
-                      Secure payment · Sessions valid 6 months · Rescheduling with 24h notice
+                      No commitment until you're ready · Sessions valid 6 months · Rescheduling with 24h notice
                     </p>
                   </motion.div>
                 )}
@@ -359,7 +350,7 @@ const GetHelp = () => {
             <div className="mt-6 p-4 bg-lavender-50/50 rounded-xl border border-lavender-100/30">
               <p className="text-sm text-gray-600 leading-relaxed">
                 <strong className="text-gray-800">Payment Options:</strong> UPI, Bank Transfer, or Cash.
-                Payment is due at the time of booking. Rescheduling available with 24-hour notice.
+                Package pricing is finalised after a brief consultation with Aqsa. Rescheduling available with 24-hour notice.
               </p>
             </div>
           </motion.div>
@@ -448,6 +439,7 @@ const GetHelp = () => {
           <PackageBookingFlow
             pkg={selectedPackage}
             onClose={() => setSelectedPackage(null)}
+            isIndia={isIndia}
           />
         )}
       </AnimatePresence>

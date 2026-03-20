@@ -103,10 +103,20 @@ const Hero = () => {
             {/* Authority Badge - Lavender themed */}
             <motion.div
               variants={itemVariants}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/80 backdrop-blur-sm border border-lavender-200/60 mb-6 shadow-soft"
+              className="inline-flex flex-wrap items-center gap-2 mb-6"
             >
-              <Sparkles className="w-4 h-4 text-lavender-600" />
-              <span className="text-sm font-medium text-lavender-700 tracking-wide">MSc Psychology · Licensed Counselor · 3000+ Hours</span>
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-lavender-100 border border-lavender-300/60 text-xs font-semibold text-lavender-800 shadow-soft">
+                <Sparkles className="w-3.5 h-3.5 text-lavender-500" />
+                Master's in Counseling Psychology
+              </span>
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-xs font-semibold text-emerald-700 shadow-soft">
+                <Shield className="w-3.5 h-3.5 text-emerald-500" />
+                Licensed
+              </span>
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/80 backdrop-blur-sm border border-lavender-200/60 text-xs font-semibold text-gray-700 shadow-soft">
+                <Heart className="w-3.5 h-3.5 text-lavender-500" />
+                3000+ Clinical Hours
+              </span>
             </motion.div>
 
             {/* Main Heading */}

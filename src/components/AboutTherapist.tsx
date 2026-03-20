@@ -249,7 +249,7 @@ const AboutTherapist = () => {
             >
               <span className="flex items-center gap-2">
                 <GraduationCap className="w-4 h-4" />
-                {showMoreDetails ? 'Hide Full Profile' : 'View Full Credentials & Profile'}
+                {showMoreDetails ? 'Hide Full Profile' : 'View Full Profile'}
               </span>
               <motion.span
                 animate={{ rotate: showMoreDetails ? 180 : 0 }}
@@ -360,21 +360,21 @@ const AboutTherapist = () => {
                     </div>
 
                     {/* Philosophy */}
-                    <div className="relative bg-gradient-to-br from-lavender-600 via-purple-700 to-indigo-800 rounded-2xl p-5 overflow-hidden">
-                      <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -translate-y-10 translate-x-10" />
-                      <div className="absolute bottom-0 left-0 w-20 h-20 bg-white/5 rounded-full translate-y-8 -translate-x-6" />
+                    <div className="relative bg-gradient-to-br from-lavender-50 to-purple-50 rounded-2xl p-5 overflow-hidden border border-lavender-200">
+                      <div className="absolute top-0 right-0 w-32 h-32 bg-lavender-100/40 rounded-full -translate-y-10 translate-x-10" />
+                      <div className="absolute bottom-0 left-0 w-20 h-20 bg-purple-100/40 rounded-full translate-y-8 -translate-x-6" />
                       <div className="relative">
                         <div className="flex items-center gap-2 mb-3">
-                          <div className="w-7 h-7 rounded-lg bg-white/15 flex items-center justify-center">
-                            <Quote className="w-4 h-4 text-lavender-200" />
+                          <div className="w-7 h-7 rounded-lg bg-lavender-100 flex items-center justify-center">
+                            <Quote className="w-4 h-4 text-lavender-600" />
                           </div>
-                          <span className="text-lavender-200 text-xs font-bold uppercase tracking-wider">My Philosophy</span>
+                          <span className="text-lavender-700 text-xs font-bold uppercase tracking-wider">My Philosophy</span>
                         </div>
-                        <p className="text-white text-sm leading-relaxed mb-4">
-                          I bring <strong className="text-lavender-200">versatility, creativity, and depth</strong> into my practice. Therapy should not feel clinical — it should feel <strong className="text-lavender-200">human, safe, and transformative.</strong>
+                        <p className="text-gray-700 text-sm leading-relaxed mb-4">
+                          I bring <strong className="text-lavender-700">versatility, creativity, and depth</strong> into my practice. Therapy should not feel clinical — it should feel <strong className="text-lavender-700">human, safe, and transformative.</strong>
                         </p>
-                        <blockquote className="border-l-2 border-lavender-300/60 pl-3">
-                          <p className="text-lavender-100 text-xs leading-relaxed italic">
+                        <blockquote className="border-l-2 border-lavender-400 pl-3">
+                          <p className="text-lavender-600 text-xs leading-relaxed italic">
                             "Creativity and insight are not just encouraged — they are essential for growth."
                           </p>
                         </blockquote>
@@ -418,34 +418,7 @@ const AboutTherapist = () => {
           </motion.div>
         </div>
 
-        {/* Support Message - More Impactful */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: "-100px" }}
-          transition={{ duration: 0.7 }}
-          className="text-center mb-16"
-        >
-          <div className="bg-gradient-to-r from-lavender-500 to-lavender-600 rounded-2xl p-8 md:p-12 shadow-xl">
-            <p className="text-xl md:text-2xl text-white font-medium leading-relaxed mb-4">
-              You don't have to carry this alone.
-            </p>
-            <p className="text-lavender-100 text-lg">
-              Here, you'll find confidential support for your mind, your relationships, and your life.
-            </p>
-            <motion.a
-              href="#get-help"
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.98 }}
-              className="inline-flex items-center gap-2 mt-6 px-6 py-3 bg-white text-lavender-600 rounded-full font-semibold hover:bg-lavender-50 transition-colors"
-            >
-              Take the First Step
-              <ArrowRight className="w-5 h-5" />
-            </motion.a>
-          </div>
-        </motion.div>
-
-        {/* Testimonials Section - Enhanced */}
+{/* Testimonials Section - Enhanced */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
