@@ -176,14 +176,16 @@ const Navigation = () => {
           {isHomePage ? (
             <a
               href="#home"
-              className="flex items-center group"
+              className="flex items-center group flex-shrink-0"
               onClick={(e) => { scrollToSection(e, '#home'); closeMobileMenu(); }}
             >
-              <Logo size="md" showText={true} />
+              <span className="lg:hidden"><Logo size="sm" showText={true} /></span>
+              <span className="hidden lg:flex"><Logo size="md" showText={true} /></span>
             </a>
           ) : (
-            <Link to="/" className="flex items-center group" onClick={() => closeMobileMenu()}>
-              <Logo size="md" showText={true} />
+            <Link to="/" className="flex items-center group flex-shrink-0" onClick={() => closeMobileMenu()}>
+              <span className="lg:hidden"><Logo size="sm" showText={true} /></span>
+              <span className="hidden lg:flex"><Logo size="md" showText={true} /></span>
             </Link>
           )}
 
@@ -348,7 +350,7 @@ const Navigation = () => {
           </div>
 
           {/* Mobile: Auth + Menu (bell moved inside drawer to prevent overflow) */}
-          <div className="flex items-center gap-1 lg:hidden">
+          <div className="flex items-center gap-1 lg:hidden flex-shrink-0">
             <UserMenu onOpenAuth={() => setIsAuthModalOpen(true)} />
             
             {/* Mobile Menu Button */}
