@@ -140,7 +140,7 @@ export default function PackageBookingFlow({ pkg, onClose, isIndia }: Props) {
             <p className="text-xs font-bold text-lavender-700 uppercase tracking-wider mb-2">How it works</p>
             <ol className="space-y-1.5 text-sm text-gray-600 list-none">
               {[
-                'Reach out via WhatsApp or email below',
+                pkg.sessionFormat === 'chat' ? 'Send an email using the button below' : 'Reach out via WhatsApp or email below',
                 'Aqsa will confirm availability & answer your questions',
                 'Finalise the package together after your consultation',
               ].map((step, i) => (
@@ -157,21 +157,27 @@ export default function PackageBookingFlow({ pkg, onClose, isIndia }: Props) {
 
         {/* Footer actions */}
         <div className="px-6 pb-6 pt-3 border-t border-lavender-50 space-y-3">
-          <a
-            href={buildWhatsAppUrl(pkg, isIndia)}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center justify-center gap-2 w-full py-3.5 bg-[#25D366] hover:bg-[#1ebe5c] text-white rounded-xl font-semibold shadow-md transition-colors"
-          >
-            <MessageCircle className="w-5 h-5" />
-            Message on WhatsApp
-          </a>
+          {pkg.sessionFormat !== 'chat' && (
+            <a
+              href={buildWhatsAppUrl(pkg, isIndia)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center gap-2 w-full py-3.5 bg-[#25D366] hover:bg-[#1ebe5c] text-white rounded-xl font-semibold shadow-md transition-colors"
+            >
+              <MessageCircle className="w-5 h-5" />
+              Message on WhatsApp
+            </a>
+          )}
           <a
             href={buildEmailUrl(pkg, isIndia)}
-            className="flex items-center justify-center gap-2 w-full py-3 border border-lavender-200 text-lavender-700 rounded-xl font-semibold hover:bg-lavender-50 transition-colors text-sm"
+            className={`flex items-center justify-center gap-2 w-full rounded-xl font-semibold transition-colors text-sm ${
+              pkg.sessionFormat === 'chat'
+                ? 'py-3.5 bg-gradient-to-r from-lavender-600 to-lavender-700 text-white shadow-md hover:from-lavender-700 hover:to-lavender-800'
+                : 'py-3 border border-lavender-200 text-lavender-700 hover:bg-lavender-50'
+            }`}
           >
             <Mail className="w-4 h-4" />
-            Send an email instead
+            {pkg.sessionFormat === 'chat' ? 'Contact Aqsa by Email' : 'Send an email instead'}
           </a>
           <p className="text-xs text-gray-400 text-center flex items-center justify-center gap-1">
             <Shield className="w-3 h-3 text-lavender-300" />
