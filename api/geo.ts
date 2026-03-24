@@ -16,7 +16,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (!validateMethod(req, res, ['GET'])) return;
 
   try {
-    const resp = await fetch(IPAPI_URL, { signal: AbortSignal.timeout(5000) });
+    // Forward the visitor's real IP so ipapi.co detects the correct country.
+    // Vercel sets x-forwarded-for; fall back to x-real-ip.
+    const forwarded = req.headers['x-forwarded-for'];
+    const visitorIp = (Array.isArray(forwarded) ? forwarded[0] : forwarded?.split(',')[0])?.trim()
+      || (req.headers['x-real-ip'] as string | undefined)?.trim();
+
+    const url = visitorIp ? `https://ipapi.co/${visitorIp}/json/` : IPAPI_URL;
+    const resp = await fetch(url, { signal: AbortSignal.timeout(5000) });
     if (!resp.ok) {
       return res.status(resp.status).json({ error: `Upstream ${resp.status}` });
     }
