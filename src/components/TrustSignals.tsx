@@ -13,7 +13,7 @@ const TrustSignals = () => {
     {
       icon: Shield,
       title: 'Privacy-First',
-      description: 'End-to-end encryption, HIPAA compliance, and strict confidentiality',
+      description: 'End-to-end encryption, strict confidentiality, and secure compliant platforms',
       color: 'lavender',
       delay: 0.15
     },

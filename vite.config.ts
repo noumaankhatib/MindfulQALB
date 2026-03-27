@@ -16,19 +16,21 @@ export default defineConfig(({ mode }) => {
   plugins: [
     react(),
     sitemap({
-      hostname: 'https://mindfulqalb.com',
+      hostname: 'https://www.mindfulqalb.com',
       dynamicRoutes: [
         '/',
         '/contact',
+        '/privacy',
+        '/terms',
       ],
       exclude: [
         '/admin',
         '/profile',
         '/my-bookings',
         '/auth/google/callback',
+        '/404',
+        '/200',
       ],
-      changefreq: 'weekly',
-      priority: 0.8,
     }),
   ],
   build: {

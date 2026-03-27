@@ -21,12 +21,12 @@ const ContactPage = () => {
       <Helmet>
         <title>Contact | MindfulQALB</title>
         <meta name="description" content="Get in touch with MindfulQALB for appointments or general enquiries. Reach us by email or social media." />
-        <link rel="canonical" href="https://mindfulqalb.com/contact" />
+        <link rel="canonical" href="https://www.mindfulqalb.com/contact" />
         <meta name="robots" content="index, follow" />
         <meta property="og:title" content="Contact | MindfulQALB" />
         <meta property="og:description" content="Get in touch with MindfulQALB for appointments or general enquiries." />
-        <meta property="og:url" content="https://mindfulqalb.com/contact" />
-        <meta property="og:image" content="https://mindfulqalb.com/og-image.png" />
+        <meta property="og:url" content="https://www.mindfulqalb.com/contact" />
+        <meta property="og:image" content="https://www.mindfulqalb.com/og-image.png" />
       </Helmet>
       <Navigation />
       <main className="pt-24 pb-16 px-4 sm:px-6 lg:px-8">

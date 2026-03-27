@@ -64,18 +64,6 @@ const AuthCallbackPage = () => {
   )
 }
 
-const faqSchema = {
-  "@context": "https://schema.org",
-  "@type": "FAQPage",
-  "mainEntity": [
-    { "@type": "Question", "name": "What types of therapy do you offer?", "acceptedAnswer": { "@type": "Answer", "text": "I offer individual therapy, couples therapy, and support groups. All services are evidence-based and provided by a licensed psychologist." } },
-    { "@type": "Question", "name": "Is online therapy effective?", "acceptedAnswer": { "@type": "Answer", "text": "Yes, research shows that online therapy can be as effective as in-person therapy for many conditions. I use secure, compliant platforms to ensure privacy and confidentiality." } },
-    { "@type": "Question", "name": "How do I get started?", "acceptedAnswer": { "@type": "Answer", "text": "You can book a session directly through the calendar on my website. I offer a free initial consultation to understand your needs and see if we're a good fit." } },
-    { "@type": "Question", "name": "What is your approach to couples therapy?", "acceptedAnswer": { "@type": "Answer", "text": "I use evidence-based approaches including EFT (Emotionally Focused Therapy), Gottman Method, and trauma-informed care. I am trained to work with all relationship types and orientations." } },
-    { "@type": "Question", "name": "Is my information confidential?", "acceptedAnswer": { "@type": "Answer", "text": "Absolutely. I use secure platforms and strict confidentiality protocols. Your privacy is my top priority." } },
-  ]
-}
-
 // Home page component
 const HomePage = () => {
   const location = useLocation()
@@ -100,13 +88,12 @@ const HomePage = () => {
       <Helmet>
         <title>Mindful QALB | Evidence-Based Mental Health Care for Individuals & Couples</title>
         <meta name="description" content="Online therapy and counseling by a licensed psychologist. Individual therapy, couples therapy, and support groups. Book a free 15-minute consultation today." />
-        <link rel="canonical" href="https://mindfulqalb.com/" />
+        <link rel="canonical" href="https://www.mindfulqalb.com/" />
         <meta name="robots" content="index, follow" />
-        <meta property="og:title" content="Mindful QALB | Evidence-Based Mental Health Care" />
+        <meta property="og:title" content="Mindful QALB | Evidence-Based Mental Health Care for Individuals & Couples" />
         <meta property="og:description" content="Online therapy and counseling by a licensed psychologist. Individual therapy, couples therapy, and support groups." />
-        <meta property="og:url" content="https://mindfulqalb.com/" />
-        <meta property="og:image" content="https://mindfulqalb.com/og-image.png" />
-        <script type="application/ld+json">{JSON.stringify(faqSchema)}</script>
+        <meta property="og:url" content="https://www.mindfulqalb.com/" />
+        <meta property="og:image" content="https://www.mindfulqalb.com/og-image.png" />
       </Helmet>
       {/* Skip to content link for accessibility */}
       <a 

@@ -5,4 +5,4 @@ Disallow: /profile
 Disallow: /my-bookings
 Disallow: /auth/
 
-Sitemap: https://mindfulqalb.com/sitemap.xml
+Sitemap: https://www.mindfulqalb.com/sitemap.xml

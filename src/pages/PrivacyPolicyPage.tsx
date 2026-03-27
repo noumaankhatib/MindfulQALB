@@ -14,11 +14,11 @@ const PrivacyPolicyPage = () => {
       <Helmet>
         <title>Privacy Policy | MindfulQALB</title>
         <meta name="description" content="MindfulQALB Privacy Policy — how we collect, use, and protect your personal and health information." />
-        <link rel="canonical" href="https://mindfulqalb.com/privacy" />
+        <link rel="canonical" href="https://www.mindfulqalb.com/privacy" />
         <meta name="robots" content="noindex, follow" />
         <meta property="og:title" content="Privacy Policy | MindfulQALB" />
         <meta property="og:description" content="How MindfulQALB collects, uses, and protects your personal and health information." />
-        <meta property="og:url" content="https://mindfulqalb.com/privacy" />
+        <meta property="og:url" content="https://www.mindfulqalb.com/privacy" />
       </Helmet>
       {/* Minimal Header */}
       <header className="border-b border-gray-200">
