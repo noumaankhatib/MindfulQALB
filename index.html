@@ -62,7 +62,7 @@
     <!-- frame-ancestors and X-Frame-Options must be set via HTTP headers (see vercel.json) -->
     <meta http-equiv="Content-Security-Policy" content="
       default-src 'self';
-      script-src 'self' 'unsafe-inline' https://checkout.razorpay.com https://js.stripe.com https://api.razorpay.com https://*.razorpay.com https://accounts.google.com https://apis.google.com https://vercel.live;
+      script-src 'self' 'unsafe-inline' https://checkout.razorpay.com https://js.stripe.com https://api.razorpay.com https://*.razorpay.com https://accounts.google.com https://apis.google.com https://www.googletagmanager.com https://vercel.live;
       style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com https://cdn.jsdelivr.net;
       font-src 'self' https://fonts.gstatic.com;
       img-src 'self' data: https: blob:;
@@ -76,7 +76,17 @@
     <meta http-equiv="X-Content-Type-Options" content="nosniff" />
     <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin" />
     
+    <!-- Google Analytics 4 -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-2RYY9JM7B1"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-2RYY9JM7B1');
+    </script>
+
     <!-- Preconnect to critical third-party origins (DNS + TLS early) -->
+    <link rel="preconnect" href="https://www.googletagmanager.com">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="preconnect" href="https://accounts.google.com" crossorigin>
