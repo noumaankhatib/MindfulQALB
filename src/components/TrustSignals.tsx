@@ -5,8 +5,8 @@ const TrustSignals = () => {
   const signals = [
     {
       icon: Award,
-      title: 'Licensed Therapists',
-      description: 'All therapists are verified, licensed, and continuously credentialed',
+      title: 'Licensed Therapist',
+      description: 'Your therapist is verified, licensed, and continuously credentialed',
       color: 'lavender',
       delay: 0.1
     },

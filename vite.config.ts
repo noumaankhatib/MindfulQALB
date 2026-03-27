@@ -18,10 +18,7 @@ export default defineConfig(({ mode }) => {
     sitemap({
       hostname: 'https://www.mindfulqalb.com',
       dynamicRoutes: [
-        '/',
         '/contact',
-        '/privacy',
-        '/terms',
       ],
       exclude: [
         '/admin',
