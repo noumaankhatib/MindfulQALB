@@ -35,12 +35,10 @@ const Footer = () => {
       { href: '#mental-health', label: 'Mental Health' },
       { href: '#couples', label: 'Couples & Relationships' },
       { href: '#therapy', label: 'Therapy & Support' },
-      { href: '#self-help', label: 'Self-Help Tools' },
     ],
     resources: [
       { href: '#ethics', label: 'About / Ethics', isExternal: false },
       { href: '#about', label: 'About Aqsa', isExternal: false },
-      { href: '#self-help', label: 'Self-Help Tools', isExternal: false },
       { href: '/privacy', label: 'Privacy Policy', isRoute: true },
       { href: '/terms', label: 'Terms of Service', isRoute: true },
     ],
@@ -280,7 +278,7 @@ const Footer = () => {
               
               {/* Disclaimer */}
               <p className="text-gray-500 text-xs max-w-sm md:max-w-none">
-                This platform is not a crisis service. For emergencies, call 911 or your local crisis line.
+                This platform is not a crisis service. For emergencies, call iCall (9152987821) or Vandrevala Foundation (1860-2662-345).
               </p>
             </div>
           </div>

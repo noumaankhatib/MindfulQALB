@@ -102,7 +102,6 @@ export const websiteSections = {
   mentalHealth: { href: '#mental-health', label: 'Mental Health Support' },
   couples: { href: '#couples', label: 'Couples & Relationships' },
   family: { href: '#family', label: 'Family Counseling' },
-  selfHelp: { href: '#self-help', label: 'Self-Help Tools' },
   about: { href: '#about', label: 'About Aqsa Khatib' },
   booking: { href: '#get-help', label: 'Book a Session' },
   faq: { href: '#faq', label: 'FAQs' },
@@ -275,7 +274,6 @@ export const chatbotFlow: Record<string, ChatStep> = {
       { label: 'Mental Health Support', href: '#mental-health', description: 'Anxiety, depression, trauma & more' },
       { label: 'Couples Therapy', href: '#couples', description: 'Strengthen your relationship' },
       { label: 'My Therapeutic Approach', href: '#approach', description: 'CBT, ACT, Gestalt & more' },
-      { label: 'Self-Help Tools', href: '#self-help', description: 'Resources for your journey' },
     ],
     options: [
       { id: 'mental_health', label: 'Mental Health Support', internalLink: '#mental-health' },
