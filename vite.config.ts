@@ -19,7 +19,6 @@ export default defineConfig(({ mode }) => {
       hostname: 'https://mindfulqalb.com',
       dynamicRoutes: [
         '/',
-        '/bookings',
         '/contact',
       ],
       exclude: [

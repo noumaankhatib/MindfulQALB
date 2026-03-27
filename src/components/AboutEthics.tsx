@@ -101,14 +101,12 @@ const AboutEthics = () => {
             </div>
             <div className="space-y-4 text-gray-600 pl-13 md:pl-0">
               <p className="leading-relaxed">
-                <strong className="text-gray-800">This platform is not a crisis service.</strong> If you are experiencing a mental health emergency, please contact your local emergency services or crisis hotline immediately.
+                <strong className="text-gray-800">This platform is not a crisis service.</strong> If you are experiencing a mental health emergency, please call iCall on <strong className="text-gray-800">9152987821</strong> or Vandrevala Foundation on <strong className="text-gray-800">1860-2662-345</strong> (24/7).
               </p>
               <p className="leading-relaxed">
                 <strong className="text-gray-800">No AI pretending to be a therapist.</strong> All therapy is provided by licensed human therapists.
               </p>
-              <p className="leading-relaxed">
-                <strong className="text-gray-800">Self-help tools complement but never replace therapy.</strong> Always seek professional help for serious concerns.
-              </p>
+
             </div>
           </div>
         </motion.div>

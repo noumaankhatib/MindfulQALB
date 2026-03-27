@@ -68,7 +68,7 @@ const faqSchema = {
   "@context": "https://schema.org",
   "@type": "FAQPage",
   "mainEntity": [
-    { "@type": "Question", "name": "What types of therapy do you offer?", "acceptedAnswer": { "@type": "Answer", "text": "I offer individual therapy, couples therapy, support groups, and self-help tools. All services are evidence-based and provided by a licensed psychologist." } },
+    { "@type": "Question", "name": "What types of therapy do you offer?", "acceptedAnswer": { "@type": "Answer", "text": "I offer individual therapy, couples therapy, and support groups. All services are evidence-based and provided by a licensed psychologist." } },
     { "@type": "Question", "name": "Is online therapy effective?", "acceptedAnswer": { "@type": "Answer", "text": "Yes, research shows that online therapy can be as effective as in-person therapy for many conditions. I use secure, compliant platforms to ensure privacy and confidentiality." } },
     { "@type": "Question", "name": "How do I get started?", "acceptedAnswer": { "@type": "Answer", "text": "You can book a session directly through the calendar on my website. I offer a free initial consultation to understand your needs and see if we're a good fit." } },
     { "@type": "Question", "name": "What is your approach to couples therapy?", "acceptedAnswer": { "@type": "Answer", "text": "I use evidence-based approaches including EFT (Emotionally Focused Therapy), Gottman Method, and trauma-informed care. I am trained to work with all relationship types and orientations." } },
@@ -130,7 +130,6 @@ const HomePage = () => {
         {/* <TherapySupport /> */}
         <FamilyCounseling />
         <HolisticWellness />
-        {/* <SelfHelpTools /> */}
         <SupportGroups />
         <Programs />
         <GetHelp />
