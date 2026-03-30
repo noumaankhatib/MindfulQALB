@@ -235,7 +235,6 @@ const Hero = () => {
                     height={1125}
                     loading="eager"
                     decoding="sync"
-                    fetchPriority="high"
                   />
                 </picture>
                 {/* Soft overlay for calm feel */}
