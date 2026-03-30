@@ -2,6 +2,18 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Ensure async-loaded fonts swap in immediately without invisible text */
+@font-face {
+  font-family: 'Cormorant Garamond';
+  font-display: swap;
+  src: local('Cormorant Garamond');
+}
+@font-face {
+  font-family: 'Inter';
+  font-display: swap;
+  src: local('Inter');
+}
+
 @layer base {
   * {
     @apply border-gray-200;
@@ -94,6 +106,8 @@
   /* Floating decorative shapes - purple/lavender only for consistency */
   .floating-shape {
     @apply absolute rounded-full opacity-20 blur-3xl pointer-events-none;
+    will-change: transform;
+    contain: layout style paint;
   }
   
   .floating-shape-primary {

@@ -15,8 +15,8 @@ const Hero = () => {
     visible: {
       opacity: 1,
       transition: {
-        staggerChildren: 0.12,
-        delayChildren: 0.3,
+        staggerChildren: 0.08,
+        delayChildren: 0.1,
       },
     },
   }
@@ -46,14 +46,14 @@ const Hero = () => {
   }
 
   const imageVariants = {
-    hidden: { opacity: 0, scale: 0.95 },
+    hidden: { opacity: 0, scale: 0.98 },
     visible: {
       opacity: 1,
       scale: 1,
       transition: {
-        duration: 1,
+        duration: 0.5,
         ease: [0.25, 0.1, 0.25, 1],
-        delay: 0.5,
+        delay: 0,
       },
     },
   }

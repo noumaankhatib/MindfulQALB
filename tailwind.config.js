@@ -122,9 +122,9 @@ export default {
       },
       fontFamily: {
         // Professional, readable typography
-        display: ['Georgia', 'Times New Roman', 'serif'], // Classic serif for headings
-        body: ['Inter', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'], // Clean sans-serif
-        accent: ['Georgia', 'Times New Roman', 'serif'],
+        display: ['"Cormorant Garamond"', 'Georgia', 'Times New Roman', 'serif'],
+        body: ['Inter', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+        accent: ['"Cormorant Garamond"', 'Georgia', 'Times New Roman', 'serif'],
       },
       fontSize: {
         // Improved readability with better line heights
