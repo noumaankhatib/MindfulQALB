@@ -27,7 +27,7 @@ const navItems: NavItem[] = [
     dropdown: [
       { label: 'Mental Health Support', href: '#mental-health', description: 'Comprehensive mental wellness care', icon: '🧠' },
       { label: 'Couples & Relationships', href: '#couples', description: 'Strengthen your bond', icon: '💕' },
-      { label: 'Individual Therapy', href: '#therapy', description: 'Personal growth journey', icon: '🌱' },
+      { label: 'Individual Therapy', href: '#get-help', description: 'Personal growth journey', icon: '🌱' },
       { label: 'Family Counseling', href: '#family', description: 'Heal together as a family', icon: '👨‍👩‍👧' },
       { label: 'Holistic Wellness', href: '#holistic', description: 'Mind, body & spirit healing', icon: '🌿' },
       { label: 'Online Consultation', href: '#get-help', description: 'Therapy from anywhere', icon: '💻' },
@@ -40,10 +40,7 @@ const navItems: NavItem[] = [
   {
     label: 'Resources',
     dropdown: [
-      // { label: 'Self-Help Tools', href: '#self-help', description: 'Empower your journey', icon: '🛠️' },
-      { label: 'Guided Exercises', href: '#self-help', description: 'Practical wellness activities', icon: '🧘' },
-      { label: 'Articles & Blogs', href: '#self-help', description: 'Insights and education', icon: '📚' },
-      { label: 'Assessments', href: '#self-help', description: 'Understand yourself better', icon: '📋' },
+      { label: 'Articles & Blogs', href: '/blog', description: 'Insights and education', icon: '📚' },
       { label: 'Support Groups', href: '#groups', description: 'Connect with others', icon: '👥' },
     ],
   },

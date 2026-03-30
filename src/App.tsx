@@ -31,6 +31,8 @@ const MyBookingsPage = lazy(() => import('./pages/MyBookingsPage'))
 const ProfilePage = lazy(() => import('./pages/ProfilePage'))
 const AdminPage = lazy(() => import('./pages/AdminPage'))
 const ContactPage = lazy(() => import('./pages/ContactPage'))
+const BlogListPage = lazy(() => import('./pages/BlogListPage'))
+const BlogPostPage = lazy(() => import('./pages/BlogPostPage'))
 
 const LazyFallback = () => (
   <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -187,6 +189,8 @@ const router = createBrowserRouter(
         { path: '/privacy', element: <Suspense fallback={<LazyFallback />}><PrivacyPolicyPage /></Suspense> },
         { path: '/terms', element: <Suspense fallback={<LazyFallback />}><TermsOfServicePage /></Suspense> },
         { path: '/contact', element: <Suspense fallback={<LazyFallback />}><ContactPage /></Suspense> },
+        { path: '/blog', element: <Suspense fallback={<LazyFallback />}><BlogListPage /></Suspense> },
+        { path: '/blog/:slug', element: <Suspense fallback={<LazyFallback />}><BlogPostPage /></Suspense> },
         { path: '/bookings', element: <Navigate to="/#get-help" replace /> },
         { path: '/my-bookings', element: <Suspense fallback={<LazyFallback />}><MyBookingsPage /></Suspense> },
         { path: '/profile', element: <Suspense fallback={<LazyFallback />}><ProfilePage /></Suspense> },
