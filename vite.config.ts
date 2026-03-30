@@ -40,13 +40,32 @@ export default defineConfig(({ mode }) => {
     }),
   ],
   build: {
+    chunkSizeWarningLimit: 400,
     rollupOptions: {
       output: {
-        manualChunks: {
-          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
-          'vendor-motion': ['framer-motion'],
-          'vendor-supabase': ['@supabase/supabase-js'],
-          'vendor-icons': ['lucide-react'],
+        manualChunks(id) {
+          if (id.includes('node_modules/react-dom') || id.includes('node_modules/react/') || id.includes('node_modules/react-router-dom') || id.includes('node_modules/scheduler')) {
+            return 'vendor-react'
+          }
+          if (id.includes('node_modules/framer-motion')) {
+            return 'vendor-motion'
+          }
+          if (id.includes('node_modules/@supabase')) {
+            return 'vendor-supabase'
+          }
+          if (id.includes('node_modules/lucide-react')) {
+            return 'vendor-icons'
+          }
+          if (id.includes('node_modules/react-helmet-async')) {
+            return 'vendor-helmet'
+          }
+          // Split admin/booking/auth pages into their own chunk (never on critical path)
+          if (id.includes('/pages/AdminPage') || id.includes('/pages/BookingsPage') || id.includes('/components/BookingFlow') || id.includes('/components/PackageBookingFlow') || id.includes('/components/PaymentModal') || id.includes('/components/BookingCalendar')) {
+            return 'chunk-booking'
+          }
+          if (id.includes('/components/auth/') || id.includes('/pages/AuthCallback')) {
+            return 'chunk-auth'
+          }
         },
       },
     },

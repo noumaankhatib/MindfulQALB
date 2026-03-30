@@ -1,10 +1,12 @@
 import { motion } from 'framer-motion'
 import { ArrowRight, Shield, Heart, Users, Sparkles } from 'lucide-react'
-import heroMainImage from '../assets/images/hero_main_optimized.jpeg'
+import heroMainWebP from '../assets/images/hero_main.webp'
+import heroMainFallback from '../assets/images/hero_main_optimized.jpeg'
 
 // Therapy-themed wellness images from Unsplash (royalty-free)
 const heroImages = {
-  main: heroMainImage,
+  mainWebP: heroMainWebP,
+  mainFallback: heroMainFallback,
   secondary: 'https://images.unsplash.com/photo-1506126613408-eca07ce68773?w=600&q=80',
   accent: 'https://images.unsplash.com/photo-1499209974431-9dddcece7f88?w=400&q=80',
 }
@@ -223,16 +225,19 @@ const Hero = () => {
                 transition={{ duration: 0.4 }}
                 className="relative rounded-[2rem] overflow-hidden shadow-2xl shadow-lavender-500/20 border border-lavender-100/50"
               >
-                <img
-                  src={heroImages.main}
-                  alt="Supportive therapy session - a safe space for healing"
-                  className="w-full h-[500px] object-cover"
-                  width={1920}
-                  height={2400}
-                  loading="eager"
-                  decoding="sync"
-                  fetchPriority="high"
-                />
+                <picture>
+                  <source srcSet={heroImages.mainWebP} type="image/webp" />
+                  <img
+                    src={heroImages.mainFallback}
+                    alt="Supportive therapy session - a safe space for healing"
+                    className="w-full h-[500px] object-cover"
+                    width={900}
+                    height={1125}
+                    loading="eager"
+                    decoding="sync"
+                    fetchPriority="high"
+                  />
+                </picture>
                 {/* Soft overlay for calm feel */}
                 <div className="absolute inset-0 bg-gradient-to-t from-lavender-900/10 via-transparent to-lavender-100/10" />
               </motion.div>

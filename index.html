@@ -96,6 +96,9 @@
     <!-- Google Identity Services (for signInWithIdToken, bypasses *.supabase.co redirect) -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
 
+    <!-- Preload LCP hero image (WebP) -->
+    <link rel="preload" as="image" type="image/webp" href="/src/assets/images/hero_main.webp" fetchpriority="high">
+
     <!-- Typography — non-render-blocking font load -->
     <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Inter:wght@400;500;600&display=swap" onload="this.onload=null;this.rel='stylesheet'">
     <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Inter:wght@400;500;600&display=swap"></noscript>
