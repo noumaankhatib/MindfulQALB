@@ -56,9 +56,6 @@ export default defineConfig(({ mode }) => {
           if (id.includes('node_modules/lucide-react')) {
             return 'vendor-icons'
           }
-          if (id.includes('node_modules/react-helmet-async')) {
-            return 'vendor-helmet'
-          }
           // Split admin/booking/auth pages into their own chunk (never on critical path)
           if (id.includes('/pages/AdminPage') || id.includes('/pages/BookingsPage') || id.includes('/components/BookingFlow') || id.includes('/components/PackageBookingFlow') || id.includes('/components/PaymentModal') || id.includes('/components/BookingCalendar')) {
             return 'chunk-booking'
