@@ -2,6 +2,12 @@ import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import sitemap from 'vite-plugin-sitemap'
 
+const blogSlugs = [
+  'family-dynamics-generational-trauma-couple-therapy',
+  'understanding-managing-emotions-guide',
+  'grief-in-layers-understanding-loss-healing-resilience',
+]
+
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
@@ -16,29 +22,46 @@ export default defineConfig(({ mode }) => {
   plugins: [
     react(),
     sitemap({
-      hostname: 'https://mindfulqalb.com',
+      hostname: 'https://www.mindfulqalb.com',
       dynamicRoutes: [
-        '/',
         '/contact',
+        '/blog',
+        ...blogSlugs.map((s) => `/blog/${s}`),
       ],
       exclude: [
         '/admin',
         '/profile',
         '/my-bookings',
         '/auth/google/callback',
+        '/404',
+        '/200',
       ],
-      changefreq: 'weekly',
-      priority: 0.8,
     }),
   ],
   build: {
+    chunkSizeWarningLimit: 400,
     rollupOptions: {
       output: {
-        manualChunks: {
-          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
-          'vendor-motion': ['framer-motion'],
-          'vendor-supabase': ['@supabase/supabase-js'],
-          'vendor-icons': ['lucide-react'],
+        manualChunks(id) {
+          if (id.includes('node_modules/react-dom') || id.includes('node_modules/react/') || id.includes('node_modules/react-router-dom') || id.includes('node_modules/scheduler')) {
+            return 'vendor-react'
+          }
+          if (id.includes('node_modules/framer-motion')) {
+            return 'vendor-motion'
+          }
+          if (id.includes('node_modules/@supabase')) {
+            return 'vendor-supabase'
+          }
+          if (id.includes('node_modules/lucide-react')) {
+            return 'vendor-icons'
+          }
+          // Split admin/booking/auth pages into their own chunk (never on critical path)
+          if (id.includes('/pages/AdminPage') || id.includes('/pages/BookingsPage') || id.includes('/components/BookingFlow') || id.includes('/components/PackageBookingFlow') || id.includes('/components/PaymentModal') || id.includes('/components/BookingCalendar')) {
+            return 'chunk-booking'
+          }
+          if (id.includes('/components/auth/') || id.includes('/pages/AuthCallback')) {
+            return 'chunk-auth'
+          }
         },
       },
     },

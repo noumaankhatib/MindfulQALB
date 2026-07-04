@@ -24,14 +24,7 @@ const navItems: NavItem[] = [
   { label: 'Home', href: '#home' },
   {
     label: 'Services',
-    dropdown: [
-      { label: 'Mental Health Support', href: '#mental-health', description: 'Comprehensive mental wellness care', icon: '🧠' },
-      { label: 'Couples & Relationships', href: '#couples', description: 'Strengthen your bond', icon: '💕' },
-      { label: 'Individual Therapy', href: '#therapy', description: 'Personal growth journey', icon: '🌱' },
-      { label: 'Family Counseling', href: '#family', description: 'Heal together as a family', icon: '👨‍👩‍👧' },
-      { label: 'Holistic Wellness', href: '#holistic', description: 'Mind, body & spirit healing', icon: '🌿' },
-      { label: 'Online Consultation', href: '#get-help', description: 'Therapy from anywhere', icon: '💻' },
-    ],
+    href: '#services',
   },
   {
     label: 'Approach',
@@ -40,27 +33,21 @@ const navItems: NavItem[] = [
   {
     label: 'Resources',
     dropdown: [
-      // { label: 'Self-Help Tools', href: '#self-help', description: 'Empower your journey', icon: '🛠️' },
-      { label: 'Guided Exercises', href: '#self-help', description: 'Practical wellness activities', icon: '🧘' },
-      { label: 'Articles & Blogs', href: '#self-help', description: 'Insights and education', icon: '📚' },
-      { label: 'Assessments', href: '#self-help', description: 'Understand yourself better', icon: '📋' },
-      { label: 'Support Groups', href: '#groups', description: 'Connect with others', icon: '👥' },
+      { label: 'Articles & Blogs', href: '/blog', description: 'Insights and education', icon: '📚' },
     ],
   },
   {
     label: 'About',
     dropdown: [
-      { label: 'Therapeutic Approach', href: '#approach', description: 'Evidence-based methods', icon: '🎯' },
       { label: 'Meet Aqsa Khatib', href: '#about', description: 'Your therapist', icon: '👩‍⚕️' },
-      { label: 'Ethics & Privacy', href: '#ethics', description: 'Your trust matters', icon: '🔒' },
+      { label: 'Book a Session', href: '#get-help', description: 'Pricing & booking', icon: '📅' },
       { label: 'FAQs', href: '#faq', description: 'Common questions', icon: '❓' },
       { label: 'Contact details', href: '/contact', description: 'Email & social', icon: '📧' },
     ],
   },
 ]
 
-// Sections to track for active highlighting
-const sectionIds = ['home', 'about', 'approach', 'mental-health', 'couples', 'therapy', 'family', 'holistic', 'self-help', 'groups', 'get-help', 'ethics', 'faq']
+const sectionIds = ['home', 'who-we-help', 'about', 'services', 'testimonials', 'approach', 'how-it-works', 'get-help', 'faq']
 
 const Navigation = () => {
   const location = useLocation()

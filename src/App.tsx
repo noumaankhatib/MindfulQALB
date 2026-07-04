@@ -7,23 +7,18 @@ import { Outlet } from 'react-router-dom'
 import { cleanupLegacyStorage } from './utils/secureStorage'
 import Navigation from './components/Navigation'
 import Hero from './components/Hero'
-import WhoWeHelp from './components/WhoWeHelp'
-import WhatWeOffer from './components/WhatWeOffer'
 import TrustSignals from './components/TrustSignals'
-import QuickAccess from './components/QuickAccess'
-import MentalHealth from './components/MentalHealth'
-import CouplesRelationships from './components/CouplesRelationships'
-import FamilyCounseling from './components/FamilyCounseling'
-import HolisticWellness from './components/HolisticWellness'
-import SupportGroups from './components/SupportGroups'
+import Services from './components/Services'
 import AboutTherapist from './components/AboutTherapist'
 import TherapeuticApproach from './components/TherapeuticApproach'
-import Programs from './components/Programs'
 import GetHelp from './components/GetHelp'
-import AboutEthics from './components/AboutEthics'
 import Footer from './components/Footer'
 import FAQ from './components/FAQ'
 import Chatbot from './components/Chatbot'
+import StickyBookCta from './components/StickyBookCta'
+import WhoThisIsFor from './components/WhoThisIsFor'
+import HowItWorks from './components/HowItWorks'
+import ClientTestimonials from './components/ClientTestimonials'
 
 const PrivacyPolicyPage = lazy(() => import('./pages/PrivacyPolicyPage'))
 const TermsOfServicePage = lazy(() => import('./pages/TermsOfServicePage'))
@@ -31,6 +26,8 @@ const MyBookingsPage = lazy(() => import('./pages/MyBookingsPage'))
 const ProfilePage = lazy(() => import('./pages/ProfilePage'))
 const AdminPage = lazy(() => import('./pages/AdminPage'))
 const ContactPage = lazy(() => import('./pages/ContactPage'))
+const BlogListPage = lazy(() => import('./pages/BlogListPage'))
+const BlogPostPage = lazy(() => import('./pages/BlogPostPage'))
 
 const LazyFallback = () => (
   <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -64,18 +61,6 @@ const AuthCallbackPage = () => {
   )
 }
 
-const faqSchema = {
-  "@context": "https://schema.org",
-  "@type": "FAQPage",
-  "mainEntity": [
-    { "@type": "Question", "name": "What types of therapy do you offer?", "acceptedAnswer": { "@type": "Answer", "text": "I offer individual therapy, couples therapy, and support groups. All services are evidence-based and provided by a licensed psychologist." } },
-    { "@type": "Question", "name": "Is online therapy effective?", "acceptedAnswer": { "@type": "Answer", "text": "Yes, research shows that online therapy can be as effective as in-person therapy for many conditions. I use secure, compliant platforms to ensure privacy and confidentiality." } },
-    { "@type": "Question", "name": "How do I get started?", "acceptedAnswer": { "@type": "Answer", "text": "You can book a session directly through the calendar on my website. I offer a free initial consultation to understand your needs and see if we're a good fit." } },
-    { "@type": "Question", "name": "What is your approach to couples therapy?", "acceptedAnswer": { "@type": "Answer", "text": "I use evidence-based approaches including EFT (Emotionally Focused Therapy), Gottman Method, and trauma-informed care. I am trained to work with all relationship types and orientations." } },
-    { "@type": "Question", "name": "Is my information confidential?", "acceptedAnswer": { "@type": "Answer", "text": "Absolutely. I use secure platforms and strict confidentiality protocols. Your privacy is my top priority." } },
-  ]
-}
-
 // Home page component
 const HomePage = () => {
   const location = useLocation()
@@ -99,14 +84,13 @@ const HomePage = () => {
     <div className="min-h-screen relative overflow-x-hidden">
       <Helmet>
         <title>Mindful QALB | Evidence-Based Mental Health Care for Individuals & Couples</title>
-        <meta name="description" content="Online therapy and counseling by a licensed psychologist. Individual therapy, couples therapy, and support groups. Book a free 15-minute consultation today." />
-        <link rel="canonical" href="https://mindfulqalb.com/" />
+        <meta name="description" content="Online therapy and counseling by a licensed psychologist. Individual and couples therapy via video, audio, or chat. Book a free 15-minute consultation." />
+        <link rel="canonical" href="https://www.mindfulqalb.com/" />
         <meta name="robots" content="index, follow" />
-        <meta property="og:title" content="Mindful QALB | Evidence-Based Mental Health Care" />
-        <meta property="og:description" content="Online therapy and counseling by a licensed psychologist. Individual therapy, couples therapy, and support groups." />
-        <meta property="og:url" content="https://mindfulqalb.com/" />
-        <meta property="og:image" content="https://mindfulqalb.com/og-image.png" />
-        <script type="application/ld+json">{JSON.stringify(faqSchema)}</script>
+        <meta property="og:title" content="Mindful QALB | Evidence-Based Mental Health Care for Individuals & Couples" />
+        <meta property="og:description" content="Online therapy and counseling by a licensed psychologist. Individual and couples therapy. Book a free 15-minute consultation." />
+        <meta property="og:url" content="https://www.mindfulqalb.com/" />
+        <meta property="og:image" content="https://www.mindfulqalb.com/og-image.png" />
       </Helmet>
       {/* Skip to content link for accessibility */}
       <a 
@@ -117,26 +101,20 @@ const HomePage = () => {
       </a>
       
       <Navigation />
-      <main id="main-content">
+      <main id="main-content" className="pb-24 md:pb-0">
         <Hero />
+        <WhoThisIsFor />
         <AboutTherapist />
-        <TherapeuticApproach />
-        <WhoWeHelp />
-        <WhatWeOffer />
         <TrustSignals />
-        <QuickAccess />
-        <MentalHealth />
-        <CouplesRelationships />
-        {/* <TherapySupport /> */}
-        <FamilyCounseling />
-        <HolisticWellness />
-        <SupportGroups />
-        <Programs />
+        <Services />
+        <ClientTestimonials />
+        <TherapeuticApproach />
+        <HowItWorks />
         <GetHelp />
-        <AboutEthics />
         <FAQ />
       </main>
       <Footer />
+      <StickyBookCta />
       
       {/* Floating Chatbot */}
       <Chatbot />
@@ -200,6 +178,9 @@ const router = createBrowserRouter(
         { path: '/privacy', element: <Suspense fallback={<LazyFallback />}><PrivacyPolicyPage /></Suspense> },
         { path: '/terms', element: <Suspense fallback={<LazyFallback />}><TermsOfServicePage /></Suspense> },
         { path: '/contact', element: <Suspense fallback={<LazyFallback />}><ContactPage /></Suspense> },
+        { path: '/blog', element: <Suspense fallback={<LazyFallback />}><BlogListPage /></Suspense> },
+        { path: '/blog/understanding-emotions-practical-ways-to-feel-better', element: <Navigate to="/blog/understanding-managing-emotions-guide" replace /> },
+        { path: '/blog/:slug', element: <Suspense fallback={<LazyFallback />}><BlogPostPage /></Suspense> },
         { path: '/bookings', element: <Navigate to="/#get-help" replace /> },
         { path: '/my-bookings', element: <Suspense fallback={<LazyFallback />}><MyBookingsPage /></Suspense> },
         { path: '/profile', element: <Suspense fallback={<LazyFallback />}><ProfilePage /></Suspense> },
