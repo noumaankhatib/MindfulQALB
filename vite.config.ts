@@ -24,6 +24,7 @@ export default defineConfig(({ mode }) => {
     react(),
     sitemap({
       hostname: 'https://www.mindfulqalb.com',
+      generateRobotsTxt: false,
       dynamicRoutes: [
         '/contact',
         '/blog',
