@@ -54,8 +54,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       .digest('hex');
 
     // timingSafeEqual throws if lengths differ; ensure same length to avoid throw + info leak
-    const expectedBuf = Buffer.from(expectedSignature, 'utf8');
-    const actualBuf = Buffer.from(razorpay_signature, 'utf8');
+    const expectedBuf = new TextEncoder().encode(expectedSignature);
+    const actualBuf = new TextEncoder().encode(razorpay_signature);
     const isValid =
       expectedBuf.length === actualBuf.length &&
       crypto.timingSafeEqual(expectedBuf, actualBuf);
