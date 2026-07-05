@@ -64,6 +64,18 @@ const mobileLinks: FooterLink[] = [
   { href: '#get-help', label: 'Crisis Helplines' },
 ]
 
+const DeveloperCredit = ({ className = '' }: { className?: string }) => (
+  <p className={`text-gray-400 text-[11px] sm:text-xs leading-relaxed ${className}`}>
+    Designed &amp; developed by{' '}
+    <a
+      href="mailto:noumankhatib@gmail.com"
+      className="text-lavender-700 hover:text-lavender-800 transition-colors font-medium"
+    >
+      Nouman Khatib
+    </a>
+  </p>
+)
+
 const Footer = () => {
   const location = useLocation()
   const isHomePage = location.pathname === '/'
@@ -192,6 +204,7 @@ const Footer = () => {
               <p className="text-gray-500 text-[11px]">
                 © {new Date().getFullYear()} Mindful QALB · Confidential &amp; Ethical Practice
               </p>
+              <DeveloperCredit className="mt-2" />
             </div>
           </div>
 
@@ -277,9 +290,12 @@ const Footer = () => {
 
           <div className="hidden md:block pt-8 border-t border-gray-200/60">
             <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-              <p className="text-gray-500 text-sm">
-                © {new Date().getFullYear()} Mindful QALB · Confidential &amp; Ethical Practice
-              </p>
+              <div>
+                <p className="text-gray-500 text-sm">
+                  © {new Date().getFullYear()} Mindful QALB · Confidential &amp; Ethical Practice
+                </p>
+                <DeveloperCredit className="mt-1.5" />
+              </div>
               <div className="flex items-center gap-4 text-sm">
                 <Link to="/privacy" className="text-gray-500 hover:text-lavender-600 transition-colors">
                   Privacy Policy
