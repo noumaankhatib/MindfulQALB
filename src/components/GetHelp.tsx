@@ -89,27 +89,36 @@ const GetHelp = () => {
   const crisisResources = [
     {
       title: 'iCall - TISS Helpline',
+      shortTitle: 'iCall (TISS)',
       contact: '9152987821',
       availability: 'Mon-Sat, 8 AM - 10 PM',
+      shortAvailability: 'Mon–Sat · 8am–10pm',
       icon: Phone,
     },
     {
       title: 'Vandrevala Foundation',
+      shortTitle: 'Vandrevala',
       contact: '1860-2662-345',
       availability: 'Available 24/7 (Hindi, English)',
+      shortAvailability: '24/7 · Hindi & English',
       icon: MessageCircle,
     },
     {
       title: 'NIMHANS Helpline',
+      shortTitle: 'NIMHANS',
       contact: '080-46110007',
       availability: 'Available 24/7',
+      shortAvailability: '24/7',
       icon: Phone,
     },
     {
       title: 'Emergency Services',
+      shortTitle: 'Emergency',
       contact: '112',
       availability: 'India Emergency Number',
+      shortAvailability: 'India emergency',
       icon: AlertTriangle,
+      urgent: true,
     },
   ]
 
@@ -356,26 +365,87 @@ const GetHelp = () => {
           </motion.div>
         </div>
 
-        {/* Crisis Resources - Condensed */}
+        {/* Crisis Resources */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: "-100px" }}
+          viewport={{ once: true, margin: '-100px' }}
           transition={{ duration: 0.7, delay: 0.1, ease: [0.25, 0.1, 0.25, 1] }}
-          className="bg-gradient-to-br from-lavender-50/60 to-cream-50/40 rounded-3xl p-8 md:p-10 border border-lavender-100/50 shadow-soft"
+          className="bg-gradient-to-br from-lavender-50/60 to-cream-50/40 rounded-2xl sm:rounded-3xl p-4 sm:p-8 md:p-10 border border-lavender-100/50 shadow-soft"
         >
-          <div className="text-center mb-8">
-            <h3 className="font-display text-xl md:text-2xl font-semibold text-gray-800 mb-2">
+          <div className="text-center mb-4 sm:mb-8">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 border border-amber-200/60 mb-3 sm:hidden">
+              <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
+              <span className="text-xs font-semibold text-amber-800">Crisis helplines</span>
+            </div>
+            <h3 className="font-display text-lg sm:text-xl md:text-2xl font-semibold text-gray-800 mb-1 sm:mb-2">
               Need Immediate Support?
             </h3>
-            <p className="text-gray-600 text-sm">
-              If you're in crisis, please reach out to these helplines immediately.
+            <p className="text-gray-600 text-xs sm:text-sm max-w-md mx-auto">
+              <span className="sm:hidden">Tap a number to call — available 24/7 on several lines.</span>
+              <span className="hidden sm:inline">
+                If you&apos;re in crisis, please reach out to these helplines immediately.
+              </span>
             </p>
           </div>
-          
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+
+          {/* Mobile: compact tap-to-call list */}
+          <div className="sm:hidden space-y-2 mb-4">
+            {[...crisisResources]
+              .sort((a, b) => (a.urgent ? -1 : 0) - (b.urgent ? -1 : 0))
+              .map((resource, index) => {
+                const Icon = resource.icon
+                const tel = resource.contact.replace(/[^0-9+]/g, '')
+                return (
+                  <motion.a
+                    key={resource.title}
+                    href={`tel:${tel}`}
+                    initial={{ opacity: 0, y: 8 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.35, delay: index * 0.05 }}
+                    whileTap={{ scale: 0.98 }}
+                    className={`flex items-center gap-3 p-3 rounded-xl border shadow-soft transition-colors ${
+                      resource.urgent
+                        ? 'bg-amber-50/90 border-amber-200/70'
+                        : 'bg-white/80 border-white/60'
+                    }`}
+                  >
+                    <div
+                      className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${
+                        resource.urgent ? 'bg-amber-100' : 'bg-lavender-100/80'
+                      }`}
+                    >
+                      <Icon
+                        className={`w-4 h-4 ${resource.urgent ? 'text-amber-700' : 'text-lavender-600'}`}
+                      />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-semibold text-gray-800 leading-tight">
+                        {resource.shortTitle}
+                      </p>
+                      <p className="text-[11px] text-gray-500 mt-0.5">{resource.shortAvailability}</p>
+                    </div>
+                    <div className="shrink-0 text-right">
+                      <span
+                        className={`inline-flex items-center gap-1 text-sm font-bold ${
+                          resource.urgent ? 'text-amber-700' : 'text-lavender-600'
+                        }`}
+                      >
+                        <Phone className="w-3.5 h-3.5" />
+                        {resource.contact}
+                      </span>
+                    </div>
+                  </motion.a>
+                )
+              })}
+          </div>
+
+          {/* Tablet & desktop: card grid */}
+          <div className="hidden sm:grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {crisisResources.map((resource, index) => {
               const Icon = resource.icon
+              const tel = resource.contact.replace(/[^0-9+]/g, '')
               return (
                 <motion.div
                   key={resource.title}
@@ -384,17 +454,29 @@ const GetHelp = () => {
                   viewport={{ once: true }}
                   transition={{ duration: 0.4, delay: index * 0.1 }}
                   whileHover={{ y: -4 }}
-                  className="flex flex-col items-center text-center p-5 bg-white/70 backdrop-blur-sm rounded-2xl border border-white/60 shadow-soft hover:shadow-gentle transition-all duration-300"
+                  className={`flex flex-col items-center text-center p-5 backdrop-blur-sm rounded-2xl border shadow-soft hover:shadow-gentle transition-all duration-300 ${
+                    resource.urgent
+                      ? 'bg-amber-50/80 border-amber-200/50'
+                      : 'bg-white/70 border-white/60'
+                  }`}
                 >
-                  <div className="w-10 h-10 rounded-xl bg-lavender-100/80 flex items-center justify-center mb-3">
-                    <Icon className="w-5 h-5 text-lavender-600" />
+                  <div
+                    className={`w-10 h-10 rounded-xl flex items-center justify-center mb-3 ${
+                      resource.urgent ? 'bg-amber-100' : 'bg-lavender-100/80'
+                    }`}
+                  >
+                    <Icon
+                      className={`w-5 h-5 ${resource.urgent ? 'text-amber-700' : 'text-lavender-600'}`}
+                    />
                   </div>
-                  <strong className="text-sm text-gray-800 block mb-1">
-                    {resource.title}
-                  </strong>
+                  <strong className="text-sm text-gray-800 block mb-1">{resource.title}</strong>
                   <a
-                    href={`tel:${resource.contact.replace(/[^0-9+]/g, '')}`}
-                    className="text-lavender-600 font-semibold text-base mb-0.5 hover:text-lavender-700 transition-colors"
+                    href={`tel:${tel}`}
+                    className={`font-semibold text-base mb-0.5 transition-colors ${
+                      resource.urgent
+                        ? 'text-amber-700 hover:text-amber-800'
+                        : 'text-lavender-600 hover:text-lavender-700'
+                    }`}
                   >
                     {resource.contact}
                   </a>
@@ -404,17 +486,17 @@ const GetHelp = () => {
             })}
           </div>
 
-          <div className="mt-6 text-center">
-            <p className="text-gray-600 text-sm">
+          <div className="mt-4 sm:mt-6 text-center">
+            <p className="text-gray-600 text-xs sm:text-sm">
               More resources at{' '}
-              <a 
-                href="https://www.thelivelovelaughfoundation.org" 
-                target="_blank" 
+              <a
+                href="https://www.thelivelovelaughfoundation.org"
+                target="_blank"
                 rel="noopener noreferrer"
                 className="text-lavender-600 hover:text-lavender-700 font-medium inline-flex items-center gap-1 transition-colors"
               >
-                The Live Love Laugh Foundation
-                <ExternalLink className="w-3.5 h-3.5" />
+                Live Love Laugh Foundation
+                <ExternalLink className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
               </a>
             </p>
           </div>

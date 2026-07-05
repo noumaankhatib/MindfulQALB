@@ -1,7 +1,8 @@
 import { motion } from 'framer-motion'
-import { ArrowRight, Shield, Heart, Users, Sparkles } from 'lucide-react'
+import { ArrowRight, Shield, Heart, Sparkles, Globe, Languages } from 'lucide-react'
 import heroMainWebP from '../assets/images/hero_main.webp'
 import heroMainFallback from '../assets/images/hero_main_optimized.jpeg'
+import profileImage from '../assets/images/profile_final_optimized.jpg'
 
 // Therapy-themed wellness images from Unsplash (royalty-free)
 const heroImages = {
@@ -61,7 +62,7 @@ const Hero = () => {
   }
 
   return (
-    <section id="home" className="relative min-h-[90vh] flex items-center overflow-hidden pt-20 pb-12 px-4 sm:px-6 lg:px-8">
+    <section id="home" className="relative min-h-0 lg:min-h-[90vh] flex items-center overflow-hidden pt-20 pb-10 sm:pb-12 px-4 sm:px-6 lg:px-8">
       {/* Gradient Background - Soft lavender for calm therapeutic feel */}
       <div className="absolute inset-0 bg-gradient-to-br from-lavender-50/80 via-white to-lavender-100/30" />
       
@@ -102,14 +103,40 @@ const Hero = () => {
             animate="visible"
             className="text-center lg:text-left"
           >
-            {/* Authority Badge - Lavender themed */}
+            {/* Mobile — therapist photo builds trust immediately */}
             <motion.div
               variants={itemVariants}
-              className="inline-flex flex-wrap items-center gap-2 mb-6"
+              className="lg:hidden flex items-center gap-4 mb-6 mx-auto sm:max-w-md"
+            >
+              <div className="relative shrink-0">
+                <div className="absolute -inset-1 bg-gradient-to-br from-lavender-300/40 to-lavender-100/20 rounded-2xl blur-sm" />
+                <img
+                  src={profileImage}
+                  alt="Aqsa Khatib — Counseling Psychologist at MindfulQALB"
+                  className="relative w-[4.5rem] h-[4.5rem] rounded-2xl object-cover object-top border-2 border-white shadow-lg"
+                  width={72}
+                  height={72}
+                  loading="eager"
+                  decoding="async"
+                />
+              </div>
+              <div className="text-left min-w-0">
+                <p className="font-display font-semibold text-gray-800 text-lg leading-tight">
+                  Aqsa Khatib
+                </p>
+                <p className="text-sm text-lavender-600 font-medium">Counseling Psychologist</p>
+                <p className="text-xs text-gray-500 mt-0.5">3,000+ clinical hours · Licensed</p>
+              </div>
+            </motion.div>
+
+            {/* Authority badges */}
+            <motion.div
+              variants={itemVariants}
+              className="inline-flex flex-wrap items-center justify-center lg:justify-start gap-2 mb-6"
             >
               <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-lavender-100 border border-lavender-300/60 text-xs font-semibold text-lavender-800 shadow-soft">
                 <Sparkles className="w-3.5 h-3.5 text-lavender-500" />
-                Master's in Counseling Psychology
+                Master&apos;s in Counseling Psychology
               </span>
               <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-xs font-semibold text-emerald-700 shadow-soft">
                 <Shield className="w-3.5 h-3.5 text-emerald-500" />
@@ -118,6 +145,14 @@ const Hero = () => {
               <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/80 backdrop-blur-sm border border-lavender-200/60 text-xs font-semibold text-gray-700 shadow-soft">
                 <Heart className="w-3.5 h-3.5 text-lavender-500" />
                 3000+ Clinical Hours
+              </span>
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/80 backdrop-blur-sm border border-lavender-200/60 text-xs font-semibold text-gray-700 shadow-soft">
+                <Globe className="w-3.5 h-3.5 text-lavender-500" />
+                India &amp; Worldwide
+              </span>
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/80 backdrop-blur-sm border border-lavender-200/60 text-xs font-semibold text-gray-700 shadow-soft">
+                <Languages className="w-3.5 h-3.5 text-lavender-500" />
+                English &amp; Hindi
               </span>
             </motion.div>
 
@@ -136,7 +171,7 @@ const Hero = () => {
               variants={itemVariants}
               className="text-lg sm:text-xl lg:text-lg mb-8 max-w-xl mx-auto lg:mx-0 leading-relaxed font-normal text-gray-600"
             >
-              Online therapy with a licensed counseling psychologist. Anxiety, relationships, burnout, grief—whatever you're carrying, you don't have to carry it alone.
+              Online therapy with a licensed counseling psychologist — confidential, evidence-based, and tailored to you.
             </motion.p>
 
             {/* CTA Buttons */}
@@ -156,13 +191,13 @@ const Hero = () => {
                 </span>
               </motion.a>
               <motion.a
-                href="#approach"
+                href="#how-it-works"
                 whileHover={{ scale: 1.03, y: -2 }}
                 whileTap={{ scale: 0.98 }}
                 className="btn-secondary w-full sm:w-auto text-center"
                 onClick={(e) => {
                   e.preventDefault()
-                  const element = document.getElementById('approach')
+                  const element = document.getElementById('how-it-works')
                   if (element) {
                     const navHeight = 80
                     const elementPosition = element.getBoundingClientRect().top + window.scrollY
@@ -180,31 +215,10 @@ const Hero = () => {
             {/* Free consultation reassurance */}
             <motion.p
               variants={itemVariants}
-              className="text-xs text-gray-500 text-center lg:text-left mb-6"
+              className="text-xs text-gray-500 text-center lg:text-left"
             >
               No commitment · 15-minute free call · Confidential
             </motion.p>
-
-            {/* Trust Indicators - All lavender themed for consistency */}
-            <motion.div
-              variants={itemVariants}
-              className="flex flex-wrap justify-center lg:justify-start gap-2 sm:gap-4 md:gap-6"
-            >
-              {[
-                { icon: Heart, text: 'Evidence-Based', color: 'text-lavender-600' },
-                { icon: Shield, text: 'Confidential', color: 'text-lavender-500' },
-                { icon: Users, text: 'Licensed Psychologist', color: 'text-lavender-700' },
-              ].map((item) => (
-                <motion.div
-                  key={item.text}
-                  whileHover={{ y: -2 }}
-                  className="flex items-center gap-2 px-3 py-2 rounded-full bg-white/70 backdrop-blur-sm border border-lavender-100/60 shadow-soft"
-                >
-                  <item.icon className={`w-4 h-4 ${item.color}`} />
-                  <span className="text-sm font-medium text-gray-700">{item.text}</span>
-                </motion.div>
-              ))}
-            </motion.div>
           </motion.div>
 
           {/* Right Image Section - Therapy Imagery */}

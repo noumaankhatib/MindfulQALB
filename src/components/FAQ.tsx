@@ -7,36 +7,32 @@ const FAQ = () => {
 
   const faqs = [
     {
-      question: 'Who can benefit from therapy?',
-      answer: 'Anyone going through emotional, relational, or life challenges can benefit from therapy. Whether you\'re dealing with anxiety, stress, relationship difficulties, self-esteem issues, life transitions, or simply seeking personal growth—therapy provides a safe space to explore, heal, and grow. You don\'t need to be in crisis to seek support.',
-    },
-    {
-      question: 'Is online therapy effective?',
-      answer: 'Yes, research consistently shows that online therapy can be as effective as in-person therapy for many conditions including anxiety, depression, and relationship issues. Online sessions offer the same quality of care with added convenience—you can attend from the comfort of your home, saving time on commute and maintaining privacy.',
+      question: 'How do I book a session?',
+      answer: 'Book through the calendar on this page. Start with a free 15-minute consultation — no commitment. Once we confirm we\'re a good fit, schedule your first full session.',
     },
     {
       question: 'How long is each session?',
-      answer: 'Individual therapy sessions are typically 50-60 minutes long. Couples therapy sessions are 60-75 minutes to allow adequate time for both partners. The initial free consultation is 15-20 minutes to understand your needs and see if we\'re a good fit for working together.',
+      answer: 'Individual sessions are 30–60 minutes depending on format (chat, audio, or video). Couples sessions are 90 minutes. The free consultation is 15 minutes.',
     },
     {
       question: 'Is therapy confidential?',
-      answer: 'Absolutely. Confidentiality is the foundation of our therapeutic relationship. Everything discussed in sessions remains strictly private. I use secure, encrypted platforms for all online sessions. There are only rare legal exceptions (such as imminent harm to self or others) which I\'ll explain during our first session.',
+      answer: 'Yes. Everything discussed stays private. Sessions use secure, encrypted platforms. Rare legal exceptions (imminent harm) are explained in your first session.',
     },
     {
-      question: 'Do you work with NRI / international clients?',
-      answer: 'Yes, I work with clients across different time zones including NRIs (Non-Resident Indians) and international clients. All sessions are conducted online, making it convenient regardless of your location. We can schedule sessions at times that work for your time zone.',
+      question: 'Is online therapy effective?',
+      answer: 'Research shows online therapy works as well as in-person for anxiety, depression, and relationship issues — with the added comfort and privacy of home.',
+    },
+    {
+      question: 'Do you work with international clients?',
+      answer: 'Yes. All sessions are online, so location doesn\'t matter. We schedule at times that work for your time zone, including NRIs and clients abroad.',
     },
     {
       question: 'What happens in the first session?',
-      answer: 'The first session is about understanding your story and what brings you to therapy. We\'ll discuss your concerns, goals, and what you hope to achieve. I\'ll explain how therapy works, answer your questions, and together we\'ll create a plan tailored to your needs. It\'s also an opportunity for you to see if you feel comfortable working with me.',
+      answer: 'We discuss what brings you to therapy, your goals, and how sessions work. You\'ll receive a consent form beforehand. It\'s also a chance to see if you feel comfortable working together.',
     },
     {
-      question: 'What types of therapy do you offer?',
-      answer: 'I offer individual therapy, couples therapy, and workshops. My approach is eclectic—I use evidence-based methods like CBT (Cognitive Behaviour Therapy), ACT (Acceptance and Commitment Therapy), Solution-Focused Therapy, Gestalt Therapy, and NLP, tailored to what will help you most effectively.',
-    },
-    {
-      question: 'How do I book a session?',
-      answer: 'You can book directly through the calendar on this website. Start with a free 15-20 minute consultation to discuss your needs. Once we determine we\'re a good fit, you can schedule your first full session. All bookings require confirmation, and you\'ll receive an email with session details.',
+      question: 'Can I choose video, audio, or chat?',
+      answer: 'Yes. Individual sessions are available as chat (30 min), audio (45 min), or video (60 min). Couples sessions are video-only. Pick the format that feels most comfortable for you.',
     },
   ]
 

@@ -7,23 +7,18 @@ import { Outlet } from 'react-router-dom'
 import { cleanupLegacyStorage } from './utils/secureStorage'
 import Navigation from './components/Navigation'
 import Hero from './components/Hero'
-import WhoWeHelp from './components/WhoWeHelp'
-import WhatWeOffer from './components/WhatWeOffer'
 import TrustSignals from './components/TrustSignals'
-import QuickAccess from './components/QuickAccess'
-import MentalHealth from './components/MentalHealth'
-import CouplesRelationships from './components/CouplesRelationships'
-import FamilyCounseling from './components/FamilyCounseling'
-import HolisticWellness from './components/HolisticWellness'
-import SupportGroups from './components/SupportGroups'
+import Services from './components/Services'
 import AboutTherapist from './components/AboutTherapist'
 import TherapeuticApproach from './components/TherapeuticApproach'
-import Programs from './components/Programs'
 import GetHelp from './components/GetHelp'
-import AboutEthics from './components/AboutEthics'
 import Footer from './components/Footer'
 import FAQ from './components/FAQ'
 import Chatbot from './components/Chatbot'
+import StickyBookCta from './components/StickyBookCta'
+import WhoThisIsFor from './components/WhoThisIsFor'
+import HowItWorks from './components/HowItWorks'
+import ClientTestimonials from './components/ClientTestimonials'
 
 const PrivacyPolicyPage = lazy(() => import('./pages/PrivacyPolicyPage'))
 const TermsOfServicePage = lazy(() => import('./pages/TermsOfServicePage'))
@@ -89,11 +84,11 @@ const HomePage = () => {
     <div className="min-h-screen relative overflow-x-hidden">
       <Helmet>
         <title>Mindful QALB | Evidence-Based Mental Health Care for Individuals & Couples</title>
-        <meta name="description" content="Online therapy and counseling by a licensed psychologist. Individual therapy, couples therapy, and support groups. Book a free 15-minute consultation today." />
+        <meta name="description" content="Online therapy and counseling by a licensed psychologist. Individual and couples therapy via video, audio, or chat. Book a free 15-minute consultation." />
         <link rel="canonical" href="https://www.mindfulqalb.com/" />
         <meta name="robots" content="index, follow" />
         <meta property="og:title" content="Mindful QALB | Evidence-Based Mental Health Care for Individuals & Couples" />
-        <meta property="og:description" content="Online therapy and counseling by a licensed psychologist. Individual therapy, couples therapy, and support groups." />
+        <meta property="og:description" content="Online therapy and counseling by a licensed psychologist. Individual and couples therapy. Book a free 15-minute consultation." />
         <meta property="og:url" content="https://www.mindfulqalb.com/" />
         <meta property="og:image" content="https://www.mindfulqalb.com/og-image.png" />
       </Helmet>
@@ -106,26 +101,20 @@ const HomePage = () => {
       </a>
       
       <Navigation />
-      <main id="main-content">
+      <main id="main-content" className="pb-24 md:pb-0">
         <Hero />
+        <WhoThisIsFor />
         <AboutTherapist />
-        <TherapeuticApproach />
-        <WhoWeHelp />
-        <WhatWeOffer />
         <TrustSignals />
-        <QuickAccess />
-        <MentalHealth />
-        <CouplesRelationships />
-        {/* <TherapySupport /> */}
-        <FamilyCounseling />
-        <HolisticWellness />
-        <SupportGroups />
-        <Programs />
+        <Services />
+        <ClientTestimonials />
+        <TherapeuticApproach />
+        <HowItWorks />
         <GetHelp />
-        <AboutEthics />
         <FAQ />
       </main>
       <Footer />
+      <StickyBookCta />
       
       {/* Floating Chatbot */}
       <Chatbot />
@@ -190,6 +179,7 @@ const router = createBrowserRouter(
         { path: '/terms', element: <Suspense fallback={<LazyFallback />}><TermsOfServicePage /></Suspense> },
         { path: '/contact', element: <Suspense fallback={<LazyFallback />}><ContactPage /></Suspense> },
         { path: '/blog', element: <Suspense fallback={<LazyFallback />}><BlogListPage /></Suspense> },
+        { path: '/blog/understanding-emotions-practical-ways-to-feel-better', element: <Navigate to="/blog/understanding-managing-emotions-guide" replace /> },
         { path: '/blog/:slug', element: <Suspense fallback={<LazyFallback />}><BlogPostPage /></Suspense> },
         { path: '/bookings', element: <Navigate to="/#get-help" replace /> },
         { path: '/my-bookings', element: <Suspense fallback={<LazyFallback />}><MyBookingsPage /></Suspense> },

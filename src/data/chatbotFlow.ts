@@ -99,9 +99,7 @@ export const sessionTypes: Record<string, SessionRecommendation> = {
 // Website sections for context-aware responses
 export const websiteSections = {
   approach: { href: '#approach', label: 'My Therapeutic Approach' },
-  mentalHealth: { href: '#mental-health', label: 'Mental Health Support' },
-  couples: { href: '#couples', label: 'Couples & Relationships' },
-  family: { href: '#family', label: 'Family Counseling' },
+  services: { href: '#services', label: 'Services' },
   about: { href: '#about', label: 'About Aqsa Khatib' },
   booking: { href: '#get-help', label: 'Book a Session' },
   faq: { href: '#faq', label: 'FAQs' },
@@ -256,11 +254,11 @@ export const chatbotFlow: Record<string, ChatStep> = {
     type: 'info',
     message: "Family therapy can transform relationships. Sessions typically include relevant family members and focus on improving communication and understanding.",
     quickLinks: [
-      { label: 'Learn about Family Counseling', href: '#family', description: 'See our family therapy approach' },
+      { label: 'Learn about Family Counseling', href: '#services', description: 'See our family therapy approach' },
       { label: 'Book Family Session', href: '#get-help', description: 'Schedule a family consultation' },
     ],
     options: [
-      { id: 'learn_family', label: 'Learn more about family therapy', internalLink: '#family' },
+      { id: 'learn_family', label: 'Learn more about family therapy', internalLink: '#services' },
       { id: 'book_family', label: 'Book a session', nextStepId: 'booking_preference' },
     ],
   },
@@ -271,13 +269,13 @@ export const chatbotFlow: Record<string, ChatStep> = {
     type: 'quick_links',
     message: "I offer a range of evidence-based services. What would you like to explore?",
     quickLinks: [
-      { label: 'Mental Health Support', href: '#mental-health', description: 'Anxiety, depression, trauma & more' },
-      { label: 'Couples Therapy', href: '#couples', description: 'Strengthen your relationship' },
+      { label: 'Individual Therapy', href: '#services', description: 'Anxiety, stress, grief & more' },
+      { label: 'Couples Therapy', href: '#services', description: 'Strengthen your relationship' },
       { label: 'My Therapeutic Approach', href: '#approach', description: 'CBT, ACT, Gestalt & more' },
     ],
     options: [
-      { id: 'mental_health', label: 'Mental Health Support', internalLink: '#mental-health' },
-      { id: 'couples_service', label: 'Couples Therapy', internalLink: '#couples' },
+      { id: 'mental_health', label: 'Individual Therapy', internalLink: '#services' },
+      { id: 'couples_service', label: 'Couples Therapy', internalLink: '#services' },
       { id: 'approach', label: 'My Approach', internalLink: '#approach' },
       { id: 'ready', label: "I'm ready to book", nextStepId: 'booking_preference' },
     ],

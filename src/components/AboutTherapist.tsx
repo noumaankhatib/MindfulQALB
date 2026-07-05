@@ -1,71 +1,10 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Heart, Clock, CheckCircle, ArrowRight, Star, Quote, FileText, CreditCard, Sparkles, ChevronDown, IndianRupee, GraduationCap, Briefcase, Award, Globe, BookOpen, Lightbulb, Users, Brain, Shield } from 'lucide-react'
+import { Heart, Clock, ArrowRight, Star, Quote, Sparkles, ChevronDown, GraduationCap, Briefcase, Award, Globe, BookOpen, Lightbulb, Users, Brain, Shield, FileText } from 'lucide-react'
 import profileImage from '../assets/images/profile_final_optimized.jpg'
 
 const AboutTherapist = () => {
   const [showMoreDetails, setShowMoreDetails] = useState(false)
-
-  const testimonials = [
-    {
-      text: "My therapy sessions have been extremely helpful. They provide a safe and understanding space, listen without judgment, and give practical guidance that really works. I feel more confident, calmer, and better equipped to handle challenges.",
-      author: "AB",
-      name: "Avilash",
-      details: "24, Male",
-      highlight: "More confident & calmer",
-    },
-    {
-      text: "After talking to you, I feel like I've been able to open up a bit more about things I couldn't share with others. Your guidance has helped me identify my problems and work through them, and I feel like I can be myself around you. Your support has given me the strength to improve myself, and I'm grateful for that.",
-      author: "SA",
-      name: "Sonia",
-      details: "42, Female",
-      highlight: "Found strength to improve",
-    },
-    {
-      text: "We had our first session on the night of 20th February, 2025 and it was an audio call and I was mesmerized by her way of putting things into perspective. Out of all the psychologists I consulted, she had the most different approach which I had never experienced before and she is such a lively and kind woman. Just in 3-4 sessions, this woman has completely changed the way I see things.",
-      author: "KS",
-      name:"Kamal",
-      details: "23, Male",
-      highlight: "Life-changing perspective",
-    },
-  ]
-
-  const feeStructure = [
-    {
-      type: 'Free Consultation',
-      duration: '15-20 min',
-      price: 'Free',
-      description: 'A brief call to understand your needs and see if we\'re a good fit',
-      features: ['No commitment required', 'Discuss your concerns', 'Ask any questions'],
-      popular: false,
-      formats: null,
-    },
-    {
-      type: 'Individual Therapy',
-      duration: '30-60 min',
-      price: '499',
-      priceLabel: 'Starting from',
-      description: 'One-on-one personalized counseling session',
-      features: ['Personalized approach', 'Evidence-based techniques', 'Progress tracking'],
-      popular: true,
-      formats: [
-        { name: 'Chat', duration: '30 min', price: '₹499' },
-        { name: 'Audio', duration: '45 min', price: '₹899' },
-        { name: 'Video', duration: '60 min', price: '₹1,299' },
-      ],
-    },
-    {
-      type: 'Couple Therapy',
-      duration: '90 min',
-      price: '1,999',
-      description: 'Joint session for couples seeking stronger bonds',
-      features: ['Both partners included', 'Relationship focus', 'Communication tools'],
-      popular: false,
-      formats: [
-        { name: 'Video', duration: '90 min', price: '₹1,999' },
-      ],
-    },
-  ]
 
   return (
     <section id="about" className="py-16 md:py-20 lg:py-24 relative overflow-hidden px-4 sm:px-6 lg:px-8">
@@ -100,8 +39,20 @@ const AboutTherapist = () => {
           <p className="text-lg md:text-xl text-lavender-600 font-medium mb-2">
             Counseling Psychologist & Therapist
           </p>
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-gray-500 mb-4">
             Master's in Counseling Psychology · CBT · NLP · Trauma-Informed · 3,000+ clinical hours
+          </p>
+          <motion.a
+            href="#get-help"
+            whileHover={{ scale: 1.03 }}
+            whileTap={{ scale: 0.98 }}
+            className="btn-primary inline-flex items-center gap-2 px-6 py-3 text-sm font-medium"
+          >
+            Book a Free Consultation
+            <ArrowRight className="w-4 h-4" />
+          </motion.a>
+          <p className="text-xs text-gray-500 mt-3">
+            Online sessions · India &amp; international clients · English &amp; Hindi
           </p>
         </motion.div>
 
@@ -418,206 +369,31 @@ const AboutTherapist = () => {
           </motion.div>
         </div>
 
-{/* Testimonials Section - Enhanced */}
+        {/* Pricing teaser — full details in Get Help */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: "-100px" }}
-          transition={{ duration: 0.7, ease: [0.25, 0.1, 0.25, 1] }}
-          className="mb-16"
+          viewport={{ once: true, margin: '-100px' }}
+          transition={{ duration: 0.7 }}
+          className="mb-8"
         >
-          <div className="text-center mb-12">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-lavender-100/60 border border-lavender-200/50 mb-6">
-              <Quote className="w-4 h-4 text-lavender-600" />
-              <span className="text-sm font-medium text-lavender-700">Real Stories, Real Results</span>
-            </div>
-            <h3 className="font-display text-2xl md:text-3xl font-semibold text-gray-800 mb-4">
-              What Clients Say
-            </h3>
-            <p className="text-gray-600 max-w-2xl mx-auto">
-              Hear from people who have experienced meaningful change through therapy.
+          <div className="bg-gradient-to-br from-lavender-50/80 to-white rounded-2xl p-6 md:p-8 border border-lavender-100/50 text-center max-w-2xl mx-auto">
+            <p className="text-gray-700 mb-2">
+              Sessions from <strong className="text-lavender-600">₹499</strong> · Free 15-minute consultation
             </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {testimonials.map((testimonial, index) => (
-              <motion.div
-                key={index}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: index * 0.1 }}
-                whileHover={{ y: -6 }}
-                className="relative bg-white rounded-2xl p-6 border border-lavender-100/50 shadow-soft hover:shadow-card-hover transition-all duration-300"
-              >
-                {/* Highlight badge */}
-                <div className="absolute -top-3 left-4">
-                  <span className="bg-gradient-to-r from-lavender-500 to-lavender-600 text-white text-xs font-medium px-3 py-1 rounded-full">
-                    {testimonial.highlight}
-                  </span>
-                </div>
-                
-                <div className="pt-4">
-                  <Quote className="w-8 h-8 text-lavender-200 mb-3" />
-                  <p className="text-gray-600 leading-relaxed mb-6 text-sm line-clamp-6">
-                    "{testimonial.text}"
-                  </p>
-                  <div className="flex items-center gap-3 pt-4 border-t border-lavender-100/50">
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-lavender-400 to-lavender-500 flex items-center justify-center">
-                      <span className="text-white font-semibold text-sm">{testimonial.author}</span>
-                    </div>
-                    <div>
-                      <p className="font-medium text-gray-800 text-sm">{testimonial.name}</p>
-                      <p className="text-xs text-gray-500">{testimonial.details}</p>
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        </motion.div>
-
-        {/* Fee Structure Section - Professional Cards */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: "-100px" }}
-          transition={{ duration: 0.7, ease: [0.25, 0.1, 0.25, 1] }}
-          className="mb-16"
-        >
-          <div className="text-center mb-12">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-lavender-100/60 border border-lavender-200/50 mb-6">
-              <CreditCard className="w-4 h-4 text-lavender-600" />
-              <span className="text-sm font-medium text-lavender-700">Transparent Pricing</span>
-            </div>
-            <h3 className="font-display text-2xl md:text-3xl font-semibold text-gray-800 mb-4">
-              Investment in Your Wellbeing
-            </h3>
-            <p className="text-gray-600 max-w-2xl mx-auto">
-              Clear, straightforward pricing with no hidden fees. All sessions are conducted online for your convenience and comfort.
+            <p className="text-sm text-gray-500 mb-4">
+              Chat, audio, and video formats · Couples sessions available · Transparent pricing, no hidden fees
             </p>
+            <motion.a
+              href="#get-help"
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.98 }}
+              className="btn-secondary inline-flex items-center gap-2"
+            >
+              View pricing &amp; book
+              <ArrowRight className="w-4 h-4" />
+            </motion.a>
           </div>
-
-          {/* Fee Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-            {feeStructure.map((fee, index) => (
-              <motion.div
-                key={index}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: index * 0.1 }}
-                whileHover={{ y: -8, scale: 1.02 }}
-                className={`relative bg-white rounded-2xl overflow-hidden border shadow-soft hover:shadow-xl transition-all duration-300 flex flex-col ${
-                  fee.popular
-                    ? 'border-lavender-400 ring-2 ring-lavender-100'
-                    : 'border-lavender-100/50'
-                }`}
-              >
-                {fee.popular && (
-                  <div className="bg-gradient-to-r from-lavender-500 to-lavender-600 text-white text-center py-2 text-sm font-semibold">
-                    Most Popular
-                  </div>
-                )}
-                <div className="p-6 flex flex-col h-full">
-                  <h4 className="font-display text-lg font-semibold text-gray-800 mb-1">
-                    {fee.type}
-                  </h4>
-                  <p className="text-sm text-gray-500 mb-3">{fee.duration}</p>
-
-                  {/* Price Display */}
-                  <div className="mb-4">
-                    {fee.priceLabel && (
-                      <p className="text-xs text-gray-500 mb-1">{fee.priceLabel}</p>
-                    )}
-                    <div className="flex items-baseline gap-1">
-                      {fee.price !== 'Free' && (
-                        <IndianRupee className="w-5 h-5 text-lavender-600" />
-                      )}
-                      <span className="text-3xl font-bold text-lavender-600">{fee.price}</span>
-                      {fee.price !== 'Free' && (
-                        <span className="text-sm text-gray-500">/session</span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Session Formats Table */}
-                  {fee.formats && fee.formats.length > 0 && (
-                    <div className="mb-4 bg-gradient-to-br from-lavender-50 to-purple-50 rounded-xl p-3 border border-lavender-100">
-                      <p className="text-xs font-semibold text-lavender-700 mb-2">Session Options:</p>
-                      <div className="space-y-2">
-                        {fee.formats.map((format, i) => (
-                          <div key={i} className="flex items-center justify-between text-sm">
-                            <div className="flex items-center gap-2">
-                              <span className="w-2 h-2 rounded-full bg-gradient-to-r from-lavender-500 to-purple-500"></span>
-                              <span className="font-medium text-gray-700">{format.name}</span>
-                              <span className="text-gray-400 text-xs">({format.duration})</span>
-                            </div>
-                            <span className="font-bold text-lavender-600">{format.price}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  <p className="text-sm text-gray-600 mb-4">{fee.description}</p>
-
-                  <ul className="space-y-2 mb-6 flex-1">
-                    {fee.features.map((feature, i) => (
-                      <li key={i} className="flex items-center gap-2 text-sm text-gray-600">
-                        <CheckCircle className="w-4 h-4 text-lavender-500 flex-shrink-0" />
-                        {feature}
-                      </li>
-                    ))}
-                  </ul>
-
-                  <motion.a
-                    href="#get-help"
-                    whileHover={{ scale: 1.03 }}
-                    whileTap={{ scale: 0.98 }}
-                    className="block text-center py-3 px-4 rounded-xl font-semibold transition-all shadow-md hover:shadow-lg bg-gradient-to-r from-lavender-500 to-lavender-600 text-white hover:from-lavender-600 hover:to-lavender-700 shadow-lavender-500/25 mt-auto"
-                  >
-                    {fee.price === 'Free' ? 'Book Free Call' : 'Get Started'}
-                  </motion.a>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-
-          {/* Getting Started Info */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ delay: 0.3 }}
-            className="bg-gradient-to-br from-lavender-50/80 to-white rounded-2xl p-8 border border-lavender-100/50"
-          >
-            <div className="flex flex-col md:flex-row items-start gap-8">
-              <div className="flex-1">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-12 h-12 rounded-xl bg-lavender-100 flex items-center justify-center">
-                    <FileText className="w-6 h-6 text-lavender-600" />
-                  </div>
-                  <h4 className="font-display text-xl font-semibold text-gray-800">
-                    How to Get Started
-                  </h4>
-                </div>
-                <p className="text-gray-600 leading-relaxed">
-                  Before your first session, you'll receive a <strong>consent form</strong> outlining the therapeutic process, confidentiality, and your rights. This ensures complete transparency and establishes a foundation of trust for our work together.
-                </p>
-              </div>
-              <div className="flex-1">
-                <div className="grid grid-cols-2 gap-3">
-                  {['100% Confidential', 'Online Sessions', 'Flexible Scheduling', 'Safe Space'].map((item, i) => (
-                    <div key={i} className="flex items-center gap-2 p-3 bg-white rounded-xl border border-lavender-100">
-                      <CheckCircle className="w-4 h-4 text-lavender-500 flex-shrink-0" />
-                      <span className="text-sm text-gray-700">{item}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </motion.div>
         </motion.div>
       </div>
     </section>
