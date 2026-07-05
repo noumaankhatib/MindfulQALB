@@ -27,6 +27,18 @@ const socialLinks = [
   },
 ]
 
+const DeveloperCredit = ({ className = '' }: { className?: string }) => (
+  <p className={`text-gray-400 text-[11px] sm:text-xs leading-relaxed ${className}`}>
+    Designed &amp; developed by{' '}
+    <a
+      href="mailto:noumankhatib@gmail.com"
+      className="text-lavender-700 hover:text-lavender-800 transition-colors font-medium"
+    >
+      Nouman Khatib
+    </a>
+  </p>
+)
+
 const Footer = () => {
   const location = useLocation()
   const isHomePage = location.pathname === '/'
@@ -255,9 +267,12 @@ const Footer = () => {
           <div className="pt-8 border-t border-gray-200/60">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 text-center md:text-left">
               {/* Copyright */}
-              <p className="text-gray-500 text-sm">
-                © {new Date().getFullYear()} Mindful QALB · Confidential & Ethical Practice
-              </p>
+              <div>
+                <p className="text-gray-500 text-sm">
+                  © {new Date().getFullYear()} Mindful QALB · Confidential & Ethical Practice
+                </p>
+                <DeveloperCredit className="mt-1.5" />
+              </div>
               
               {/* Legal Links - Industry Standard Placement */}
               <div className="flex items-center justify-center gap-4 text-sm">
