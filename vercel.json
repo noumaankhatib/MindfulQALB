@@ -19,6 +19,10 @@
     },
     { "source": "/api/(.*)", "destination": "/api/$1" },
     { "source": "/sb/(.*)", "destination": "/api/sb-proxy?path=$1" },
+    { "source": "/robots.txt", "destination": "/robots.txt" },
+    { "source": "/sitemap.xml", "destination": "/sitemap.xml" },
+    { "source": "/llms.txt", "destination": "/llms.txt" },
+    { "source": "/llm.txt", "destination": "/llms.txt" },
     { "source": "/(.*)", "destination": "/index.html" }
   ],
   "headers": [

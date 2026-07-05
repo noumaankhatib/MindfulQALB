@@ -41,6 +41,9 @@ const quickLinks: FooterLink[] = [
 const resourceLinks: FooterLink[] = [
   { href: '/blog', label: 'Blog', isRoute: true },
   { href: '#faq', label: 'FAQs' },
+  { href: '/sitemap.xml', label: 'Sitemap', external: true },
+  { href: '/robots.txt', label: 'Robots.txt', external: true },
+  { href: '/llms.txt', label: 'LLMs.txt', external: true },
   { href: '/privacy', label: 'Privacy Policy', isRoute: true },
   { href: '/terms', label: 'Terms of Service', isRoute: true },
 ]

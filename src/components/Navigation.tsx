@@ -12,6 +12,7 @@ interface DropdownItem {
   href: string
   description?: string
   icon?: string
+  external?: boolean
 }
 
 interface NavItem {
@@ -34,6 +35,9 @@ const navItems: NavItem[] = [
     label: 'Resources',
     dropdown: [
       { label: 'Articles & Blogs', href: '/blog', description: 'Insights and education', icon: '📚' },
+      { label: 'Sitemap', href: '/sitemap.xml', description: 'All indexable pages', icon: '🗺️', external: true },
+      { label: 'Robots.txt', href: '/robots.txt', description: 'Crawler directives', icon: '🤖', external: true },
+      { label: 'LLMs.txt', href: '/llms.txt', description: 'AI content summary', icon: '✨', external: true },
     ],
   },
   {
@@ -223,7 +227,8 @@ const Navigation = () => {
                           >
                             <div className="p-2">
                               {item.dropdown.map((subItem, index) => {
-                                const isRoute = subItem.href.startsWith('/');
+                                const isExternal = subItem.external === true
+                                const isRoute = !isExternal && subItem.href.startsWith('/');
                                 const isHash = subItem.href.startsWith('#');
                                 const isSubActive = !isRoute && activeSection === subItem.href.replace('#', '');
                                 const className = `flex items-start gap-3 px-4 py-3 rounded-xl transition-colors duration-150 group ${
@@ -248,6 +253,20 @@ const Navigation = () => {
                                     </div>
                                   </>
                                 );
+                                if (isExternal) {
+                                  return (
+                                    <a
+                                      key={index}
+                                      href={subItem.href}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      onClick={() => { setOpenDropdown(null); closeMobileMenu(); }}
+                                      className={className}
+                                    >
+                                      {content}
+                                    </a>
+                                  );
+                                }
                                 if (isRoute) {
                                   return (
                                     <Link
@@ -316,22 +335,16 @@ const Navigation = () => {
               )
             })}
             
-            {/* CTA Button - Book Your Session section on homepage */}
-            <Link
-              to="/#get-help"
-              onClick={closeMobileMenu}
-              className="ml-4 px-6 py-2.5 rounded-full font-medium text-sm text-white bg-gradient-to-r from-lavender-600 to-lavender-700 shadow-lg shadow-lavender-500/25 hover:shadow-lavender-500/40 hover:-translate-y-0.5 transition-all duration-300"
-            >
-              Book a Session
-            </Link>
-
-            {/* Notifications - Desktop */}
-            <div className="ml-2">
+            {/* Nav actions — matched sizing */}
+            <div className="flex items-center gap-2 ml-3 shrink-0">
+              <Link
+                to="/#get-help"
+                onClick={closeMobileMenu}
+                className="nav-btn btn-primary shadow-md shadow-lavender-500/20 hover:shadow-lavender-500/35"
+              >
+                <span>Book a Session</span>
+              </Link>
               <NotificationBell />
-            </div>
-            
-            {/* User Menu / Auth - Desktop */}
-            <div className="ml-2">
               <UserMenu onOpenAuth={() => setIsAuthModalOpen(true)} />
             </div>
           </div>
@@ -402,7 +415,8 @@ const Navigation = () => {
                               >
                                 <div className="pl-4 py-2 space-y-1">
                                   {item.dropdown.map((subItem, index) => {
-                                    const isRoute = subItem.href.startsWith('/');
+                                    const isExternal = subItem.external === true
+                                    const isRoute = !isExternal && subItem.href.startsWith('/');
                                     const isHash = subItem.href.startsWith('#');
                                     const isSubActive = !isRoute && activeSection === subItem.href.replace('#', '');
                                     const mobileClassName = `flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${
@@ -419,6 +433,20 @@ const Navigation = () => {
                                         </div>
                                       </>
                                     );
+                                    if (isExternal) {
+                                      return (
+                                        <a
+                                          key={index}
+                                          href={subItem.href}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          onClick={closeMobileMenu}
+                                          className={mobileClassName}
+                                        >
+                                          {mobileContent}
+                                        </a>
+                                      );
+                                    }
                                     if (isRoute) {
                                       return (
                                         <Link key={index} to={subItem.href} onClick={closeMobileMenu} className={mobileClassName}>
@@ -467,9 +495,9 @@ const Navigation = () => {
                   <Link
                     to="/#get-help"
                     onClick={closeMobileMenu}
-                    className="block w-full text-center px-6 py-3 rounded-xl font-medium text-white bg-gradient-to-r from-lavender-600 to-lavender-700 shadow-lg shadow-lavender-500/25"
+                    className="btn-primary block w-full text-center px-6 py-3 rounded-xl text-sm shadow-lg shadow-lavender-500/25"
                   >
-                    Book a Session
+                    <span>Book a Session</span>
                   </Link>
                   {/* Notification bell in drawer so header doesn't overflow */}
                   <div className="flex items-center justify-center gap-3 pt-1">
@@ -493,9 +521,9 @@ const Navigation = () => {
         <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-lavender-100 px-4 py-3 flex gap-2 shadow-[0_-4px_16px_rgba(139,92,246,0.10)]">
           <Link
             to="/#get-help"
-            className="flex-1 py-3 bg-gradient-to-r from-lavender-600 to-lavender-700 text-white rounded-xl font-semibold text-sm text-center shadow-md shadow-lavender-500/25 active:opacity-90 transition-opacity"
+            className="btn-primary flex-1 py-3 rounded-xl text-sm text-center shadow-md shadow-lavender-500/25"
           >
-            Book Free Consultation
+            <span>Book Free Consultation</span>
           </Link>
           <Link
             to="/my-bookings"

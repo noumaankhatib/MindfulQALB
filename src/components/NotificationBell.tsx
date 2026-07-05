@@ -123,7 +123,7 @@ function NotificationBellInner() {
         type="button"
         onClick={() => setIsOpen((o) => !o)}
         className={`
-          relative p-2.5 rounded-xl
+          relative inline-flex items-center justify-center h-10 w-10 shrink-0 rounded-full
           transition-all duration-200 ease-out
           focus:outline-none focus-visible:ring-2 focus-visible:ring-lavender-400 focus-visible:ring-offset-2
           hover:bg-lavender-50 hover:text-lavender-600

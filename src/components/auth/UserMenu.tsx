@@ -56,10 +56,12 @@ export const UserMenu = ({ onOpenAuth }: UserMenuProps) => {
   if (loading) {
     return (
       <button
+        type="button"
         onClick={onOpenAuth}
-        className="px-4 py-2 bg-lavender-100 text-lavender-600 rounded-full font-medium text-sm animate-pulse"
+        className="nav-btn-signin animate-pulse"
+        aria-busy="true"
       >
-        Sign In
+        <span>Sign In</span>
       </button>
     );
   }
@@ -67,10 +69,11 @@ export const UserMenu = ({ onOpenAuth }: UserMenuProps) => {
   if (!user) {
     return (
       <button
+        type="button"
         onClick={onOpenAuth}
-        className="px-4 py-2 bg-lavender-600 text-white rounded-lg hover:bg-lavender-700 transition-all font-medium text-sm shadow-sm hover:shadow-md flex items-center gap-2"
+        className="nav-btn-signin"
       >
-        <User className="w-4 h-4" />
+        <User className="w-4 h-4 shrink-0" aria-hidden="true" />
         <span>Sign In</span>
       </button>
     );
@@ -122,7 +125,7 @@ export const UserMenu = ({ onOpenAuth }: UserMenuProps) => {
         aria-expanded={isOpen}
         aria-haspopup="true"
         aria-label={isOpen ? 'Close user menu' : 'Open user menu'}
-        className="flex items-center gap-2 p-1.5 sm:pr-3 rounded-full bg-lavender-50 hover:bg-lavender-100 transition-colors border border-lavender-100"
+        className="flex items-center gap-2 h-10 px-3 rounded-full bg-lavender-50 hover:bg-lavender-100 transition-colors border border-lavender-200 shrink-0"
       >
         {avatarEl('sm')}
         <span className="text-sm font-medium text-gray-700 max-w-[80px] truncate hidden sm:block">
